@@ -1,0 +1,93 @@
+#include "SensorSCD30.h"
+
+SensorSCD30::SensorSCD30(uint16_t iMeasureTypes)
+    : Sensor(iMeasureTypes, SCD30_I2C_ADDR), Adafruit_SCD30(){};
+
+SensorSCD30::SensorSCD30(uint16_t iMeasureTypes, uint8_t iAddress)
+    : Sensor(iMeasureTypes, iAddress), Adafruit_SCD30(){};
+
+uint8_t SensorSCD30::getSensorClass()
+{
+    return SENS_SCD30;
+}
+
+float SensorSCD30::measureValue(MeasureType iMeasureType)
+{
+    switch (iMeasureType)
+    {
+    case Temperature:
+        // hardware calibration
+        return mTemp;
+        break;
+    case Humidity:
+        return mHum;
+        break;
+    case Co2:
+        return mCo2;
+        break;
+    default:
+        break;
+    }
+    return -1000.0f;
+}
+
+bool SensorSCD30::begin() {
+    printDebug("Starting sensor SCD30... ");
+    bool lResult = Adafruit_SCD30::begin();
+    if (lResult) lResult = Sensor::begin();
+    printResult(lResult);
+    return lResult;
+}
+
+void SensorSCD30::sensorLoopInternal() {
+    switch (gSensorState)
+    {
+    case Wakeup:
+        Sensor::sensorLoopInternal();
+        break;
+    case Calibrate:
+        Sensor::sensorLoopInternal();
+        break;
+    case Finalize:
+        // we ask for value until we get a valid value
+        if (delayCheck(pSensorStateDelay, 2000))
+        {
+            if (getSensorData())
+                gSensorState = Running;
+            pSensorStateDelay = millis();
+        }
+        break;
+    case Running:
+        if (delayCheck(pSensorStateDelay, 2000))
+        {
+            getSensorData();
+            pSensorStateDelay = millis();
+        }
+        break;
+    default:
+        Sensor::sensorLoopInternal();
+        break;
+    }
+}
+
+uint8_t SensorSCD30::getI2cSpeed()
+{
+    return 1; // n * 100kHz
+}
+
+bool SensorSCD30::getSensorData()
+{
+    bool lResult = dataReady();
+    if (lResult)
+    {
+        delay(1);
+        lResult = read();
+        if (lResult)
+        {
+            mTemp = temperature;
+            mHum = relative_humidity;
+            mCo2 = CO2;
+        }
+    }
+    return lResult;
+}

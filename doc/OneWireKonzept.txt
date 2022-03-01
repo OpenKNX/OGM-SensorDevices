@@ -1,0 +1,27 @@
+OneWire Grundkonzept:
+
+- BM ist shared Resource, kann nur von einem Sensor gleichzeitig genutzt werden - OK
+- Search ist eigene Klasse, kann als SearchAll, SearchFamily und SearchNoFamily initialisiert werden
+- Search hat einen eigenen loop für non-blocking aufgaben - OK
+- 1-Wire ist langsam, deswegen muss alles non-Blocking sein - OK
+- Das Finden eines Gerätes dauert 91 ms! MUSS non-blocking sein! - kann auf ca. 50ms gedrückt werden
+- wireReset dauert bis zu 8 ms, das geht noch, sollte aber zumindest beim Search non-blocking laufen - kann auf ca. 4ms gedrückt werden
+- BM bekommt ein callback für unbekannte gefundene ID - OK
+- Beim Search schaut der BM selber nach bekannten IDs - NIEIN
+  - neu: Search verwaltet die bekannten IDs je nach Instanzierung (Family, noFamily, All)
+- Beim startup (aber schon im loop) gibt es erstmal einen vollständigen search, bevor irgendein Sensor was macht - OK
+- Wenn die App eine neue ID (callback) bekommt, instanziert sie einen passenden Sensor - OK
+- Jeder Sensor hat einen (optionalen) callback für Wertänderungen (Wichtig für IO und iButton) - nicht nötig?
+- Instanzierende App macht gesamte Kommunikation nach außen (so ist das für KONN und ETS nutzbar) - OK
+- Senoren habe auch einen eigenen loop für non-Blocking Aufgaben - OK
+- BM dispatched freie Zeitslots an die Sensoren
+- DS18x20 haben einen Modus, um alle auf dem Bus zur DA-Wandelung zu veranlassen, unbedingt nutzen
+- BM hat 2 Dispatching-Queues, Prio für zeitkritische Sachen (iButton und IO), normal für Rest (messungen) - NEIN 
+  - NEU: BM hat 4 Queues:
+    - 1. eine reine iButton-Queue, macht nur FamilySearch auf 0x01
+    - 2. Input-Queue, fragt nur Inputs ab (also alle 50ms ein Input-check, reicht das?)
+    - 3. alle weiteren Devices, hier auch Output
+    - 4. der "normale" search nach dem Rest, SearchNoFamily auf 0x01
+
+Findings für Search:
+- FamilySearch kann abgebrochen werden, wenn Step == 8 und Id[0] != iFamily ist, dann ist kein Device der Family angeschlossen.

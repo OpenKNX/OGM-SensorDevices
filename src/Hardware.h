@@ -25,7 +25,7 @@
 #define SAVE_INTERRUPT_PIN 8
 #define INFO_LED_PIN 38
 #define INFO_LED_PIN_ACTIVE_ON HIGH
-#define COUNT_LOG_CHANNEL 80
+// #define COUNT_LOG_CHANNEL 80
 // Buzzer
 #define BUZZER_PIN 9
 // #define I2C_EEPROM_DEVICE_ADDRESSS 0x50 // Address of 24LC256 eeprom chip
@@ -41,8 +41,8 @@
 #define INFO_LED_PIN_ACTIVE_ON HIGH
 #define COUNT_1WIRE_BUSMASTER 1
 #define COUNT_1WIRE_CHANNEL 30
-#define COUNT_PM_CHANNEL 6
-#define COUNT_LOG_CHANNEL 80
+// #define COUNT_PM_CHANNEL 6
+// #define COUNT_LOG_CHANNEL 80
 // Buzzer
 #define BUZZER_PIN 9
 #define I2C_1WIRE_DEVICE_ADDRESSS 0x1A  // Address of DS2482 1-Wire-Busmaster chip
@@ -59,8 +59,8 @@
 #define INFO_LED_PIN_ACTIVE_ON HIGH
 #define COUNT_1WIRE_BUSMASTER 1
 #define COUNT_1WIRE_CHANNEL 30
-#define COUNT_PM_CHANNEL 6
-#define COUNT_LOG_CHANNEL 99
+// #define COUNT_PM_CHANNEL 6
+// #define COUNT_LOG_CHANNEL 99
 // Buzzer
 #define BUZZER_PIN 9
 #define I2C_1WIRE_DEVICE_ADDRESSS 0x18 // Address of DS2484 1-Wire-Busmaster chip
@@ -77,8 +77,8 @@
 #define INFO_LED_PIN_ACTIVE_ON HIGH
 #define COUNT_1WIRE_BUSMASTER 1
 #define COUNT_1WIRE_CHANNEL 30
-#define COUNT_PM_CHANNEL 6
-#define COUNT_LOG_CHANNEL 80
+// #define COUNT_PM_CHANNEL 6
+// #define COUNT_LOG_CHANNEL 80
 // Buzzer
 #define BUZZER_PIN 9
 #define I2C_1WIRE_DEVICE_ADDRESSS 0x18  // Address of DS2484 1-Wire-Busmaster chip
@@ -95,8 +95,8 @@
 #define INFO_LED_PIN_ACTIVE_ON HIGH
 #define COUNT_1WIRE_BUSMASTER 1
 #define COUNT_1WIRE_CHANNEL 30
-#define COUNT_PM_CHANNEL 6
-#define COUNT_LOG_CHANNEL 80
+// #define COUNT_PM_CHANNEL 6
+// #define COUNT_LOG_CHANNEL 80
 // Buzzer
 #define BUZZER_PIN 9
 #define I2C_1WIRE_DEVICE_ADDRESSS 0x18  // Address of DS2484 1-Wire-Busmaster chip
@@ -113,7 +113,7 @@
 #define INFO_LED_PIN_ACTIVE_ON HIGH
 #define COUNT_1WIRE_BUSMASTER 1
 #define COUNT_1WIRE_CHANNEL 30
-#define COUNT_LOG_CHANNEL 80
+// #define COUNT_LOG_CHANNEL 80
 // Buzzer
 #define BUZZER_PIN 9
 #define I2C_1WIRE_DEVICE_ADDRESSS 0x18  // Address of DS2484 1-Wire-Busmaster chip
@@ -131,7 +131,7 @@
 #define COUNT_1WIRE_BUSMASTER 1
 #define COUNT_1WIRE_CHANNEL 30
 // #define COUNT_PM_CHANNEL 6
-#define COUNT_LOG_CHANNEL 99
+// #define COUNT_LOG_CHANNEL 99
 #define KNX_UART_RX_PIN 17
 #define KNX_UART_TX_PIN 16
 #define KNX_I2C_SDA_PIN 20
@@ -152,8 +152,8 @@
 // #define INFO_LED_PIN_ACTIVE_ON HIGH
 // #define COUNT_1WIRE_BUSMASTER 1
 // #define COUNT_1WIRE_CHANNEL 30
-#define COUNT_PM_CHANNEL 20
-#define COUNT_LOG_CHANNEL 80
+// #define COUNT_PM_CHANNEL 20
+// #define COUNT_LOG_CHANNEL 80
 #define KNX_UART_RX_PIN 17
 #define KNX_UART_TX_PIN 16
 #define KNX_I2C_SDA_PIN 20
@@ -174,8 +174,8 @@
 #define PRESENCE_LED_PIN 8
 #define PRESENCE_LED_PIN_ACTIVE_ON HIGH
 #define PIR_PIN 14
-#define COUNT_PM_CHANNEL 15
-#define COUNT_LOG_CHANNEL 80
+// #define COUNT_PM_CHANNEL 15
+// #define COUNT_LOG_CHANNEL 80
 // Buzzer
 #define I2C_EEPROM_DEVICE_ADDRESSS 0x50 // Address of 24LC256 eeprom chip
 #endif
@@ -189,8 +189,8 @@
 #define INFO_LED_PIN_ACTIVE_ON HIGH
 #define COUNT_1WIRE_BUSMASTER 1
 #define COUNT_1WIRE_CHANNEL 30
-#define COUNT_PM_CHANNEL 20
-#define COUNT_LOG_CHANNEL 80
+// #define COUNT_PM_CHANNEL 20
+// #define COUNT_LOG_CHANNEL 80
 // Buzzer
 #define BUZZER_PIN 9
 #define I2C_1WIRE_DEVICE_ADDRESSS 0x18  // Address of DS2484 1-Wire-Busmaster chip
@@ -207,8 +207,8 @@
 #define INFO_LED_PIN_ACTIVE_ON HIGH
 #define COUNT_1WIRE_BUSMASTER 1
 #define COUNT_1WIRE_CHANNEL 30
-#define COUNT_PM_CHANNEL 20
-#define COUNT_LOG_CHANNEL 80
+// #define COUNT_PM_CHANNEL 20
+// #define COUNT_LOG_CHANNEL 80
 // Buzzer
 #define BUZZER_PIN 9
 #define I2C_1WIRE_DEVICE_ADDRESSS 0x18  // Address of DS2484 1-Wire-Busmaster chip
@@ -224,7 +224,7 @@
 #define INFO_LED_PIN_ACTIVE_ON HIGH
 #define COUNT_1WIRE_BUSMASTER 3
 #define COUNT_1WIRE_CHANNEL 90
-#define COUNT_LOG_CHANNEL 80
+// #define COUNT_LOG_CHANNEL 80
 #define I2C_1WIRE_DEVICE_ADDRESSS 0x18 // Address of first DS2482 1-Wire-Busmaster chip, used are 0x19, 0x1A, 0x1B
 #define I2C_EEPROM_DEVICE_ADDRESSS 0x50 // Address of 24LC256 eeprom chip
 #endif
@@ -237,7 +237,7 @@
 #define INFO_LED_PIN_ACTIVE_ON HIGH
 #define COUNT_1WIRE_BUSMASTER 3
 #define COUNT_1WIRE_CHANNEL 90
-#define COUNT_LOG_CHANNEL 80
+// #define COUNT_LOG_CHANNEL 80
 #define I2C_1WIRE_DEVICE_ADDRESSS 0x18 // Address of first DS2482 1-Wire-Busmaster chip, used are 0x19, 0x1A, 0x1B
 #define I2C_EEPROM_DEVICE_ADDRESSS 0x50 // Address of 24LC256 eeprom chip
 #endif

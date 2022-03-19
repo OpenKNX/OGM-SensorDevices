@@ -1,6 +1,6 @@
 #ifdef SENSORMODULE
 #include "Sensor.h"
-#include "Hardware.h"
+#include "HardwareDevices.h"
 #include "SensorDummy.h"
 #include "SensorSHT3x.h"
 #include "SensorBME280.h"

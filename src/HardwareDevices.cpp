@@ -1,7 +1,7 @@
 #include <Wire.h>
-#include "Hardware.h"
 #include "Helper.h"
 #include "EepromManager.h"
+#include "HardwareDevices.h"
 #ifdef WATCHDOG
 #include <Adafruit_SleepyDog.h>
 #endif

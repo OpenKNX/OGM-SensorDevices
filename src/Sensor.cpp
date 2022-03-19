@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include "Sensor.h"
-#include "Hardware.h"
+#include "HardwareDevices.h"
 
 // static
 uint8_t Sensor::sNumSensors = 0;

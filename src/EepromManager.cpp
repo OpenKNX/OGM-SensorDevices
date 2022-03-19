@@ -1,5 +1,5 @@
 #include <Wire.h>
-#include "Hardware.h"
+#include "HardwareDevices.h"
 #include "EepromManager.h"
 
 EepromManager::EepromManager(uint16_t iStartPage, uint16_t iNumPages, uint8_t *iMagicWord)
@@ -66,10 +66,10 @@ bool EepromManager::checkMagicWord(uint16_t iAddress) {
     int lIndex = 0;
     while (lResult && lIndex < 4) 
         lResult = Wire.available() && (mMagicWord[lIndex++] == Wire.read());
-    return lResult;
 #else
-    return false;
+    lResult = false;
 #endif
+    return lResult;
 }
 
 bool EepromManager::writeSession(bool iBegin) {

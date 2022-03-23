@@ -1,4 +1,4 @@
-#ifdef SENSORMODULE
+#if defined(SENSORMODULE) || defined(PMMODULE)
 #include <Arduino.h>
 #include <Wire.h>
 #include "Sensor.h"
@@ -97,6 +97,7 @@ void Sensor::restartSensor() {
 
 bool Sensor::checkSensorConnection()
 {
+    // just valid for i2c sensors, in other cases this should be overridden
     bool lResult = false;
     // if (gSensorState == Running) {
         // ceck for I2C ack

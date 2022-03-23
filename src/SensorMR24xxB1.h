@@ -1,0 +1,103 @@
+#pragma once
+#ifdef PMMODULE
+#include "Sensor.h"
+
+// Radar commands, value is index to command table cCommands
+#define RadarCmd_ResetSensor 0
+#define RadarCmd_ReadSensitivity 5
+#define RadarCmd_WriteSensitivity 10
+#define RadarCmd_ReadScene 15
+#define RadarCmd_WriteScene 20
+
+// result of Presence is a bitfielt uint8_t, where bits are used as following:
+// Presence - Bit   0:  0 - no presence, 1 - any presence
+// Move     - Bit 1-2:  00 - stay, 01 - move, 10 - closer, 11 - away
+// Fall     - Bit 3-4:  00 - no fall, 01 - suspected fall, 10 - real fall
+// Alarm    - Bit 5-8:  000 - no alarm, 001-100 alarm level 1-4
+// $FF means uninitialized/sensor not available
+#define RADAR_PresenceMask 0x01
+#define RADAR_PresenceOffset 0
+#define RADAR_MoveMask 0x06
+#define RADAR_MoveOffset 1
+#define RADAR_FallMask 0x18
+#define RADAR_FallOffset 3
+#define RADAR_AlarmMask 0xE0
+#define RADAR_AlarmOffset 5
+
+#define RADAR_NoValue 0xFF
+
+#define RADAR_PresenceNo 0
+#define RADAR_Presence 1
+
+#define RADAR_MoveStay 0
+#define RADAR_MoveMove 1
+#define RADAR_MoveCloser 2
+#define RADAR_MoveAway 3
+
+#define RADAR_FallNo 0
+#define RADAR_FallSuspected 1
+#define RADAR_FallReal 2
+
+#define RADAR_AlarmNo 0
+#define RADAR_AlarmLevel1 1
+#define RADAR_AlarmLevel2 2
+#define RADAR_AlarmLevel3 3
+#define RADAR_AlarmLevel4 4
+
+class SensorMR24xxB1 : public Sensor
+{
+  private:
+    //! uartGetPacket state machine states.
+    enum PacketStates
+    {
+        //! Waiting for the synchronisation byte 0x55
+        GET_SYNC_STATE = 0,
+        //! Copying the 4 after sync byte: raw data length (2 bytes), optional data length (1), type (1).
+        GET_HEADER_STATE,
+        //! Checking the header CRC8 checksum. Resynchronisation test is also done here
+        CHECK_DATA_LENGTH,
+        //! Copying the data and optional data bytes to the paquet buffer
+        GET_DATA_STATE,
+        //! receiving first CRC byte
+        GET_CRC16D_STATE,
+        //! Checking the info CRC8 checksum.
+        CHECK_CRC16D_STATE
+    };
+
+    static const uint8_t mBufferSize = 20;
+    uint8_t mBuffer[mBufferSize] = {0}; // message buffer
+    uint8_t mBufferIndex = 0;
+    PacketStates mPacketState = GET_SYNC_STATE;
+
+    static void calculateCrcLoHi(uint8_t *iFrame, uint16_t iLen, uint8_t &eCRCLo, uint8_t &eCRCHi);
+    void uartGetPacket();
+    void getPresenceState(bool iHeartbeat);
+    void getMoveState();
+    void getMoveSpeed();
+    bool getSensorData();
+    void printDebugData(char *iMessage, uint8_t iLength);
+
+  protected:
+    uint8_t mPresence = RADAR_NoValue;
+    float mMoveSpeed = NO_NUM;
+    uint8_t getSensorClass() override; // returns unique ID for this sensor type
+    void sensorLoopInternal() override;
+    bool checkSensorConnection() override;
+    float measureValue(MeasureType iMeasureType) override;
+
+  public:
+    SensorMR24xxB1(uint16_t iMeasureTypes);
+    SensorMR24xxB1(uint16_t iMeasureTypes, uint8_t iAddress);
+    virtual ~SensorMR24xxB1() {}
+
+    static bool decodePresenceResult(uint8_t iResult, bool &ePresence, uint8_t &eMove, uint8_t &eFall, uint8_t &eAlarm);
+    bool begin() override;
+    uint8_t getI2cSpeed() override;
+    void resetSensor();
+    void writeSensitivity(uint8_t iValue);
+    void readSensitivity();
+    void writeScene(uint8_t iValue);
+    void readScene();
+    void sendCommand(uint8_t iCommand, int8_t iValue = -1);
+};
+#endif

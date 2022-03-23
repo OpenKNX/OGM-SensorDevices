@@ -1,4 +1,4 @@
-#ifdef SENSORMODULE
+#if defined(SENSORMODULE) || defined(PMMODULE)
 #include "Sensor.h"
 #include "HardwareDevices.h"
 #include "SensorDummy.h"
@@ -11,11 +11,13 @@
 #include "SensorSGP30.h"
 #include "SensorOPT300x.h"
 #include "SensorVL53L1X.h"
+#include "SensorMR24xxB1.h"
 
 Sensor* newSensor(uint8_t iSensorClass, MeasureType iMeasureType) {
     Sensor* lSensor = nullptr;
     switch (iSensorClass)
     {
+#ifdef SENSORMODULE
         case SENS_SHT3X:
             lSensor = new SensorSHT3x(iMeasureType);
             break;
@@ -51,7 +53,12 @@ Sensor* newSensor(uint8_t iSensorClass, MeasureType iMeasureType) {
         case SENS_SGP30:
             lSensor = new SensorSGP30(iMeasureType);
             break;
-
+#endif
+#ifdef PMMODULE
+        case SENS_MR24xxB1:
+            lSensor = new SensorMR24xxB1(iMeasureType);
+            break;
+#endif
         default:
             lSensor = nullptr;
             break;

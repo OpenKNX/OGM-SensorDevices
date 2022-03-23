@@ -1,5 +1,5 @@
 #pragma once
-#ifdef SENSORMODULE
+#if defined(SENSORMODULE) || defined(PMMODULE)
 #include "Sensor.h"
 
 // dummy sensor, returned for not implemented sensors

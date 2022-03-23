@@ -1,4 +1,4 @@
-#ifdef SENSORMODULE
+#if defined(SENSORMODULE) || defined(PMMODULE)
 #include <Wire.h>
 #include "SensorDummy.h"
 

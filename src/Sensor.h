@@ -13,17 +13,20 @@
 #define BIT_LOGIC 128
 #define BIT_LUX 256
 #define BIT_TOF 512
+#define BIT_PRESENCE 1024
 
 #define SENS_NO 0
-#define SENS_SHT3X 1
-#define SENS_BME280 2
-#define SENS_BME680 3
-#define SENS_SCD30 4
-#define SENS_IAQCORE 5
-#define SENS_OPT300X 6
-#define SENS_VL53L1X 7
-#define SENS_SGP30 8
-#define SENS_SCD41 9
+#define SENS_SHT3X 1     // Temp/Hum
+#define SENS_BME280 2    // Temp/Hum/Pressure
+#define SENS_BME680 3    // Temp/Hum/Pressure/Voc
+#define SENS_SCD30 4     // Temp/Hum/Co2
+#define SENS_IAQCORE 5   // Voc
+#define SENS_OPT300X 6   // Lux
+#define SENS_VL53L1X 7   // Tof
+#define SENS_SGP30 8     // Temp/Hum/Voc
+#define SENS_SCD41 9     // Temp/Hum/Co2
+#define SENS_MR24xxB1 10 // HF-Presence
+#define SENS_VEML7700 11 // Lux
 
 enum SensorState
 {
@@ -44,10 +47,12 @@ enum MeasureType {
     Co2Calc = 64, // calculated Co2 from VOC
     Accuracy = 128,
     Lux = 256,
-    Tof = 512
+    Tof = 512,
+    Pres = 1024,
+    Speed = 2048
 };
 
-#ifdef SENSORMODULE
+#if defined(SENSORMODULE) || defined(PMMODULE)
 #include "Helper.h"
 
 class Sensor
@@ -69,7 +74,7 @@ class Sensor
     float gTempOffset = 0.0;
 
     virtual uint8_t getSensorClass() = 0; // pure; returns unique ID for this sensor type
-    bool checkSensorConnection();
+    virtual bool checkSensorConnection();
     virtual float measureValue(MeasureType iMeasureType) = 0; //pure
     virtual void sensorLoopInternal();
     virtual void sensorSaveState();

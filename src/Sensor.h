@@ -49,7 +49,9 @@ enum MeasureType {
     Lux = 256,
     Tof = 512,
     Pres = 1024,
-    Speed = 2048
+    Speed = 2048,
+    Sensitivity = 4096,
+    Scenario = 8192
 };
 
 #if defined(SENSORMODULE) || defined(PMMODULE)

@@ -163,6 +163,9 @@
 #define I2C_SCL_PIN 3
 #define HF_UART_TX_PIN 4
 #define HF_UART_RX_PIN 5
+#define HF_S1_PIN 6
+#define HF_S2_PIN 7
+#define HF_POWER_PIN 14
 #define SAVE_INTERRUPT_PIN 15
 // #define PIR_PIN 14
 // #define COUNT_PM_CHANNEL 15

@@ -52,16 +52,12 @@ class SensorMR24xxB1 : public Sensor
     {
         //! Waiting for the synchronisation byte 0x55
         GET_SYNC_STATE = 0,
-        //! Copying the 4 after sync byte: raw data length (2 bytes), optional data length (1), type (1).
-        GET_HEADER_STATE,
-        //! Checking the header CRC8 checksum. Resynchronisation test is also done here
-        CHECK_DATA_LENGTH,
-        //! Copying the data and optional data bytes to the paquet buffer
-        GET_DATA_STATE,
-        //! receiving first CRC byte
-        GET_CRC16D_STATE,
+        //! Reads the whole sensor message in our buffer
+        GET_PACKET_STATE,
         //! Checking the info CRC8 checksum.
-        CHECK_CRC16D_STATE
+        CHECK_CRC16D_STATE,
+        //! Process the correctly received packet
+        PROCESS_PACKET_STATE
     };
 
     static const uint8_t mBufferSize = 20;
@@ -75,11 +71,13 @@ class SensorMR24xxB1 : public Sensor
     void getMoveState();
     void getMoveSpeed();
     bool getSensorData();
-    void printDebugData(char *iMessage, uint8_t iLength);
+    void printDebugData(const char *iMessage, uint8_t iLength);
 
   protected:
     uint8_t mPresence = RADAR_NoValue;
     float mMoveSpeed = NO_NUM;
+    uint8_t mSensitivity = 0;
+    uint8_t mScenario = 0;
     uint8_t getSensorClass() override; // returns unique ID for this sensor type
     void sensorLoopInternal() override;
     bool checkSensorConnection() override;
@@ -93,11 +91,11 @@ class SensorMR24xxB1 : public Sensor
     static bool decodePresenceResult(uint8_t iResult, bool &ePresence, uint8_t &eMove, uint8_t &eFall, uint8_t &eAlarm);
     bool begin() override;
     uint8_t getI2cSpeed() override;
-    void resetSensor();
-    void writeSensitivity(uint8_t iValue);
-    void readSensitivity();
-    void writeScene(uint8_t iValue);
-    void readScene();
+    // void resetSensor();
+    // void writeSensitivity(uint8_t iValue);
+    // void readSensitivity();
+    // void writeScenario(uint8_t iValue);
+    // void readScenario();
     void sendCommand(uint8_t iCommand, int8_t iValue = -1);
 };
 #endif

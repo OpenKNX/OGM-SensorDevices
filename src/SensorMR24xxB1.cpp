@@ -99,7 +99,7 @@ void SensorMR24xxB1::sensorLoopInternal()
         case Finalize:
             if (delayCheck(pSensorStateDelay, 50))
             {
-                sendCommand(RadarCmd_WriteSensitivity, 1);
+                sendCommand(RadarCmd_WriteSensitivity, 2);
                 gSensorState = Running;
                 pSensorStateDelay = millis();
             }
@@ -121,36 +121,43 @@ void SensorMR24xxB1::sensorLoopInternal()
 // adr1 - 
 void SensorMR24xxB1::uartGetPacket()
 {
-    uint8_t lRxByte;
     uint8_t lCRCLo;
     uint8_t lCRCHi;
-    if (SERIAL_HF.available() > 0 && SERIAL_HF.readBytes(&lRxByte, 1) == 1)
+    uint8_t lRxByte;
+    switch (mPacketState)
     {
-        switch (mPacketState)
-        {
-            // Waiting for packet sync byte 0x55
-            case GET_SYNC_STATE:
-                // SERIAL_DEBUG.println(u8RxByte);
+        // Waiting for packet sync byte 0x55
+        case GET_SYNC_STATE:
+            // SERIAL_DEBUG.println(u8RxByte);
+            if (SERIAL_HF.available() > 0 && SERIAL_HF.readBytes(&lRxByte, 1) == 1)
                 if (lRxByte == MESSAGE_HEAD)
                 {
-                    mPacketState = GET_HEADER_STATE;
+                    mPacketState = GET_PACKET_STATE;
                     mBuffer[0] = lRxByte;
                     mBufferIndex = 1;
                 }
-                break;
-            case GET_HEADER_STATE:
+            break;
+        case GET_PACKET_STATE:
+            if (SERIAL_HF.available() > 0 && SERIAL_HF.readBytes(&lRxByte, 1) == 1)
+            {
                 mBuffer[mBufferIndex++] = lRxByte;
                 if (mBufferIndex > mBuffer[BUFFER_POS_LENGTH])
-                {
-                    calculateCrcLoHi(mBuffer, mBufferIndex - 2, lCRCLo, lCRCHi);
-                    if (mBuffer[mBufferIndex - 2] == lCRCLo && mBuffer[mBufferIndex - 1] == lCRCHi)
-                    {
-                        getSensorData();
-                    }
-                    mPacketState = GET_SYNC_STATE;
-                }
-                break;
-        }
+                    mPacketState = CHECK_CRC16D_STATE;
+            }
+            else
+                mPacketState = GET_SYNC_STATE;
+            break;
+        case CHECK_CRC16D_STATE:
+            calculateCrcLoHi(mBuffer, mBufferIndex - 2, lCRCLo, lCRCHi);
+            if (mBuffer[mBufferIndex - 2] == lCRCLo && mBuffer[mBufferIndex - 1] == lCRCHi)
+                mPacketState = PROCESS_PACKET_STATE;
+            else
+                mPacketState = GET_SYNC_STATE;
+            break;
+        case PROCESS_PACKET_STATE:
+            getSensorData();
+            mPacketState = GET_SYNC_STATE;
+            break;
     }
 }
 
@@ -166,6 +173,12 @@ float SensorMR24xxB1::measureValue(MeasureType iMeasureType)
     case Speed:
         return mMoveSpeed;
         break;
+    case Sensitivity:
+        return mSensitivity;
+        break;
+    case Scenario:
+        return mScenario;
+        break;
     default:
         break;
     }
@@ -180,7 +193,6 @@ bool SensorMR24xxB1::checkSensorConnection()
 bool SensorMR24xxB1::begin()
 {
     printDebug("Starting sensor MR24xxB1 (Presence)... ");
-    SERIAL_HF.begin(9600);
     bool lResult = Sensor::begin();
     printResult(lResult);
     return lResult;
@@ -238,7 +250,7 @@ void SensorMR24xxB1::getMoveSpeed()
     SERIAL_DEBUG.println(mMoveSpeed);
 }
 
-void SensorMR24xxB1::printDebugData(char *iMessage, uint8_t iLength)
+void SensorMR24xxB1::printDebugData(const char *iMessage, uint8_t iLength)
 {
     SERIAL_DEBUG.print(iMessage);
     for (int i = 0; i < iLength; i++)
@@ -290,12 +302,14 @@ bool SensorMR24xxB1::getSensorData()
                     switch (mBuffer[BUFFER_POS_AD2])
                     {
                         case AD2_THRESHOLD_GEAR: // Threshold gear
+                            mSensitivity = data[0];
                             SERIAL_DEBUG.print("Sensitivity: ");
-                            SERIAL_DEBUG.println(data[0]);
+                            SERIAL_DEBUG.println(mSensitivity);
                             break;              // ENDE 0x0C: //Threshold gear
                         case AD2_SCENE_SETTING: // Scene setting
+                            mScenario = data[0];
                             SERIAL_DEBUG.print("Mode: ");
-                            switch (data[0])
+                            switch (mScenario)
                             {
                                 case AD3_SCENE_DEFAULT: // Default mode
                                     SERIAL_DEBUG.println("Default mode");
@@ -371,6 +385,9 @@ bool SensorMR24xxB1::getSensorData()
                         case AD2_APPROACH_AWAY: // Approaching away state
                             getMoveState();
                             break; // ENDE 0x07 Approaching away state
+                        case AD2_SIGNS_PARAMETERS: // Signs parameters
+                            getMoveSpeed();
+                            break; // ENDE 0x06: //Signs parameters
                     }
                     break;                  // ENDE 0x03 Report radar information
                 case AD1_REPORT_OTHER_INFO: // Report other information

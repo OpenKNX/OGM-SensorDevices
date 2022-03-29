@@ -71,10 +71,13 @@ float toFloat(uint8_t *iData)
 }
 
 SensorMR24xxB1::SensorMR24xxB1(uint16_t iMeasureTypes)
-    : Sensor(iMeasureTypes, 0){};
+    : SensorMR24xxB1(iMeasureTypes, 0){};
 
 SensorMR24xxB1::SensorMR24xxB1(uint16_t iMeasureTypes, uint8_t iAddress)
-    : Sensor(iMeasureTypes, iAddress){};
+    : Sensor(iMeasureTypes, iAddress)
+    {
+        gMeasureTypes |= Pres | Speed | Sensitivity | Scenario;
+    };
 
 uint8_t SensorMR24xxB1::getSensorClass()
 {
@@ -91,7 +94,7 @@ void SensorMR24xxB1::sensorLoopInternal()
         case Calibrate:
             if (delayCheck(pSensorStateDelay, 50))
             {
-                sendCommand(RadarCmd_WriteScene, 3);
+                sendCommand(RadarCmd_WriteScene, 2);
                 gSensorState = Finalize;
                 pSensorStateDelay = millis();
             }
@@ -246,7 +249,7 @@ void SensorMR24xxB1::getMoveState()
 void SensorMR24xxB1::getMoveSpeed()
 {
     mMoveSpeed = toFloat(&mBuffer[BUFFER_POS_DATA]);
-    SERIAL_DEBUG.print("Motion sign parameter: ");
+    SERIAL_DEBUG.print("Move speed: ");
     SERIAL_DEBUG.println(mMoveSpeed);
 }
 

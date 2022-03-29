@@ -63,12 +63,12 @@ class Sensor
     static Sensor* sSensors[SENSOR_COUNT];
     static uint8_t sNumSensors;
     static uint8_t sMaxI2cSpeed;
-    uint16_t gMeasureTypes;
 
   protected:
     // Sensor();
     Sensor(uint16_t iMeasureTypes, uint8_t iAddress);
     virtual ~Sensor() {}
+    uint16_t gMeasureTypes;
 
     uint8_t gAddress; 
     SensorState gSensorState = Wakeup;

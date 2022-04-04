@@ -19,19 +19,19 @@
 #endif
 #ifdef BOARD_ENOCEAN
 #ifndef PROG_LED_PIN
-#define PROG_LED_PIN 13
+#define PROG_LED_PIN 10
 #define PROG_LED_PIN_ACTIVE_ON HIGH
 #endif
 #ifndef PROG_BUTTON_PIN
-#define PROG_BUTTON_PIN 11
+#define PROG_BUTTON_PIN 8
 #define PROG_BUTTON_PIN_INTERRUPT_ON FALLING
 #endif
-#define SAVE_INTERRUPT_PIN 8
-#define INFO_LED_PIN 38
-#define INFO_LED_PIN_ACTIVE_ON HIGH
+#define SAVE_INTERRUPT_PIN A9
+// #define INFO_LED_PIN 38
+// #define INFO_LED_PIN_ACTIVE_ON HIGH
 // #define COUNT_LOG_CHANNEL 80
 // Buzzer
-#define BUZZER_PIN 9
+// #define BUZZER_PIN 9
 // #define I2C_EEPROM_DEVICE_ADDRESSS 0x50 // Address of 24LC256 eeprom chip
 #define NO_I2C
 #endif

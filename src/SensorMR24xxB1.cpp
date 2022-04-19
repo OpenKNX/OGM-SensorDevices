@@ -1,4 +1,5 @@
 #ifdef PMMODULE
+#ifdef PRESENCE_LED_PIN
 #include <Arduino.h>
 #include <Wire.h>
 #include "SensorMR24xxB1.h"
@@ -522,4 +523,5 @@ bool SensorMR24xxB1::decodePresenceResult(uint8_t iResult, bool &ePresence, uint
     eAlarm = (iResult & RADAR_AlarmMask) >> RADAR_AlarmOffset;
     return (iResult < RADAR_NoValue);
 }
+#endif
 #endif

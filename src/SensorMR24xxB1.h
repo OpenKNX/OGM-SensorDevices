@@ -1,5 +1,6 @@
 #pragma once
 #ifdef PMMODULE
+#ifdef PRESENCE_LED_PIN
 #include "Sensor.h"
 
 // Radar commands, value is index to command table cCommands
@@ -98,4 +99,5 @@ class SensorMR24xxB1 : public Sensor
     // void readScenario();
     void sendCommand(uint8_t iCommand, int8_t iValue = -1);
 };
+#endif
 #endif

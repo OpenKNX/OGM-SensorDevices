@@ -1,5 +1,5 @@
 #ifdef PMMODULE
-#ifdef PRESENCE_LED_PIN
+#ifdef HF_POWER_PIN
 #include <Arduino.h>
 #include <Wire.h>
 #include "SensorMR24xxB1.h"

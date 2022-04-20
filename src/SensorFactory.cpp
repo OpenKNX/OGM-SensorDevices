@@ -55,7 +55,7 @@ Sensor* newSensor(uint8_t iSensorClass, MeasureType iMeasureType) {
             break;
 #endif
 #ifdef PMMODULE
-#ifdef PRESENCE_LED_PIN
+#ifdef HF_POWER_PIN
         case SENS_MR24xxB1:
             lSensor = new SensorMR24xxB1(iMeasureType);
             break;

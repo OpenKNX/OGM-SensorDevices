@@ -1,6 +1,6 @@
 #pragma once
 #ifdef PMMODULE
-#ifdef PRESENCE_LED_PIN
+#ifdef HF_POWER_PIN
 #include "Sensor.h"
 
 // Radar commands, value is index to command table cCommands

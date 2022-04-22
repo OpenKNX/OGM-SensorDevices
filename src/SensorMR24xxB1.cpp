@@ -1,5 +1,5 @@
 #ifdef PMMODULE
-#ifdef HF_POWER_PIN
+#ifdef SERIAL_HF
 #include <Arduino.h>
 #include <Wire.h>
 #include "SensorMR24xxB1.h"

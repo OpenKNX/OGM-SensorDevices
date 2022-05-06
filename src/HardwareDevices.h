@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <Arduino.h>
 
+#ifndef BOARD_ENDUSER
 // Board specific definietions
 // #define BOARD_MASIFI
 // ################################################
@@ -130,7 +131,7 @@
 #define PROG_LED_PIN_ACTIVE_ON HIGH
 #define PROG_BUTTON_PIN 28
 #define PROG_BUTTON_PIN_INTERRUPT_ON FALLING
-#define SAVE_INTERRUPT_PIN 29 // 8
+#define SAVE_INTERRUPT_PIN D29 // 8
 // #define INFO_LED_PIN 38
 // #define INFO_LED_PIN_ACTIVE_ON HIGH
 #define COUNT_1WIRE_BUSMASTER 1
@@ -153,7 +154,7 @@
 #define PROG_LED_PIN_ACTIVE_ON HIGH
 #define PROG_BUTTON_PIN 28
 #define PROG_BUTTON_PIN_INTERRUPT_ON FALLING
-#define SAVE_INTERRUPT_PIN 29 // 8
+#define SAVE_INTERRUPT_PIN D29 // 8
 // #define INFO_LED_PIN 38
 // #define INFO_LED_PIN_ACTIVE_ON HIGH
 // #define COUNT_1WIRE_BUSMASTER 1
@@ -207,6 +208,28 @@
 // #define COUNT_LOG_CHANNEL 80
 // Buzzer
 // #define I2C_EEPROM_DEVICE_ADDRESSS 0x50 // Address of 24LC256 eeprom chip
+#endif
+#ifdef BOARD_MASIFI_HFPM_DEVEL2
+#define PROG_LED_PIN 16
+#define PROG_LED_PIN_ACTIVE_ON HIGH
+#define PROG_BUTTON_PIN 17
+#define PROG_BUTTON_PIN_INTERRUPT_ON FALLING
+#define INFO_LED_PIN 10
+#define INFO_LED_PIN_ACTIVE_ON HIGH
+#define PRESENCE_LED_PIN 9
+#define PRESENCE_LED_PIN_ACTIVE_ON HIGH
+#define MOVE_LED_PIN 8
+#define MOVE_LED_PIN_ACTIVE_ON HIGH
+#define KNX_UART_TX_PIN 12
+#define KNX_UART_RX_PIN 13
+#define I2C_SDA_PIN 2
+#define I2C_SCL_PIN 3
+#define HF_UART_TX_PIN 4
+#define HF_UART_RX_PIN 5
+#define HF_S1_PIN 6
+#define HF_S2_PIN 7
+#define HF_POWER_PIN 14
+#define SAVE_INTERRUPT_PIN 15
 #endif
 #ifdef BOARD_MASIFI_PM
 #define PROG_LED_PIN 13
@@ -285,7 +308,7 @@
 #define I2C_1WIRE_DEVICE_ADDRESSS 0x18 // Address of first DS2482 1-Wire-Busmaster chip, used are 0x19, 0x1A, 0x1B
 #define I2C_EEPROM_DEVICE_ADDRESSS 0x50 // Address of 24LC256 eeprom chip
 #endif
-
+#endif
 // board independent definitions
 
 // fatal error codes

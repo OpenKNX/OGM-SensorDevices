@@ -100,7 +100,7 @@ bool Sensor::checkSensorConnection()
     // just valid for i2c sensors, in other cases this should be overridden
     bool lResult = false;
     // if (gSensorState == Running) {
-        // ceck for I2C ack
+        // check for I2C ack
         Wire.beginTransmission(gAddress);
         lResult = (Wire.endTransmission() == 0);
         if (!lResult)

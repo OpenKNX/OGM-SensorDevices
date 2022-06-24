@@ -1,5 +1,5 @@
 #pragma once
-#ifdef SENSORMODULE
+#if defined(SENSORMODULE) || defined(PMMODULE)
 #include "Sensor.h"
 
 #define OPT300X_I2C_ADDR 0x45

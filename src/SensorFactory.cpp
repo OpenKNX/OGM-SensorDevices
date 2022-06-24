@@ -12,6 +12,7 @@
 #include "SensorOPT300x.h"
 #include "SensorVL53L1X.h"
 #include "SensorMR24xxB1.h"
+#include "SensorVEML7700.h"
 
 Sensor* newSensor(uint8_t iSensorClass, MeasureType iMeasureType) {
     Sensor* lSensor = nullptr;
@@ -42,10 +43,6 @@ Sensor* newSensor(uint8_t iSensorClass, MeasureType iMeasureType) {
             lSensor = new SensorIAQCore(iMeasureType);
             break;
 
-        case SENS_OPT300X:
-            lSensor = new SensorOPT300x(iMeasureType);
-            break;
-
         case SENS_VL53L1X:
             lSensor = new SensorVL53L1X(iMeasureType);
             break;
@@ -53,6 +50,16 @@ Sensor* newSensor(uint8_t iSensorClass, MeasureType iMeasureType) {
         case SENS_SGP30:
             lSensor = new SensorSGP30(iMeasureType);
             break;
+#endif
+#if defined(SENSORMODULE) || defined(PMMODULE)
+        case SENS_OPT300X:
+            lSensor = new SensorOPT300x(iMeasureType);
+            break;
+
+        case SENS_VEML7700:
+            lSensor = new SensorVEML7700(iMeasureType);
+            break;
+
 #endif
 #ifdef PMMODULE
 #ifdef HF_POWER_PIN

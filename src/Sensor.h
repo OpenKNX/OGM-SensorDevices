@@ -1,5 +1,6 @@
 #pragma once
 // #include <knx/bits.h>
+#include <Wire.h>
 
 #define SENSOR_COUNT 5
 
@@ -70,7 +71,8 @@ class Sensor
     virtual ~Sensor() {}
     uint16_t gMeasureTypes;
 
-    uint8_t gAddress; 
+    uint8_t gAddress;
+    TwoWire &gWire = Wire;
     SensorState gSensorState = Wakeup;
     uint32_t pSensorStateDelay = 0;
     float gTempOffset = 0.0;

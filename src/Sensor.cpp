@@ -101,8 +101,8 @@ bool Sensor::checkSensorConnection()
     bool lResult = false;
     // if (gSensorState == Running) {
         // check for I2C ack
-        Wire.beginTransmission(gAddress);
-        lResult = (Wire.endTransmission() == 0);
+        gWire.beginTransmission(gAddress);
+        lResult = (gWire.endTransmission() == 0);
         if (!lResult)
             restartSensor();
     // }

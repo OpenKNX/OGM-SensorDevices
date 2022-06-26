@@ -69,7 +69,7 @@ float SensorSCD40::measureValue(MeasureType iMeasureType)
 bool SensorSCD40::begin()
 {
     printDebug("Starting sensor SCD40... ");
-    SensirionI2CScd4x::begin(Wire);
+    SensirionI2CScd4x::begin(gWire);
     bool lResult = false;
     lResult = (stopPeriodicMeasurement() == 0);
     if (lResult)

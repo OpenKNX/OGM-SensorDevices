@@ -145,7 +145,7 @@ bool SensorBME680::begin() {
     printDebug("Starting sensor BME680... ");
     bool lResult = Sensor::begin();
     if (lResult) {
-        Bsec::begin(gAddress, Wire, mDelayCallback);
+        Bsec::begin(gAddress, gWire, mDelayCallback);
         lResult = checkIaqSensorStatus();
     }
     if (lResult) {
@@ -194,7 +194,7 @@ void SensorBME680::sensorLoadState()
     // Existing state in EEPROM
     printDebug("Reading BME680 state from EEPROM\n");
     mEEPROM->prepareRead(EEPROM_BME680_START_ADDRESS, 144);
-    if (Wire.available()) Wire.readBytes(buffer, 144);
+    if (gWire.available()) gWire.readBytes(buffer, 144);
 
     for (uint8_t i = 0; i < 144; i+=16)
         printHEX("<-- ", buffer + i, 16);
@@ -236,7 +236,7 @@ void SensorBME680::sensorSaveState()
 
         for (uint8_t lCount = 0; lCount < 144; lCount += 16) {
             mEEPROM->beginPage(EEPROM_BME680_START_ADDRESS + lCount);
-            Wire.write(buffer + lCount, 16);
+            gWire.write(buffer + lCount, 16);
             mEEPROM->endPage();
             printHEX("--> ", buffer + lCount, 16);
         }

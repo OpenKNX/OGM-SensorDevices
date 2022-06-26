@@ -126,14 +126,11 @@ float SensorSGP30::measureValue(MeasureType iMeasureType)
 bool SensorSGP30::begin()
 {
     printDebug("Starting sensor BME680... ");
-    // Bsec::begin(gAddress, Wire, mDelayCallback);
     bool lResult = checkIaqSensorStatus();
     if (lResult) {
-        // Bsec::setConfig(bsec_config_iaq);
         lResult = checkIaqSensorStatus();
     }
     if (lResult) {
-        // Bsec::updateSubscription(sensorList, sizeof(sensorList)/sizeof(bsec_virtual_sensor_t), BSEC_SAMPLE_RATE_LP);
         lResult = checkIaqSensorStatus();
     }
     if (lResult) {
@@ -184,7 +181,7 @@ void SensorSGP30::sensorLoadState()
     // Existing state in EEPROM
     printDebug("Reading BME680 state from EEPROM\n");
     mEEPROM->prepareRead(EEPROM_BME680_START_ADDRESS, 144);
-    if (Wire.available()) Wire.readBytes(buffer, 144);
+    if (gWire.available()) gWire.readBytes(buffer, 144);
 
     for (uint8_t i = 0; i < 144; i+=16)
         printHEX("<-- ", buffer + i, 16);
@@ -227,7 +224,7 @@ void SensorSGP30::sensorSaveState()
     for (uint8_t lCount = 0; lCount < 144; lCount += 16)
         {
             mEEPROM->beginPage(EEPROM_BME680_START_ADDRESS + lCount);
-            Wire.write(buffer + lCount, 16);
+            gWire.write(buffer + lCount, 16);
             mEEPROM->endPage();
             printHEX("--> ", buffer + lCount, 16);
         }

@@ -1,5 +1,6 @@
 #if defined(SENSORMODULE) || defined(PMMODULE)
 #include <Wire.h>
+#include "HardwareDevices.h"
 #include "SensorVEML7700.h"
 
 SensorVEML7700::SensorVEML7700(uint16_t iMeasureTypes)
@@ -45,19 +46,19 @@ void SensorVEML7700::sensorLoopInternal()
     }
 }
 
-bool SensorVEML7700::checkSensorConnection()
-{
-    // just valid for i2c sensors, in other cases this should be overridden
-    bool lResult = false;
-    // if (gSensorState == Running) {
-    // check for I2C ack
-    Wire1.beginTransmission(gAddress);
-    lResult = (Wire1.endTransmission() == 0);
-    if (!lResult)
-        restartSensor();
-    // }
-    return lResult;
-}
+// bool SensorVEML7700::checkSensorConnection()
+// {
+//     // just valid for i2c sensors, in other cases this should be overridden
+//     bool lResult = false;
+//     // if (gSensorState == Running) {
+//     // check for I2C ack
+//     Wire1.beginTransmission(gAddress);
+//     lResult = (Wire1.endTransmission() == 0);
+//     if (!lResult)
+//         restartSensor();
+//     // }
+//     return lResult;
+// }
 
 float SensorVEML7700::measureValue(MeasureType iMeasureType)
 {
@@ -76,11 +77,14 @@ float SensorVEML7700::measureValue(MeasureType iMeasureType)
 bool SensorVEML7700::begin()
 {
     printDebug("Starting sensor VEML7700... ");
-    bool lResult = true; // Sensor::begin();
+#ifdef SENSOR_I2C_VEML7700
+    gWire = SENSOR_I2C_VEML7700;
+    gWire.begin();
+#endif
+    bool lResult = Sensor::begin();
     if (lResult) {
-        Wire1.begin();
-        Wire1.setClock(400000);
-        lResult = mVeml.begin(&Wire1);
+        gWire.setClock(400000);
+        lResult = mVeml.begin(&gWire);
     }
     printResult(lResult);
     return lResult;

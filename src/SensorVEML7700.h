@@ -16,7 +16,7 @@ class SensorVEML7700 : public Sensor
     uint8_t getSensorClass() override; // returns unique ID for this sensor type
     void sensorLoopInternal() override;
     float measureValue(MeasureType iMeasureType) override;
-    bool checkSensorConnection() override;
+    // bool checkSensorConnection() override;
 
   public:
     SensorVEML7700(uint16_t iMeasureTypes);

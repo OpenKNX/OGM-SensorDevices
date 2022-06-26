@@ -1,5 +1,6 @@
 #if defined(SENSORMODULE) || defined(PMMODULE)
 #include <Wire.h>
+#include "HardwareDevices.h"
 #include "SensorOPT300x.h"
 
 SensorOPT300x::SensorOPT300x(uint16_t iMeasureTypes)
@@ -62,6 +63,10 @@ float SensorOPT300x::measureValue(MeasureType iMeasureType)
 bool SensorOPT300x::begin()
 {
     printDebug("Starting sensor OPT300x... ");
+#ifdef SENSOR_I2C_OPT300x
+    gWire = SENSOR_I2C_OPT300x;
+    gWire.begin();
+#endif
     bool lResult = Sensor::begin();
     if (lResult) {
         OPT300xConfig lConfig;
@@ -87,16 +92,16 @@ bool SensorOPT300x::getSensorData()
     mBuffer[1] = 0;
     uint16_t lRaw;
 
-    Wire.beginTransmission(gAddress);
-    Wire.write(OPT300X_REG_RESULT); // Send result register address
-    if (Wire.endTransmission() != 0)
+    gWire.beginTransmission(gAddress);
+    gWire.write(OPT300X_REG_RESULT); // Send result register address
+    if (gWire.endTransmission() != 0)
         return false;
 
     // request sensor data
-    Wire.requestFrom(gAddress, 2);
-    if (Wire.available() != 2)
+    gWire.requestFrom(gAddress, 2);
+    if (gWire.available() != 2)
         return false;
-    Wire.readBytes(mBuffer, 2);
+    gWire.readBytes(mBuffer, 2);
     lRaw = (mBuffer[0] << 8) | mBuffer[1];
     mLux = (lRaw & 0x0FFF) * (0.01 * pow(2, (lRaw & 0xF000) >> 12));
     return true;
@@ -104,10 +109,10 @@ bool SensorOPT300x::getSensorData()
 
 bool SensorOPT300x::writeConfig(OPT300xConfig iConfig)
 {
-    Wire.beginTransmission(gAddress);
-    Wire.write(OPT300X_REG_CONFIG);
-    Wire.write(iConfig.rawData >> 8);
-    Wire.write(iConfig.rawData & 0x00FF);
-    return (Wire.endTransmission() == 0);
+    gWire.beginTransmission(gAddress);
+    gWire.write(OPT300X_REG_CONFIG);
+    gWire.write(iConfig.rawData >> 8);
+    gWire.write(iConfig.rawData & 0x00FF);
+    return (gWire.endTransmission() == 0);
 }
 #endif

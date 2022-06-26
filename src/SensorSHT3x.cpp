@@ -132,12 +132,12 @@ bool SensorSHT3x::getTempHum(void)
     // writeCommand(SHT3X_MEAS_HIGHREP);
 
     // delay(50);
-    Wire.requestFrom(gAddress, 6);
-    if (Wire.available() != 6)
+    gWire.requestFrom(gAddress, 6);
+    if (gWire.available() != 6)
         return false;
     for (uint8_t i = 0; i < 6; i++)
     {
-        readbuffer[i] = Wire.read();
+        readbuffer[i] = gWire.read();
     }
     if (readbuffer[2] != crc8(readbuffer, 2) ||
         readbuffer[5] != crc8(readbuffer + 3, 2))
@@ -160,9 +160,9 @@ bool SensorSHT3x::getTempHum(void)
 
 void SensorSHT3x::writeCommand(uint16_t iCmd)
 {
-    Wire.beginTransmission(gAddress);
-    Wire.write(iCmd >> 8);
-    Wire.write(iCmd & 0xFF);
-    Wire.endTransmission();
+    gWire.beginTransmission(gAddress);
+    gWire.write(iCmd >> 8);
+    gWire.write(iCmd & 0xFF);
+    gWire.endTransmission();
 }
 #endif

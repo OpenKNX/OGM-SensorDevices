@@ -76,11 +76,11 @@ bool SensorIAQCore::getSensorData()
     memset(mBuffer, 0, sizeof(mBuffer));
     // request sensor data
 
-    Wire.requestFrom(gAddress, IAQCORE_READ_ALL);
-    if (Wire.available() != IAQCORE_READ_ALL)
+    gWire.requestFrom(gAddress, IAQCORE_READ_ALL);
+    if (gWire.available() != IAQCORE_READ_ALL)
         return false;
     for (uint8_t i = 0; i < IAQCORE_READ_ALL; i++)
-        mBuffer[i] = Wire.read();
+        mBuffer[i] = gWire.read();
     uint8_t lStatus = mBuffer[IAQCORE_STATUS_OFFSET];
     if ( lStatus & IAQCORE_STATUS_ERROR)
         return false;

@@ -203,6 +203,8 @@
 #define HF_S2_PIN 7
 #define HF_POWER_PIN 14
 #define SAVE_INTERRUPT_PIN 15
+#define SENSOR_I2C_OPT300x Wire1
+#define SENSOR_I2C_VEML7700 Wire1
 // #define PIR_PIN 14
 // #define COUNT_PM_CHANNEL 15
 // #define COUNT_LOG_CHANNEL 80
@@ -230,6 +232,8 @@
 #define HF_S2_PIN 3
 #define HF_POWER_PIN 10
 #define SAVE_INTERRUPT_PIN 11
+#define SENSOR_I2C_OPT300x Wire1
+#define SENSOR_I2C_VEML7700 Wire1
 #endif
 #ifdef BOARD_MASIFI_PM
 #define PROG_LED_PIN 13

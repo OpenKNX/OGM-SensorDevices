@@ -95,7 +95,7 @@ void SensorMR24xxB1::sensorLoopInternal()
         case Calibrate:
             if (delayCheck(pSensorStateDelay, 50))
             {
-                sendCommand(RadarCmd_WriteScene, 2);
+                sendCommand(RadarCmd_WriteScene, 0);
                 gSensorState = Finalize;
                 pSensorStateDelay = millis();
             }
@@ -103,7 +103,7 @@ void SensorMR24xxB1::sensorLoopInternal()
         case Finalize:
             if (delayCheck(pSensorStateDelay, 50))
             {
-                sendCommand(RadarCmd_WriteSensitivity, 2);
+                sendCommand(RadarCmd_WriteSensitivity, 8);
                 gSensorState = Running;
                 pSensorStateDelay = millis();
             }

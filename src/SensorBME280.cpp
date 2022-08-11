@@ -89,7 +89,7 @@ float SensorBME280::measureValue(MeasureType iMeasureType) {
 bool SensorBME280::begin() {
     printDebug("Starting sensor BME280... ");
     _i2caddr = gAddress;
-    _wire = gWire;
+    _wire = &gWire;
     bool lResult = Sensor::begin();
     gSensorState = Wakeup;
     // printResult(lResult);

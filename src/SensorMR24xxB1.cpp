@@ -80,6 +80,12 @@ SensorMR24xxB1::SensorMR24xxB1(uint16_t iMeasureTypes, uint8_t iAddress)
         gMeasureTypes |= Pres | Speed | Sensitivity | Scenario;
     };
 
+void SensorMR24xxB1::defaultSensorParameters(int8_t iScenario, uint8_t iSensitivity)
+{
+    mDefaultScenario = iScenario; 
+    mDefaultSensitivity = iSensitivity;
+}
+
 uint8_t SensorMR24xxB1::getSensorClass()
 {
     return SENS_MR24xxB1;
@@ -95,7 +101,6 @@ void SensorMR24xxB1::sensorLoopInternal()
         case Calibrate:
             if (delayCheck(pSensorStateDelay, 50))
             {
-                sendCommand(RadarCmd_WriteScene, 0);
                 gSensorState = Finalize;
                 pSensorStateDelay = millis();
             }
@@ -103,19 +108,117 @@ void SensorMR24xxB1::sensorLoopInternal()
         case Finalize:
             if (delayCheck(pSensorStateDelay, 50))
             {
-                sendCommand(RadarCmd_WriteSensitivity, 8);
                 gSensorState = Running;
                 pSensorStateDelay = millis();
             }
             break;
         case Running:
             uartGetPacket();
+            sendDefaultSensorValues();
             break;
         default:
             pSensorStateDelay = millis();
             break;
     }
 }
+
+// this state engine calculates startup behaviour of HF sensor 
+// and sends default values as soon as the sensor can consume them
+void SensorMR24xxB1::sendDefaultSensorValues()
+{
+    switch (mHfSensorStartupStates)
+    {
+        case START_INIT:
+            if (mMoveSpeed > NO_NUM)
+            {
+                pSensorStateDelay = millis();
+                mHfSensorStartupStates = START_SENSOR_ACTIVE;
+            }
+            break;
+        case START_SENSOR_ACTIVE:
+            // Communication is established, we wait for scenario info from Sensor
+            if (delayCheck(pSensorStateDelay, 1000))
+            {
+                pSensorStateDelay = millis();
+                if (mScenario >= 0)
+                {
+                    mHfSensorStartupStates = START_SCENARIO_RECEIVED;
+                    SERIAL_DEBUG.print("Got Scenario at startup: ");
+                    SERIAL_DEBUG.println(mScenario);
+                } 
+                else
+                {
+                    sendCommand(RadarCmd_ReadScene);
+                }
+            }
+            break;
+        case START_SCENARIO_RECEIVED:
+            // We got Scenario, we wait for sensitivity info from Sensor
+            if (delayCheck(pSensorStateDelay, 1000))
+            {
+                pSensorStateDelay = millis();
+                if (mSensitivity >= 0)
+                {
+                    mHfSensorStartupStates = START_SENSITIVITY_RECEIVED;
+                    SERIAL_DEBUG.print("Got Sensitivity at startup: ");
+                    SERIAL_DEBUG.println(mSensitivity);
+                } 
+                else
+                {
+                    sendCommand(RadarCmd_ReadSensitivity);
+                }
+            }
+            break;
+        case START_SENSITIVITY_RECEIVED:
+            // We got Scenario and sensitivity, we set now default scenario, if it differs from current
+            if (delayCheck(pSensorStateDelay, 5000))
+            {
+                pSensorStateDelay = millis();
+                mHfSensorStartupStates = START_SCENARIO_SET;
+                if (mDefaultScenario >= 0 && mScenario != mDefaultScenario) 
+                {
+                    SERIAL_DEBUG.print("Setting Scenario: ");
+                    SERIAL_DEBUG.println(mDefaultScenario);
+                    sendCommand(RadarCmd_WriteScene, mDefaultScenario);
+                }
+            }
+            break;
+        case START_SCENARIO_SET:
+            // We got sensitivity and we set a scenario, we set now default sensitivity, if it differs from current
+            if (delayCheck(pSensorStateDelay, 1000))
+            {
+                pSensorStateDelay = millis();
+                mHfSensorStartupStates = START_SENSITIVITY_SET;
+                if (mDefaultSensitivity > 0 && mSensitivity != mDefaultSensitivity) 
+                {
+                    SERIAL_DEBUG.print("Setting Sensitivity: ");
+                    SERIAL_DEBUG.println(mDefaultSensitivity);
+                    sendCommand(RadarCmd_WriteSensitivity, mDefaultSensitivity);
+                }
+            }
+        case START_SENSITIVITY_SET:
+            // we finished default settings for hf sensor, lets check if everything is as expected
+            if (delayCheck(pSensorStateDelay, 1000))
+            {
+                pSensorStateDelay = millis();
+                if ((mDefaultScenario < 0 || mScenario == mDefaultScenario) && (mDefaultSensitivity <= 0 || mSensitivity == mDefaultSensitivity)) 
+                {
+                    SERIAL_DEBUG.println("Setting HF-Sensor defaults OK!");
+                    mHfSensorStartupStates = START_FINISHED;
+                }
+                else
+                {
+                    SERIAL_DEBUG.println("Setting HF-Sensor defaults FAILED, retrying!!!!!!!!!");
+                    mHfSensorStartupStates = START_SENSITIVITY_RECEIVED;
+                }
+            }
+            break;
+        default:
+            mHfSensorStartupStates = START_FINISHED;
+            break;
+    }
+}
+
 // Packet: 
 // 0x55 - Message head
 // ll   - data length low
@@ -167,6 +270,8 @@ void SensorMR24xxB1::uartGetPacket()
 
 float SensorMR24xxB1::measureValue(MeasureType iMeasureType)
 {
+    if (mHfSensorStartupStates < START_FINISHED)
+        return NO_NUM;
     switch (iMeasureType)
     {
     case Pres:
@@ -178,10 +283,12 @@ float SensorMR24xxB1::measureValue(MeasureType iMeasureType)
         return mMoveSpeed;
         break;
     case Sensitivity:
-        return mSensitivity;
+        if (mSensitivity >= 0)
+            return mSensitivity;
         break;
     case Scenario:
-        return mScenario;
+        if (mScenario >= 0)
+            return mScenario;
         break;
     default:
         break;
@@ -312,7 +419,9 @@ bool SensorMR24xxB1::getSensorData()
                             break;              // ENDE 0x0C: //Threshold gear
                         case AD2_SCENE_SETTING: // Scene setting
                             mScenario = data[0];
-                            SERIAL_DEBUG.print("Mode: ");
+                            SERIAL_DEBUG.print("Scenario ");
+                            SERIAL_DEBUG.print(mScenario);
+                            SERIAL_DEBUG.print(": ");
                             switch (mScenario)
                             {
                                 case AD3_SCENE_DEFAULT: // Default mode

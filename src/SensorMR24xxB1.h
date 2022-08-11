@@ -45,6 +45,15 @@
 #define RADAR_AlarmLevel3 3
 #define RADAR_AlarmLevel4 4
 
+#define START_INIT 0
+#define START_SENSOR_ACTIVE 1
+#define START_SCENARIO_RECEIVED 2
+#define START_SENSITIVITY_RECEIVED 3
+#define START_SCENARIO_SET 4
+#define START_SENSITIVITY_SET 5
+#define START_FINISHED 255
+
+
 class SensorMR24xxB1 : public Sensor
 {
   private:
@@ -65,6 +74,10 @@ class SensorMR24xxB1 : public Sensor
     uint8_t mBuffer[mBufferSize] = {0}; // message buffer
     uint8_t mBufferIndex = 0;
     PacketStates mPacketState = GET_SYNC_STATE;
+    
+    int8_t mDefaultScenario = 0;
+    int8_t mDefaultSensitivity = 8;
+    uint8_t mHfSensorStartupStates = 0;
 
     static void calculateCrcLoHi(uint8_t *iFrame, uint16_t iLen, uint8_t &eCRCLo, uint8_t &eCRCHi);
     void uartGetPacket();
@@ -77,12 +90,13 @@ class SensorMR24xxB1 : public Sensor
   protected:
     uint8_t mPresence = RADAR_NoValue;
     float mMoveSpeed = NO_NUM;
-    uint8_t mSensitivity = 0;
-    uint8_t mScenario = 0;
+    int8_t mSensitivity = -1;
+    int8_t mScenario = -1;
     uint8_t getSensorClass() override; // returns unique ID for this sensor type
     void sensorLoopInternal() override;
     bool checkSensorConnection() override;
     float measureValue(MeasureType iMeasureType) override;
+    void sendDefaultSensorValues();
 
   public:
     SensorMR24xxB1(uint16_t iMeasureTypes);
@@ -92,6 +106,7 @@ class SensorMR24xxB1 : public Sensor
     static bool decodePresenceResult(uint8_t iResult, bool &ePresence, uint8_t &eMove, uint8_t &eFall, uint8_t &eAlarm);
     bool begin() override;
     uint8_t getI2cSpeed() override;
+    void defaultSensorParameters(int8_t iScenario, uint8_t iSensitivity);
     // void resetSensor();
     // void writeSensitivity(uint8_t iValue);
     // void readSensitivity();

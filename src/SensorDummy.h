@@ -1,4 +1,5 @@
 #pragma once
+#include "IncludeManager.h"
 #if defined(SENSORMODULE) || defined(PMMODULE)
 #include "Sensor.h"
 

@@ -1,3 +1,4 @@
+#include "IncludeManager.h"
 #ifdef SENSORMODULE
 #include <Wire.h>
 #include "SensorSCD40.h"

@@ -72,6 +72,7 @@ class Sensor
     uint16_t gMeasureTypes;
 
     uint8_t gAddress;
+    static TwoWire &sWire;
     TwoWire &gWire = Wire;
     SensorState gSensorState = Wakeup;
     uint32_t pSensorStateDelay = 0;
@@ -88,6 +89,7 @@ class Sensor
 
   public:
     // static 
+    static void SetWire(TwoWire &iWire);
     static Sensor* factory(uint8_t iSensorClass, MeasureType iMeasureType);
     static void sensorLoop();
     static bool measureValue(MeasureType iMeasureType, float& eValue);
@@ -96,7 +98,7 @@ class Sensor
     static void restartSensors();
     static bool beginSensors();
     static uint8_t getMaxI2cSpeed();
-   
+    
     virtual uint8_t getI2cSpeed();
     virtual bool prepareTemperatureOffset(float iTempOffset);
 };

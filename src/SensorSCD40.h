@@ -1,3 +1,4 @@
+#include "IncludeManager.h"
 #pragma once
 #ifdef SENSORMODULE
 #include "Sensor.h"

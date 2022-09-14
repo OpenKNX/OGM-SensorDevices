@@ -1,3 +1,4 @@
+#include "IncludeManager.h"
 #ifdef SENSORMODULE
 #include "SensorBME680.h"
 #include "bsec/bme680/bme680.h"

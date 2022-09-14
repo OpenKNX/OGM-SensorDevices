@@ -1,4 +1,5 @@
 #pragma once
+#include "IncludeManager.h"
 #ifdef PMMODULE
 #ifdef SERIAL_HF
 #include "Sensor.h"

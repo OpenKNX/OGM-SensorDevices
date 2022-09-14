@@ -1,3 +1,4 @@
+#include "IncludeManager.h"
 #if defined(SENSORMODULE) || defined(PMMODULE)
 #include <Wire.h>
 #include "HardwareDevices.h"
@@ -63,10 +64,10 @@ float SensorOPT300x::measureValue(MeasureType iMeasureType)
 bool SensorOPT300x::begin()
 {
     printDebug("Starting sensor OPT300x... ");
-#ifdef SENSOR_I2C_OPT300x
-    gWire = SENSOR_I2C_OPT300x;
-    gWire.begin();
-#endif
+// #ifdef SENSOR_I2C_OPT300x
+//     gWire = SENSOR_I2C_OPT300x;
+//     gWire.begin();
+// #endif
     bool lResult = Sensor::begin();
     if (lResult) {
         OPT300xConfig lConfig;

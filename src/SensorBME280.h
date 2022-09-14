@@ -1,4 +1,5 @@
 #pragma once
+#include "IncludeManager.h"
 #ifdef SENSORMODULE
 #include <Adafruit_BME280.h>
 #include "Sensor.h"

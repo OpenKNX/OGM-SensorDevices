@@ -1,4 +1,5 @@
 #pragma once
+#include "IncludeManager.h"
 #ifdef SENSORMODULE
 #include <SparkFun_SCD30_Arduino_Library.h>
 #include "Sensor.h"

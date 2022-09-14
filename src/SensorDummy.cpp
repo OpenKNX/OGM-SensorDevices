@@ -1,3 +1,4 @@
+#include "IncludeManager.h"
 #if defined(SENSORMODULE) || defined(PMMODULE)
 #include <Wire.h>
 #include "SensorDummy.h"

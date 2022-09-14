@@ -1,3 +1,4 @@
+#include "IncludeManager.h"
 #if defined(SENSORMODULE) || defined(PMMODULE)
 #include <Arduino.h>
 #include <Wire.h>
@@ -8,6 +9,7 @@
 uint8_t Sensor::sNumSensors = 0;
 uint8_t Sensor::sMaxI2cSpeed = 255;
 Sensor* Sensor::sSensors[SENSOR_COUNT];
+TwoWire &Sensor::sWire = Wire;
 
 Sensor* newSensor(uint8_t iSensorClass, MeasureType iMeasureType);
 
@@ -44,10 +46,16 @@ Sensor::Sensor(uint16_t iMeasureTypes, uint8_t iAddress)
     }
     gMeasureTypes = iMeasureTypes;
     gAddress = iAddress;
+    gWire = sWire;
     sSensors[sNumSensors++] = this;
 };
 
 // static
+void Sensor::SetWire(TwoWire &iWire) 
+{
+    sWire = iWire;
+}
+
 void Sensor::sensorLoop() {
     for (uint8_t lCounter = 0; lCounter < sNumSensors; lCounter++)
         sSensors[lCounter]->sensorLoopInternal();
@@ -65,8 +73,8 @@ bool Sensor::beginSensors()
     bool lResult = true;
     // fist we start i2c with the right speed
     if (sNumSensors > 0) {
-        Wire.begin();
-        Wire.setClock(sMaxI2cSpeed * 100000);
+        sWire.begin();
+        sWire.setClock(sMaxI2cSpeed * 100000);
         delay(1);
         // we use standard Wakeup procedure to start single sensors
         // for (uint8_t lCounter = 0; lCounter < sNumSensors; lCounter++)

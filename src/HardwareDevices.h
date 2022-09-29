@@ -335,6 +335,25 @@
 #define I2C_1WIRE_DEVICE_ADDRESSS 0x18 // Address of first DS2482 1-Wire-Busmaster chip, used are 0x19, 0x1A, 0x1B
 #define I2C_EEPROM_DEVICE_ADDRESSS 0x50 // Address of 24LC256 eeprom chip
 #endif
+// ModbusGateway from Masifi, SAMD hardware
+#ifdef BOARD_MASIFI_MODBUS_SAMD
+#define PROG_LED_PIN 9
+#define PROG_LED_PIN_ACTIVE_ON HIGH
+#define PROG_BUTTON_PIN A1
+#define INFO_LED_PIN 13
+#define INFO_LED_PIN_ACTIVE_ON HIGH
+#define I2C_EEPROM_DEVICE_ADDRESSS 0x50 // Address of 24LC256 eeprom chip
+#endif
+// ModbusGateway from Masifi, RP2040 hardware
+#ifdef BOARD_MASIFI_MODBUS_RP2040
+#define PROG_LED_PIN 9
+#define PROG_LED_PIN_ACTIVE_ON HIGH
+#define PROG_BUTTON_PIN A1
+#define INFO_LED_PIN 13
+#define INFO_LED_PIN_ACTIVE_ON HIGH
+#define KNX_UART_TX_PIN 12
+#define KNX_UART_RX_PIN 13
+#endif
 #endif
 // board independent definitions
 

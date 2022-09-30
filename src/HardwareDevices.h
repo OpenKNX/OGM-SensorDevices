@@ -337,7 +337,6 @@
 #endif
 // ModbusGateway from Masifi, SAMD hardware
 #ifdef BOARD_MASIFI_MODBUS_SAMD
-#define PROG_LED_PIN 9
 #define PROG_LED_PIN_ACTIVE_ON HIGH
 #define PROG_BUTTON_PIN A1
 #define INFO_LED_PIN 13
@@ -346,7 +345,6 @@
 #endif
 // ModbusGateway from Masifi, RP2040 hardware
 #ifdef BOARD_MASIFI_MODBUS_RP2040
-#define PROG_LED_PIN 9
 #define PROG_LED_PIN_ACTIVE_ON HIGH
 #define PROG_BUTTON_PIN A1
 #define INFO_LED_PIN 13

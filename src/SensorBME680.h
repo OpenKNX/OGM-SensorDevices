@@ -1,5 +1,5 @@
 #pragma once
-#include "IncludeManager.h"
+// #include "IncludeManager.h"
 #ifdef SENSORMODULE
 
 #include "bsec/bsec.h"

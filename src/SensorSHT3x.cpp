@@ -1,4 +1,4 @@
-#include "IncludeManager.h"
+// #include "IncludeManager.h"
 #ifdef SENSORMODULE
 #include <Wire.h>
 #include "SensorSHT3x.h"

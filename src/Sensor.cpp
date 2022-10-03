@@ -1,4 +1,4 @@
-#include "IncludeManager.h"
+// #include "IncludeManager.h"
 #if defined(SENSORMODULE) || defined(PMMODULE)
 #include <Arduino.h>
 #include <Wire.h>

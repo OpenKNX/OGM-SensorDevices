@@ -1,6 +1,6 @@
 #pragma once
 #include <Helper.h>
-#include <HardwareDevices.h>
+#include <hardware.h>
 #ifdef COUNT_1WIRE_CHANNEL
 
 /**

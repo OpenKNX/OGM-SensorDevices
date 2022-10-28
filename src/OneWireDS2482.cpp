@@ -1,7 +1,7 @@
 #include <Wire.h>
 #include <Arduino.h>
 #include "Helper.h"
-#include "HardwareDevices.h"
+#include "hardware.h"
 #ifdef COUNT_1WIRE_CHANNEL
 #include "OneWireDS2482.h"
 #include "OneWireDS18B20.h"

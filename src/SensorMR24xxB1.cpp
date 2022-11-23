@@ -236,32 +236,67 @@ void SensorMR24xxB1::uartGetPacket()
     {
         // Waiting for packet sync byte 0x55
         case GET_SYNC_STATE:
-            // SERIAL_DEBUG.println(u8RxByte);
             if (SERIAL_HF.available() > 0 && SERIAL_HF.readBytes(&lRxByte, 1) == 1)
                 if (lRxByte == MESSAGE_HEAD)
-                {
-                    mPacketState = GET_PACKET_STATE;
-                    mBuffer[0] = lRxByte;
-                    mBufferIndex = 1;
-                }
+                    mPacketState = PROCESS_SYNC_STATE;
             break;
+        case PROCESS_SYNC_STATE:
+            // SERIAL_DEBUG.println(MESSAGE_HEAD);
+            mPacketState = GET_PACKET_STATE;
+            mBuffer[0] = MESSAGE_HEAD;
+            mBufferIndex = 1;
         case GET_PACKET_STATE:
-            if (SERIAL_HF.available() > 0 && SERIAL_HF.readBytes(&lRxByte, 1) == 1)
+            // uncomment following while if scheduler is implemented in future
+            // which ensures a more regular call to SERIAL_HF
+            while (mPacketState == GET_PACKET_STATE)
             {
-                mBuffer[mBufferIndex++] = lRxByte;
-                if (mBufferIndex > mBuffer[BUFFER_POS_LENGTH])
-                    mPacketState = CHECK_CRC16D_STATE;
+                if (SERIAL_HF.available() > 0 && SERIAL_HF.readBytes(&lRxByte, 1) == 1)
+                {
+                    // SERIAL_DEBUG.println(lRxByte);
+                    mBuffer[mBufferIndex++] = lRxByte;
+                    if (lRxByte == MESSAGE_HEAD)
+                        mPacketState = PROCESS_SYNC_STATE;
+                    else if (mBufferIndex >= 0x6)
+                        mPacketState = GET_PACKET_DATA;
+                    else if (mBufferIndex > mBuffer[BUFFER_POS_LENGTH])
+                        mPacketState = GET_SYNC_STATE;
+                }
+                else
+                    break;
             }
-            else
-                mPacketState = GET_SYNC_STATE;
+            break;
+        case GET_PACKET_DATA:
+            // uncomment following while if scheduler is implemented in future
+            // which ensures a more regular call to SERIAL_HF
+            while (mPacketState == GET_PACKET_DATA)
+            {
+                if (SERIAL_HF.available() > 0 && SERIAL_HF.readBytes(&lRxByte, 1) == 1)
+                {
+                    // SERIAL_DEBUG.println(lRxByte);
+                    mBuffer[mBufferIndex++] = lRxByte;
+                    // Data and CRC might contain 0x55, so we cannot eval it as new MESSAGE_HEAD
+                    if (mBufferIndex > mBuffer[BUFFER_POS_LENGTH])
+                        mPacketState = CHECK_CRC16D_STATE;
+                    else if (mBufferIndex >= 0xf)
+                        mPacketState = GET_SYNC_STATE;
+                }
+                else
+                    break;
+            }
             break;
         case CHECK_CRC16D_STATE:
-            calculateCrcLoHi(mBuffer, mBufferIndex - 2, lCRCLo, lCRCHi);
-            if (mBuffer[mBufferIndex - 2] == lCRCLo && mBuffer[mBufferIndex - 1] == lCRCHi)
-                mPacketState = PROCESS_PACKET_STATE;
-            else
+            if (mBuffer[BUFFER_POS_LENGTH] < 7)
                 mPacketState = GET_SYNC_STATE;
-            break;
+            else
+                calculateCrcLoHi(mBuffer, mBufferIndex - 2, lCRCLo, lCRCHi);
+            if (mPacketState == CHECK_CRC16D_STATE)
+            {
+                if (mBuffer[mBufferIndex - 2] == lCRCLo && mBuffer[mBufferIndex - 1] == lCRCHi)
+                    mPacketState = PROCESS_PACKET_STATE;
+                else
+                    mPacketState = GET_SYNC_STATE;
+                break;
+            }
         case PROCESS_PACKET_STATE:
             getSensorData();
             mPacketState = GET_SYNC_STATE;

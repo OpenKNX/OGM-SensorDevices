@@ -99,7 +99,7 @@ uint8_t SensorVEML7700::getI2cSpeed()
 bool SensorVEML7700::getSensorData()
 {
     mLux = mVeml.readLux(VEML_LUX_NORMAL_NOWAIT);
-    return true;
+    return (mLux >= 0.0);
 }
 
 #endif

@@ -63,8 +63,12 @@ class SensorMR24xxB1 : public Sensor
     {
         //! Waiting for the synchronisation byte 0x55
         GET_SYNC_STATE = 0,
-        //! Reads the whole sensor message in our buffer
+        //! Reset Buffer and prepare further processing
+        PROCESS_SYNC_STATE,
+        //! Reads the message header in our buffer
         GET_PACKET_STATE,
+        //! Reads message data in our buffer
+        GET_PACKET_DATA,
         //! Checking the info CRC8 checksum.
         CHECK_CRC16D_STATE,
         //! Process the correctly received packet

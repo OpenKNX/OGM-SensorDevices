@@ -1,27 +1,39 @@
 #pragma once
 // #include "IncludeManager.h"
-#ifdef SENSORMODULE
+// #ifdef SENSORMODULE
 
 #include "bsec/bsec.h"
 #include "Sensor.h"
 #include "EepromManager.h"
+#include "IFlashUserData.h"
 
 #define BME680_I2C_ADDR (0x76)
+#define BME680_CALIBRATION_DATA_SIZE 454
+#define BME680_SAVE_SIZE 144
 
-class SensorBME680 : public Sensor, protected Bsec
+class SensorBME680 : public Sensor, public IFlashUserData, protected Bsec
 {
 
 protected:
     uint8_t getSensorClass() override; // returns unique ID for this sensor type
     float measureValue(MeasureType iMeasureType) override;
-    void sensorSaveState() override;
+    // void sensorSaveState() override;
     void sensorLoopInternal() override;
     bool checkIaqSensorStatus(void);
     void sensorLoadState();
-    void sensorUpdateState();
+    // void sensorUpdateState();
     uint32_t stateUpdateTimer = 0;
     static bsec_virtual_sensor_t sensorList[];
     bme680_delay_fptr_t mDelayCallback = 0;
+
+    const uint8_t *mFlashBuffer = nullptr; // Pointer to stored flash content
+    // IFlashUserData
+    virtual const uint8_t *restore(const uint8_t *iBuffer) override;
+    virtual uint8_t *save(uint8_t *iBuffer) override;
+    virtual uint16_t saveSize() override;
+    // IFlashUserData* next() override; should not be overridden except you know what you do
+    virtual const char* name() override;
+    // end of IFlashUserData
 
   public:
     SensorBME680(uint16_t iMeasureTypes);
@@ -37,8 +49,8 @@ protected:
 
   private:
     static uint8_t sMagicWord[];
-    static uint8_t bsec_config_iaq[454];
+    static uint8_t bsec_config_iaq[BME680_CALIBRATION_DATA_SIZE];
     EepromManager *mEEPROM;
     uint8_t mLastAccuracy = 0;
 };
-#endif
+// #endif

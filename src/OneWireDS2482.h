@@ -1,5 +1,6 @@
 #pragma once
 #include <inttypes.h>
+#include <Wire.h>
 #include "OneWire.h"
 #ifdef COUNT_1WIRE_CHANNEL
 #include "OneWireSearch.h"
@@ -12,10 +13,10 @@
 
 #define DS2482_COMMAND_SRP 0xE1 // Set read pointer
 #define DS2482_POINTER_STATUS 0xF0
-#define DS2482_STATUS_BUSY 0x01
-#define DS2482_STATUS_PPD 0x02
-#define DS2482_STATUS_SD 0x04
-#define DS2482_STATUS_LL 0x08
+#define DS2482_STATUS_BUSY 0x01 // 1-Wire line is busy
+#define DS2482_STATUS_PPD 0x02 // 
+#define DS2482_STATUS_SD 0x04 // short wire
+#define DS2482_STATUS_LL 0x08 // logic level of 1W-Line is 1
 #define DS2482_STATUS_RST 0x10
 #define DS2482_STATUS_SBR 0x20
 #define DS2482_STATUS_TSB 0x40
@@ -71,7 +72,7 @@ class OneWireDS2482
 
     OneWireDS2482(foundNewId iNewIdCallback, loopCallback iLoopCallback);
 
-    bool setup(uint8_t iInstanceId, uint8_t iI2cAddressOffset, bool iSearchNewDevices);
+    bool setup(uint8_t iInstanceId, uint8_t iI2cAddressOffset, bool iSearchNewDevices, TwoWire &iWire);
     bool setupTiming(uint8_t itRSTL, uint8_t itMSP, uint8_t itW0L, uint8_t itREC0, uint8_t iRWPU);
     void loop();
 
@@ -123,6 +124,7 @@ class OneWireDS2482
     bool ProcessNormalBusUse();
     bool ProcessIButton();
     void checkSensorTypesToProcess();
+    TwoWire &mWire = Wire;
 
     OneWireSearch *mSearchPrio = NULL;
     OneWireSearch *mSearchNormal = NULL;

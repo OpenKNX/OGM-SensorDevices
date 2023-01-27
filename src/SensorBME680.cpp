@@ -2,11 +2,11 @@
 // #ifdef SENSORMODULE
 #include "SensorBME680.h"
 #include "bsec/bme680/bme680.h"
-#include "EepromManager.h"
+// #include "EepromManager.h"
 #include "oknx.h"
 
 #define STATE_SAVE_PERIOD  UINT32_C(360 * 60 * 1000) // 360 minutes - 4 times a day
-#define EEPROM_BME680_START_ADDRESS 0xC80
+// #define EEPROM_BME680_START_ADDRESS 0xC80
 
 SensorBME680::SensorBME680(uint16_t iMeasureTypes)
     : Sensor(iMeasureTypes, BME680_I2C_ADDR), Bsec()
@@ -54,7 +54,7 @@ uint8_t SensorBME680::bsec_config_iaq[BME680_CALIBRATION_DATA_SIZE] = {
 //  3, 7, 4, 1, 61, 0, 0, 0, 0, 0, 0, 0, 174, 1, 0, 0, 48, 0, 1, 0, 0, 168,  19, 73, 64, 49, 119, 76, 0, 0, 225, 68, 137, 65, 0, 63, 205, 204, 204, 62, 0, 0, 64, 63, 205, 204, 204, 62, 0, 0, 0, 0,   0, 80, 5,  95, 0, 0, 0, 0, 0, 0, 0, 0, 28, 0, 2, 0, 0, 244, 1, 225, 0, 25, 0, 0, 128, 64, 0, 0, 32, 65, 144, 1, 0, 0, 112, 65, 0, 0, 0, 63, 16, 0, 3, 0, 10, 215, 163, 60, 10, 215, 35, 59, 10, 215, 35, 59, 9, 0, 5, 0, 0, 0, 0, 0, 1, 88, 0, 9, 0, 229, 208, 34, 62, 0, 0, 0, 0, 0, 0, 0, 0, 218, 27, 156, 62, 225, 11, 67, 64, 0, 0, 160, 64, 0, 0, 0, 0, 0, 0, 0, 0, 94, 75, 72, 189, 93, 254, 159, 64, 66, 62, 160, 191, 0, 0, 0, 0, 0, 0, 0, 0, 33, 31, 180, 190, 138, 176, 97, 64, 65, 241, 99, 190, 0, 0, 0, 0, 0, 0, 0, 0, 167, 121, 71, 61, 165, 189, 41, 192, 184, 30, 189, 64, 12, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 229, 0, 254, 0, 2, 1, 5, 48, 117, 100, 0, 44, 1, 112, 23, 151, 7, 132, 3, 197, 0, 92, 4, 144, 1, 64, 1, 64, 1, 144, 1, 48, 117, 48, 117, 48, 117, 48, 117, 100, 0, 100, 0, 100, 0, 48, 117, 48, 117, 48, 117, 100, 0, 100, 0, 48, 117, 48, 117, 100, 0, 100, 0, 100, 0, 100, 0, 48, 117, 48, 117, 48, 117, 100, 0, 100, 0, 100, 0, 48, 117, 48, 117, 100, 0, 100, 0, 44, 1, 44, 1, 44, 1, 44, 1, 44, 1, 44, 1, 44, 1, 44, 1, 44, 1, 44, 1, 44, 1, 44, 1, 44, 1, 44, 1, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 112, 23, 112, 23, 112, 23, 112, 23, 112, 23, 112, 23, 112, 23, 112, 23, 112, 23, 112, 23, 112, 23, 112, 23, 112, 23, 112, 23, 255, 255, 255, 255, 255, 255, 255, 255, 220, 5, 220, 5, 220, 5, 255, 255, 255, 255, 255, 255, 220, 5, 220, 5, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 44, 1, 0, 0, 0, 0, 222, 38, 0, 0
 };
 
-// EEPROM memory start id
+// Flash memory start id
 uint8_t SensorBME680::sMagicWord[] = {0xCA, 0xFE, 0x3D, 0x76};
 
 uint8_t SensorBME680::getSensorClass()
@@ -199,12 +199,12 @@ void SensorBME680::sensorLoadState()
         Bsec::setState((uint8_t *)mFlashBuffer + 4);
         bool lResult = checkIaqSensorStatus();
         if (lResult) {
-            printDebug("BME680 was successfully calibrated from EEPROM\n");
+            printDebug("BME680 was successfully calibrated from Flash\n");
         } else {
-            printDebug("*** BME680 calibration from EEPROM failed! ***\n");
+            printDebug("*** BME680 calibration from Flash failed! ***\n");
         }
     } else {
-        printDebug("BME680 calibration data in EEPROM has wrong ID and will be deleted!\n");
+        printDebug("BME680 calibration data in Flash has wrong ID and will be deleted!\n");
     }
 }
 

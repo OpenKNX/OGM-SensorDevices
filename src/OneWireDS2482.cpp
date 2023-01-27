@@ -23,9 +23,11 @@ OneWireDS2482::OneWireDS2482(foundNewId iNewIdCallback, loopCallback iLoopCallba
     mError = 0;
 }
 
-bool OneWireDS2482::setup(uint8_t iInstanceId, uint8_t iI2cAddressOffset, bool iSearchNewDevices)
+bool OneWireDS2482::setup(uint8_t iInstanceId, uint8_t iI2cAddressOffset, bool iSearchNewDevices, TwoWire &iWire)
 {
     mI2cAddress = I2C_1WIRE_DEVICE_ADDRESSS | iI2cAddressOffset;
+    mWire = iWire;
+    // mWire.begin();
     gInstance = iInstanceId;
     if (checkI2cPresence())
     {
@@ -319,8 +321,8 @@ bool OneWireDS2482::selectChannel(uint8_t channel)
 
 
 	begin();
-	Wire.write(0xc3);
-	Wire.write(ch);
+	mWire.write(0xc3);
+	mWire.write(ch);
 	end();
 	
 
@@ -342,23 +344,23 @@ uint8_t OneWireDS2482::getError()
 // Helper functions to make dealing with I2C side easier
 void OneWireDS2482::begin()
 {
-	Wire.beginTransmission(mI2cAddress);
+	mWire.beginTransmission(mI2cAddress);
 }
 
 uint8_t OneWireDS2482::end()
 {
-	return Wire.endTransmission();
+	return mWire.endTransmission();
 }
 
 void OneWireDS2482::writeByte(uint8_t data)
 {
-	Wire.write(data); 
+	mWire.write(data); 
 }
 
 uint8_t OneWireDS2482::readByte()
 {
-	Wire.requestFrom(mI2cAddress,1u);
-	return Wire.read();
+	mWire.requestFrom(mI2cAddress,1u);
+	return mWire.read();
 }
 
 // Simply starts and ends an Wire transmission

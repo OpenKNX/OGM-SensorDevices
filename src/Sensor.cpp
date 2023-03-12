@@ -196,3 +196,14 @@ uint8_t Sensor::getError() {
     return lResult;
 }
 #endif
+
+std::string Sensor::logPrefix()
+{
+    return "Sensor";
+}
+
+void Sensor::logResult(bool iResult)
+{
+    logDebugP(iResult ? "OK" : "FAIL");
+}
+

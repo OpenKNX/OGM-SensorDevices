@@ -34,14 +34,14 @@ float SensorSCD30::measureValue(MeasureType iMeasureType)
 }
 
 bool SensorSCD30::begin() {
-    printDebug("Starting sensor SCD30... ");
+    logDebugP("Starting sensor SCD30... ");
     bool lResult = SCD30::begin();
     if (lResult) 
     {
         lResult = Sensor::begin();
         setTemperatureOffset(-gTempOffset);
     }
-    printResult(lResult);
+    logResult(lResult);
     return lResult;
 }
 

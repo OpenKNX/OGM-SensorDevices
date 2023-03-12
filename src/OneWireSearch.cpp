@@ -221,7 +221,7 @@ void OneWireSearch::manageSearchCounter(OneWireSearch::SearchState iState) {
 //             lDuration = millis() - mDuration;
 // 			if (abs(mDurationOld - lDuration) > 5) { 
 // 				// print only if there is a big difference between cycles
-//                 printDebug("(0x%X) Finished search %s (%s), took %d ms, max blocking was %d ms\n", mBM->mI2cAddress, mSearchMode == Family ? "Family" : "NoFamily", mSearchResultId, lDuration, mMaxDelay);
+//                 logDebugP("(0x%X) Finished search %s (%s), took %d ms, max blocking was %d ms\n", mBM->mI2cAddress, mSearchMode == Family ? "Family" : "NoFamily", mSearchResultId, lDuration, mMaxDelay);
 //                 mDurationOld = lDuration;
 //             }
 // #endif

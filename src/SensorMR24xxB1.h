@@ -90,7 +90,7 @@ class SensorMR24xxB1 : public Sensor
     void getMoveState();
     void getMoveSpeed();
     bool getSensorData();
-    void printDebugData(const char *iMessage, uint8_t iLength);
+    void logDebugPData(const char *iMessage, uint8_t iLength);
 
   protected:
     uint8_t mPresence = RADAR_NoValue;

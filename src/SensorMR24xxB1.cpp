@@ -339,9 +339,9 @@ bool SensorMR24xxB1::checkSensorConnection()
 
 bool SensorMR24xxB1::begin()
 {
-    printDebug("Starting sensor MR24xxB1 (Presence)... ");
+    logDebugP("Starting sensor MR24xxB1 (Presence)... ");
     bool lResult = Sensor::begin();
-    printResult(lResult);
+    logResult(lResult);
     return lResult;
 }
 
@@ -397,7 +397,7 @@ void SensorMR24xxB1::getMoveSpeed()
     SERIAL_DEBUG.println(mMoveSpeed);
 }
 
-void SensorMR24xxB1::printDebugData(const char *iMessage, uint8_t iLength)
+void SensorMR24xxB1::logDebugPData(const char *iMessage, uint8_t iLength)
 {
     SERIAL_DEBUG.print(iMessage);
     for (int i = 0; i < iLength; i++)
@@ -421,16 +421,16 @@ bool SensorMR24xxB1::getSensorData()
                     switch (mBuffer[BUFFER_POS_AD2])
                     {
                         case AD2_DEVICE_ID: // Device ID 12 Bytes
-                            printDebugData("Device ID: ", 12);
+                            logDebugPData("Device ID: ", 12);
                             break;                 // ENDE 0x01: //Device ID 12Bytes
                         case AD2_SOFTWARE_VERSION: // SW Version 10Bytes
-                            printDebugData("SW_Version: ", 10);
+                            logDebugPData("SW_Version: ", 10);
                             break;                 // ENDE 0x02: //SW Version 10Bytes
                         case AD2_HARDWARE_VERSION: // HW Version 8Bytes
-                            printDebugData("HW-Version: ", 8);
+                            logDebugPData("HW-Version: ", 8);
                             break;                 // ENDE 0x03: //HW Version 8Bytes
                         case AD2_PROTOCOL_VERSION: // Protocol version 8Bytes
-                            printDebugData("Prot Version: ", 8);
+                            logDebugPData("Prot Version: ", 8);
                             break; // ENDE 0x04: //Protocol version 8Bytes
                     }
                     break;                  // ENDE 0x01: //Reporting module identification
@@ -521,7 +521,7 @@ bool SensorMR24xxB1::getSensorData()
                     switch (mBuffer[BUFFER_POS_AD2])
                     {
                         case AD2_SOFTWARE_VERSION: // SW Version 10Bytes
-                            printDebugData("SW_Version: ", 10);
+                            logDebugPData("SW_Version: ", 10);
                             break; // ENDE 0x02: //SW Version 10Bytes
                     }
                     break;                  // ENDE 0x01: // Reporting module identification

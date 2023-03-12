@@ -64,7 +64,7 @@ float SensorVL53L1X::measureValue(MeasureType iMeasureType)
 
 bool SensorVL53L1X::begin()
 {
-    printDebug("Starting sensor VL53L1X... ");
+    logDebugP("Starting sensor VL53L1X... ");
     this->setTimeout(500);
     bool lResult = this->init();
     if (lResult) {
@@ -82,7 +82,7 @@ bool SensorVL53L1X::begin()
         // this->startContinuous(50);
         lResult = Sensor::begin();
     }
-    printResult(lResult);
+    logResult(lResult);
     return lResult;
 }
 

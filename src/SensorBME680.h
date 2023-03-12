@@ -42,6 +42,7 @@ protected:
     void delayCallback(bme680_delay_fptr_t iDelayCallback);
     void setMagicKeyOffset(uint8_t iMagicKeyOffset);
     bool prepareTemperatureOffset(float iTemp) override;
+    virtual std::string logPrefix() override;
 
   private:
     static uint8_t sMagicWord[];

@@ -31,7 +31,7 @@ void SensorBME280::sensorLoopInternal() {
             if (!isReadingCalibration()) {
                 initFinalize();
                 gSensorState = Finalize;
-                printResult(true);
+                logResult(true);
             }
             pSensorStateDelay = millis();
         }
@@ -88,12 +88,12 @@ float SensorBME280::measureValue(MeasureType iMeasureType) {
 }
 
 bool SensorBME280::begin() {
-    printDebug("Starting sensor BME280... ");
+    logDebugP("Starting sensor BME280... ");
     _i2caddr = gAddress;
     _wire = &gWire;
     bool lResult = Sensor::begin();
     gSensorState = Wakeup;
-    // printResult(lResult);
+    // logResult(lResult);
     return lResult;
 }
 

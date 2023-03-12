@@ -125,7 +125,7 @@ bool OneWireDS18B20::updateTemp()
             mTemp = (float)lTempRaw / 16.0;
         }
     #ifdef DebugInfoTemp
-        printDebug("Temp = %0.1f°C --- ", mTemp);
+        logDebugP("Temp = %0.1f°C --- ", mTemp);
         printHEX("Id: ", Id(), 7);
     #endif
         lResult = true;

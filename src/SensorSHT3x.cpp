@@ -73,9 +73,9 @@ float SensorSHT3x::measureValue(MeasureType iMeasureType)
 bool SensorSHT3x::begin()
 {
     bool lResult = false;
-    printDebug("Starting sensor SHT3x... ");
+    logDebugP("Starting sensor SHT3x... ");
     lResult = Sensor::begin();
-    printResult(lResult);
+    logResult(lResult);
     return lResult;
 }
 

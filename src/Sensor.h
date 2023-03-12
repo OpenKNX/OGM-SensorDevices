@@ -1,6 +1,7 @@
 #pragma once
 // #include <knx/bits.h>
 #include <Wire.h>
+#include "OpenKNX.h"
 
 #define SENSOR_COUNT 5
 
@@ -86,6 +87,7 @@ class Sensor
     // non blocking restart approach for a sensor
     void restartSensor();
     virtual bool begin(); // first initialization, may be blocking, should be called druing setup(), not during loop()
+    void logResult(bool iResult);
 
   public:
     // static 
@@ -101,5 +103,6 @@ class Sensor
     
     virtual uint8_t getI2cSpeed();
     virtual bool prepareTemperatureOffset(float iTempOffset);
+    virtual std::string logPrefix();
 };
 #endif

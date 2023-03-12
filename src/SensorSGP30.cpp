@@ -51,7 +51,7 @@ void SensorSGP30::sensorLoopInternal()
             if (pSensorStateDelay == 0 || delayCheck(pSensorStateDelay, 1000))
             {
                 pSensorStateDelay = millis();
-                printDebug("Restarting Sensor BME680... ");
+                logDebugP("Restarting Sensor BME680... ");
                 // Bsec::setConfig(bsec_config_iaq);
                 lResult = checkIaqSensorStatus();
                 if (lResult)
@@ -71,7 +71,7 @@ void SensorSGP30::sensorLoopInternal()
                 pSensorStateDelay = millis();
                 if (lResult)
                     // Bsec::run();
-                printResult(lResult);
+                logResult(lResult);
             }
             break;
         case Finalize:
@@ -126,7 +126,7 @@ float SensorSGP30::measureValue(MeasureType iMeasureType)
 
 bool SensorSGP30::begin()
 {
-    printDebug("Starting sensor BME680... ");
+    logDebugP("Starting sensor BME680... ");
     bool lResult = checkIaqSensorStatus();
     if (lResult) {
         lResult = checkIaqSensorStatus();
@@ -144,7 +144,7 @@ bool SensorSGP30::begin()
         lResult = Sensor::begin();
     gSensorState = Finalize;
     pSensorStateDelay = millis();
-    printResult(lResult);
+    logResult(lResult);
     return lResult;
 }
 
@@ -157,21 +157,21 @@ bool SensorSGP30::checkIaqSensorStatus(void)
 {
     // if (Bsec::status < BSEC_OK)
     // {
-    //     printDebug("BSEC error code : %d\n", Bsec::status);
+    //     logDebugP("BSEC error code : %d\n", Bsec::status);
     //     return false;
     //     // fatalError(-iaqSensor.status, "BSEC error code");
     // }
     // else if (Bsec::status > BSEC_OK)
-    //     printDebug("BSEC warning code : %d\n", Bsec::status);
+    //     logDebugP("BSEC warning code : %d\n", Bsec::status);
 
     // if (Bsec::bme680Status < BME680_OK)
     // {
-    //     printDebug("BME680 error code : %d\n", Bsec::bme680Status);
+    //     logDebugP("BME680 error code : %d\n", Bsec::bme680Status);
     //     return false;
     //     // fatalError(-iaqSensor.bme680Status, "BME680 error code");
     // }
     // else if (Bsec::bme680Status > BME680_OK)
-    //     printDebug("BME680 warning code : %d\n", Bsec::bme680Status);
+    //     logDebugP("BME680 warning code : %d\n", Bsec::bme680Status);
 
     return true;
 }
@@ -180,7 +180,7 @@ void SensorSGP30::sensorLoadState()
 {
     uint8_t buffer[144]; //[BSEC_MAX_STATE_BLOB_SIZE];
     // Existing state in EEPROM
-    printDebug("Reading BME680 state from EEPROM\n");
+    logDebugP("Reading BME680 state from EEPROM\n");
     mEEPROM->prepareRead(EEPROM_BME680_START_ADDRESS, 144);
     if (gWire.available()) gWire.readBytes(buffer, 144);
 
@@ -194,16 +194,16 @@ void SensorSGP30::sensorLoadState()
         // Bsec::setState(buffer + 4);
         bool lResult = checkIaqSensorStatus();
         if (lResult) {
-            printDebug("BME680 was successfully calibrated from EEPROM\n");
+            logDebugP("BME680 was successfully calibrated from EEPROM\n");
         } else {
             // if sensor state was not correctly loaded, we delete EEPROM data 
             mEEPROM->beginPage(EEPROM_BME680_START_ADDRESS);
             mEEPROM->write4Bytes(sMagicWord, 1); // this is correct, it deletes the last 3 bytes of magic word
             mEEPROM->endPage();
-            printDebug("*** BME680 calibration from EEPROM failed! ***\n");
+            logDebugP("*** BME680 calibration from EEPROM failed! ***\n");
         }
     } else {
-        printDebug("BME680 calibration data in EEPROM has wrong ID and will be deleted!\n");
+        logDebugP("BME680 calibration data in EEPROM has wrong ID and will be deleted!\n");
     }
 }
 
@@ -220,7 +220,7 @@ void SensorSGP30::sensorSaveState()
     // Bsec::getState(buffer + 4);
     bool lCheck = checkIaqSensorStatus();
     if (lCheck) { 
-    printDebug("Writing BME680 state to EEPROM\n");
+    logDebugP("Writing BME680 state to EEPROM\n");
 
     for (uint8_t lCount = 0; lCount < 144; lCount += 16)
         {

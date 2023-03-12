@@ -65,9 +65,9 @@ float SensorIAQCore::measureValue(MeasureType iMeasureType)
 bool SensorIAQCore::begin()
 {
     bool lResult = false;
-    printDebug("Starting sensor IAQCore... ");
+    logDebugP("Starting sensor IAQCore... ");
     lResult = Sensor::begin();
-    printResult(lResult);
+    logResult(lResult);
     return lResult;
 }
 

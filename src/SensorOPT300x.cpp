@@ -63,7 +63,7 @@ float SensorOPT300x::measureValue(MeasureType iMeasureType)
 
 bool SensorOPT300x::begin()
 {
-    printDebug("Starting sensor OPT300x... ");
+    logDebugP("Starting sensor OPT300x... ");
 // #ifdef SENSOR_I2C_OPT300x
 //     gWire = SENSOR_I2C_OPT300x;
 //     gWire.begin();
@@ -77,7 +77,7 @@ bool SensorOPT300x::begin()
         lConfig.latch = OPT300X_CONF_LATCH_WINDOW;
         writeConfig(lConfig);
     }
-    printResult(lResult);
+    logResult(lResult);
     return lResult;
 }
 

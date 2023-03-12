@@ -91,7 +91,7 @@ void SensorBME680::sensorLoopInternal() {
                 pSensorStateDelay = millis();
                 if (lResult)
                     Bsec::run();
-                printResult(lResult);
+                logResult(lResult);
             }
             break;
         case Finalize:
@@ -144,7 +144,7 @@ float SensorBME680::measureValue(MeasureType iMeasureType) {
 }
 
 bool SensorBME680::begin() {
-    printDebug("Starting sensor BME680... ");
+    logDebugP("Starting sensor BME680... ");
     bool lResult = Sensor::begin();
     if (lResult) {
         Bsec::begin(gAddress, gWire, mDelayCallback);
@@ -171,21 +171,21 @@ bool SensorBME680::checkIaqSensorStatus(void)
 {
     if (Bsec::status < BSEC_OK)
     {
-        printDebug("BSEC error code : %d\n", Bsec::status);
+        logDebugP("BSEC error code : %d\n", Bsec::status);
         return false;
         // fatalError(-iaqSensor.status, "BSEC error code");
     }
     else if (Bsec::status > BSEC_OK)
-        printDebug("BSEC warning code : %d\n", Bsec::status);
+        logDebugP("BSEC warning code : %d\n", Bsec::status);
 
     if (Bsec::bme680Status < BME680_OK)
     {
-        printDebug("BME680 error code : %d\n", Bsec::bme680Status);
+        logDebugP("BME680 error code : %d\n", Bsec::bme680Status);
         return false;
         // fatalError(-iaqSensor.bme680Status, "BME680 error code");
     }
     else if (Bsec::bme680Status > BME680_OK)
-        printDebug("BME680 warning code : %d\n", Bsec::bme680Status);
+        logDebugP("BME680 warning code : %d\n", Bsec::bme680Status);
 
     return true;
 }
@@ -196,12 +196,12 @@ void SensorBME680::sensorLoadState()
         Bsec::setState((uint8_t *)mFlashBuffer);
         bool lResult = checkIaqSensorStatus();
         if (lResult) {
-            printDebug("BME680 was successfully calibrated from Flash\n");
+            logDebugP("BME680 was successfully calibrated from Flash\n");
         } else {
-            printDebug("*** BME680 calibration from Flash failed! ***\n");
+            logDebugP("*** BME680 calibration from Flash failed! ***\n");
         }
     } else {
-        printDebug("BME680 calibration data in Flash has wrong ID and will be deleted!\n");
+        logDebugP("BME680 calibration data in Flash has wrong ID and will be deleted!\n");
     }
 }
 
@@ -218,7 +218,7 @@ void SensorBME680::sensorLoadState()
 //     Bsec::getState(buffer + 4);
 //     bool lCheck = checkIaqSensorStatus();
 //     if (lCheck) { 
-//         printDebug("Writing BME680 state to EEPROM\n");
+//         logDebugP("Writing BME680 state to EEPROM\n");
 
 //         for (uint8_t lCount = 0; lCount < BME680_SAVE_SIZE; lCount += 16) {
 //             mEEPROM->beginPage(EEPROM_BME680_START_ADDRESS + lCount);
@@ -252,11 +252,13 @@ bool SensorBME680::prepareTemperatureOffset(float iTemp)
 void SensorBME680::readFlash(const uint8_t* iBuffer, const uint16_t iSize)
 {
     bool lValid = (iBuffer[0] == 1); //check version first
-    printDebug("BME680: Reading state from Flash\n");
+    openknx.logger.log("test");
+
+    logDebugP("BME680: Reading state from Flash\n");
     // read magic word
     for (uint8_t i = 1; i < 5 && lValid; i++)
     {
-        // printDebug("%02X ", iBuffer[i]);
+        // logDebugP("%02X ", iBuffer[i]);
         lValid = lValid && (iBuffer[i] == sMagicWord[i]);
     }
 
@@ -264,7 +266,7 @@ void SensorBME680::readFlash(const uint8_t* iBuffer, const uint16_t iSize)
 
     if (!lValid)
     {
-        printDebug("BME680: No valid data in Flash\n");
+        logDebugP("BME680: No valid data in Flash\n");
     }
 }
 
@@ -279,7 +281,7 @@ void SensorBME680::writeFlash()
     bool lCheck = checkIaqSensorStatus();
     if (lCheck) 
     { 
-        printDebug("BME680: Written state to Flash\n");
+        logDebugP("BME680: Written state to Flash\n");
     }
 }
 
@@ -288,7 +290,7 @@ uint16_t SensorBME680::flashSize()
     return BME680_SAVE_SIZE;
 }
 
-const char* SensorBME680::name()
+std::string SensorBME680::logPrefix()
 {
     return "BME680";
 }

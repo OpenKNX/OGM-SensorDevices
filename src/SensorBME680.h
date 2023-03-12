@@ -5,13 +5,12 @@
 #include "bsec/bsec.h"
 #include "Sensor.h"
 #include "EepromManager.h"
-#include "IFlashUserData.h"
 
 #define BME680_I2C_ADDR (0x76)
 #define BME680_CALIBRATION_DATA_SIZE 454
 #define BME680_SAVE_SIZE 144
 
-class SensorBME680 : public Sensor, public IFlashUserData, protected Bsec
+class SensorBME680 : public Sensor, protected Bsec
 {
 
 protected:
@@ -27,13 +26,10 @@ protected:
     bme680_delay_fptr_t mDelayCallback = 0;
 
     const uint8_t *mFlashBuffer = nullptr; // Pointer to stored flash content
-    // IFlashUserData
-    virtual const uint8_t *restore(const uint8_t *iBuffer) override;
-    virtual uint8_t *save(uint8_t *iBuffer) override;
-    virtual uint16_t saveSize() override;
-    // IFlashUserData* next() override; should not be overridden except you know what you do
-    virtual const char* name() override;
-    // end of IFlashUserData
+    // new flash handling
+    void readFlash(const uint8_t* iBuffer, const uint16_t iSize);
+    void writeFlash();
+    uint16_t flashSize();
 
   public:
     SensorBME680(uint16_t iMeasureTypes);

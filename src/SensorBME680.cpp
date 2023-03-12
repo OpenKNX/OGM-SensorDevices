@@ -3,7 +3,7 @@
 #include "SensorBME680.h"
 #include "bsec/bme680/bme680.h"
 // #include "EepromManager.h"
-#include "oknx.h"
+#include "OpenKNX.h"
 
 #define STATE_SAVE_PERIOD  UINT32_C(360 * 60 * 1000) // 360 minutes - 4 times a day
 // #define EEPROM_BME680_START_ADDRESS 0xC80
@@ -12,21 +12,18 @@ SensorBME680::SensorBME680(uint16_t iMeasureTypes)
     : Sensor(iMeasureTypes, BME680_I2C_ADDR), Bsec()
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
-    openknx.flashUserData()->first(this);
 }
 
 SensorBME680::SensorBME680(uint16_t iMeasureTypes, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback)
     : Sensor(iMeasureTypes, iAddress), Bsec(), mDelayCallback(iDelayCallback)
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
-    openknx.flashUserData()->first(this);
 }
 
 SensorBME680::SensorBME680(uint16_t iMeasureTypes, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback, uint8_t iMagicKeyOffset)
     : Sensor(iMeasureTypes, iAddress), Bsec(), mDelayCallback(iDelayCallback)
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
-    openknx.flashUserData()->first(this);
     sMagicWord[0] ^= iMagicKeyOffset;
 };
 
@@ -196,7 +193,7 @@ bool SensorBME680::checkIaqSensorStatus(void)
 void SensorBME680::sensorLoadState()
 {  
     if (mFlashBuffer) {
-        Bsec::setState((uint8_t *)mFlashBuffer + 4);
+        Bsec::setState((uint8_t *)mFlashBuffer);
         bool lResult = checkIaqSensorStatus();
         if (lResult) {
             printDebug("BME680 was successfully calibrated from Flash\n");
@@ -252,46 +249,46 @@ bool SensorBME680::prepareTemperatureOffset(float iTemp)
 // #endif
 
 // IFlashUserData
-const uint8_t* SensorBME680::restore(const uint8_t* iBuffer)
+void SensorBME680::readFlash(const uint8_t* iBuffer, const uint16_t iSize)
 {
-    bool lValid = true;
+    bool lValid = (iBuffer[0] == 1); //check version first
     printDebug("BME680: Reading state from Flash\n");
     // read magic word
-    for (uint8_t i = 0; i < 4 && lValid; i++)
+    for (uint8_t i = 1; i < 5 && lValid; i++)
     {
         // printDebug("%02X ", iBuffer[i]);
         lValid = lValid && (iBuffer[i] == sMagicWord[i]);
     }
 
-    mFlashBuffer = lValid ? iBuffer : nullptr;
+    mFlashBuffer = lValid ? iBuffer + 5 : nullptr;
 
     if (!lValid)
     {
         printDebug("BME680: No valid data in Flash\n");
     }
-    return iBuffer + saveSize();
 }
 
-uint8_t* SensorBME680::save(uint8_t* iBuffer)
+void SensorBME680::writeFlash()
 {
+    openknx.flash.writeByte(1); //version
     for (uint8_t lIndex = 0; lIndex < 4; lIndex++)
-        iBuffer[lIndex] = sMagicWord[lIndex];
-
-    Bsec::getState(iBuffer + 4);
+        openknx.flash.writeByte(sMagicWord[lIndex]);
+    uint8_t workBuffer[BME680_SAVE_SIZE - 5];
+    Bsec::getState(workBuffer);
+    openknx.flash.write(workBuffer, BME680_SAVE_SIZE - 5);
     bool lCheck = checkIaqSensorStatus();
     if (lCheck) 
     { 
         printDebug("BME680: Written state to Flash\n");
     }
-    return iBuffer + saveSize();
 }
 
-uint16_t SensorBME680::saveSize()
+uint16_t SensorBME680::flashSize()
 {
     return BME680_SAVE_SIZE;
 }
 
 const char* SensorBME680::name()
 {
-    return "BME 680";
+    return "BME680";
 }

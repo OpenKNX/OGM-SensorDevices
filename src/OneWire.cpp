@@ -70,7 +70,7 @@ OneWire* OneWire::factory(tIdRef iId, bool *eIsNew)
                 lSensor = (new OneWireDS2438(iId));
                 break;
             default:
-                printHEX("Unsupported family found: ", iId, 7);
+                logInfo("OneWire::factory", "Unsupported family found: ", iId, 7);
                 // sensor family not supported
                 break;
         }
@@ -151,5 +151,10 @@ bool OneWire::setValue(uint8_t iValue, uint8_t iModelFunction)
 bool OneWire::setParameter(OneWire::ModelParameter iModelParameter, uint8_t iValue, uint8_t iModelFunction) {
     // default implementation for devices without parameters
     return false;
+}
+
+std::string OneWire::logPrefix()
+{
+    return "OneWire";
 }
 #endif

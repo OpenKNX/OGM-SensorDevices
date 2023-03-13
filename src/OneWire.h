@@ -2,7 +2,7 @@
 #include <Helper.h>
 #include <hardware.h>
 #ifdef COUNT_1WIRE_CHANNEL
-
+#include "OpenKNX.h"
 /**
  * OneWire Commands
  **/
@@ -56,13 +56,14 @@ void copyId(tIdRef iIdLeft, const tIdRef iIdRight);
 // forward declaration
 class OneWireDS2482;
 
-class OneWire {
+class OneWire
+{
   public:
     enum SensorMode
     {
         New,    // Sensor on 1W bus, but not known by application
         Connected,  // Sensor on 1W bus and known by application
-        Disconnected // Sensor removed from 1W bus, but known by appliation
+        Disconnected // Sensor removed from 1W bus, but known by application
     };
 
     enum ModelParameter
@@ -86,6 +87,7 @@ class OneWire {
     static OneWire *factory(tIdRef iId, bool *eIsNew);
 
     // instance members
+    virtual std::string logPrefix();
     virtual void loop() = 0;
     tIdRef Id() { return pId; }
     uint8_t Family() { return pId[0]; }

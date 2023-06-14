@@ -1,4 +1,4 @@
-#include <arduino.h>
+#include <Arduino.h>
 #include <stdio.h>
 #include <Wire.h>
 #include "OneWire.h"

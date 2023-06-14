@@ -1,5 +1,5 @@
 #include <Wire.h>
-#include <arduino.h>
+#include <Arduino.h>
 #include <math.h>
 
 #include "OneWireDS2482.h"

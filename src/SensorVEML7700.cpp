@@ -1,7 +1,7 @@
 // #include "IncludeManager.h"
 #if defined(SENSORMODULE) || defined(PMMODULE)
 #include <Wire.h>
-#include "HardwareDevices.h"
+// #include "HardwareDevices.h"
 #include "SensorVEML7700.h"
 
 SensorVEML7700::SensorVEML7700(uint16_t iMeasureTypes)

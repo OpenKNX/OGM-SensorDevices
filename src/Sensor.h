@@ -57,7 +57,7 @@ enum MeasureType {
 };
 
 #if defined(SENSORMODULE) || defined(PMMODULE)
-#include "Helper.h"
+// #include "OpenKNX/Helper.h"
 
 class Sensor
 {

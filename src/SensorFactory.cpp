@@ -1,7 +1,7 @@
 // #include "IncludeManager.h"
 #if defined(SENSORMODULE) || defined(PMMODULE)
 #include "Sensor.h"
-#include "HardwareDevices.h"
+// #include "OpenKNX/Hardware.h"
 #include "SensorDummy.h"
 #include "SensorSHT3x.h"
 #include "SensorBME280.h"
@@ -77,7 +77,7 @@ Sensor* newSensor(uint8_t iSensorClass, MeasureType iMeasureType) {
         lSensor = new SensorDummy(iMeasureType);
     }
     if (lSensor == nullptr) {
-        fatalError(FATAL_SENS_UNKNOWN, "Unknown Sensor or sensor creation error!");
+        openknx.hardware.fatalError(FATAL_SENS_UNKNOWN, "Unknown Sensor or sensor creation error!");
     }
     return lSensor;
 }

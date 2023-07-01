@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include "Sensor.h"
-#include "HardwareDevices.h"
+// #include "OpenKNX/Hardware.h"
 
 // static
 uint8_t Sensor::sNumSensors = 0;

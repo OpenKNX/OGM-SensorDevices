@@ -4,7 +4,7 @@
 
 #include "bsec/bsec.h"
 #include "Sensor.h"
-#include "EepromManager.h"
+// #include "EepromManager.h"
 
 #define BME680_I2C_ADDR (0x76)
 #define BME680_CALIBRATION_DATA_SIZE 454
@@ -47,7 +47,7 @@ protected:
   private:
     static uint8_t sMagicWord[];
     static uint8_t bsec_config_iaq[BME680_CALIBRATION_DATA_SIZE];
-    EepromManager *mEEPROM;
+    // EepromManager *mEEPROM;
     uint8_t mLastAccuracy = 0;
 };
 // #endif

@@ -1,7 +1,7 @@
 // #include "IncludeManager.h"
 #if defined(SENSORMODULE) || defined(PMMODULE)
 #include <Wire.h>
-#include "HardwareDevices.h"
+// #include "OpenKNX/Hardware.h"
 #include "SensorOPT300x.h"
 
 SensorOPT300x::SensorOPT300x(uint16_t iMeasureTypes)

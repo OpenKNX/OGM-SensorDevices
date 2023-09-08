@@ -1,10 +1,10 @@
 #pragma once
 // #include "IncludeManager.h"
 #if defined(SENSORMODULE) || defined(PMMODULE)
-#include "Sensor.h"
-#include <Adafruit_VEML7700.h>
+    #include "Adafruit_VEML7700.h"
+    #include "Sensor.h"
 
-#define VEML7700_I2C_ADDR 0x10
+    #define VEML7700_I2C_ADDR 0x10
 
 class SensorVEML7700 : public Sensor
 {

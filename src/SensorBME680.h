@@ -2,8 +2,8 @@
 // #include "IncludeManager.h"
 // #ifdef SENSORMODULE
 
-#include "bsec/bsec.h"
 #include "Sensor.h"
+#include "bsec/bsec.h"
 // #include "EepromManager.h"
 
 #define BME680_I2C_ADDR (0x76)
@@ -13,7 +13,7 @@
 class SensorBME680 : public Sensor, protected Bsec
 {
 
-protected:
+  protected:
     uint8_t getSensorClass() override; // returns unique ID for this sensor type
     float measureValue(MeasureType iMeasureType) override;
     // void sensorSaveState() override;
@@ -27,9 +27,9 @@ protected:
 
     const uint8_t *mFlashBuffer = nullptr; // Pointer to stored flash content
     // new flash handling
-    void readFlash(const uint8_t* iBuffer, const uint16_t iSize);
-    void writeFlash();
-    uint16_t flashSize();
+    void sensorReadFlash(const uint8_t *iBuffer, const uint16_t iSize) override;
+    void sensorWriteFlash() override;
+    uint16_t sensorFlashSize() override;
 
   public:
     SensorBME680(uint16_t iMeasureTypes);

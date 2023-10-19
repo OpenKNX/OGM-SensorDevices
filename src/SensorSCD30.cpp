@@ -1,6 +1,6 @@
 // #include "IncludeManager.h"
-#ifdef SENSORMODULE
-#include "SensorSCD30.h"
+#ifdef SENSOR_SCD30_SUPPORT
+    #include "SensorSCD30.h"
 
 SensorSCD30::SensorSCD30(uint16_t iMeasureTypes)
     : Sensor(iMeasureTypes, SCD30_I2C_ADDR), SCD30(){};
@@ -17,26 +17,27 @@ float SensorSCD30::measureValue(MeasureType iMeasureType)
 {
     switch (iMeasureType)
     {
-    case Temperature:
-        // hardware calibration
-        return getTemperature();
-        break;
-    case Humidity:
-        return getHumidity();
-        break;
-    case Co2:
-        return getCO2();
-        break;
-    default:
-        break;
+        case Temperature:
+            // hardware calibration
+            return getTemperature();
+            break;
+        case Humidity:
+            return getHumidity();
+            break;
+        case Co2:
+            return getCO2();
+            break;
+        default:
+            break;
     }
     return NO_NUM;
 }
 
-bool SensorSCD30::begin() {
+bool SensorSCD30::begin()
+{
     logDebugP("Starting sensor SCD30... ");
     bool lResult = SCD30::begin();
-    if (lResult) 
+    if (lResult)
     {
         lResult = Sensor::begin();
         setTemperatureOffset(-gTempOffset);
@@ -45,25 +46,27 @@ bool SensorSCD30::begin() {
     return lResult;
 }
 
-void SensorSCD30::sensorLoopInternal() {
+void SensorSCD30::sensorLoopInternal()
+{
     switch (gSensorState)
     {
-    case Wakeup:
-        Sensor::sensorLoopInternal();
-        break;
-    case Calibrate:
-        Sensor::sensorLoopInternal();
-        break;
-    case Finalize:
-        // we ask for Temperature until we get a valid value
-        if (delayCheck(pSensorStateDelay, 200)) {
-            if (getTemperature() > 0) gSensorState = Running;
-            pSensorStateDelay = millis();
-        }
-        break;
-    default:
-        Sensor::sensorLoopInternal();
-        break;
+        case Wakeup:
+            Sensor::sensorLoopInternal();
+            break;
+        case Calibrate:
+            Sensor::sensorLoopInternal();
+            break;
+        case Finalize:
+            // we ask for Temperature until we get a valid value
+            if (delayCheck(pSensorStateDelay, 200))
+            {
+                if (getTemperature() > 0) gSensorState = Running;
+                pSensorStateDelay = millis();
+            }
+            break;
+        default:
+            Sensor::sensorLoopInternal();
+            break;
     }
 }
 

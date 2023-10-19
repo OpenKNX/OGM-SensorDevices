@@ -1,19 +1,20 @@
 // #include "IncludeManager.h"
 #if defined(SENSORMODULE) || defined(PMMODULE)
-#include <Arduino.h>
-#include <Wire.h>
-#include "Sensor.h"
+    #include "Sensor.h"
+    #include <Arduino.h>
+    #include <Wire.h>
 // #include "OpenKNX/Hardware.h"
 
 // static
 uint8_t Sensor::sNumSensors = 0;
 uint8_t Sensor::sMaxI2cSpeed = 255;
 Sensor* Sensor::sSensors[SENSOR_COUNT];
-TwoWire &Sensor::sWire = Wire;
+TwoWire& Sensor::sWire = Wire;
 
 Sensor* newSensor(uint8_t iSensorClass, MeasureType iMeasureType);
 
-Sensor* Sensor::factory(uint8_t iSensorClass, MeasureType iMeasureType) {
+Sensor* Sensor::factory(uint8_t iSensorClass, MeasureType iMeasureType)
+{
     Sensor* lSensor = nullptr;
     // first check, if there is already an instance
     for (size_t lCount = 0; lCount < sNumSensors; lCount++)
@@ -24,7 +25,8 @@ Sensor* Sensor::factory(uint8_t iSensorClass, MeasureType iMeasureType) {
             break;
         }
     }
-    if (lSensor == nullptr) {
+    if (lSensor == nullptr)
+    {
         lSensor = newSensor(iSensorClass, iMeasureType);
     }
     // at this point we have a valid sensor or a sensor dummy!
@@ -41,7 +43,7 @@ Sensor::Sensor(uint16_t iMeasureTypes, uint8_t iAddress)
     if (sNumSensors >= SENSOR_COUNT)
     {
         // println("Sensor::Sensor() - Currently only 2 (Hardware)Sensors are supported");
-        //fatal error handling
+        // fatal error handling
         return;
     }
     gMeasureTypes = iMeasureTypes;
@@ -51,18 +53,20 @@ Sensor::Sensor(uint16_t iMeasureTypes, uint8_t iAddress)
 };
 
 // static
-void Sensor::SetWire(TwoWire &iWire) 
+void Sensor::SetWire(TwoWire& iWire)
 {
     sWire = iWire;
 }
 
-void Sensor::sensorLoop() {
+void Sensor::sensorLoop()
+{
     for (uint8_t lCounter = 0; lCounter < sNumSensors; lCounter++)
         sSensors[lCounter]->sensorLoopInternal();
-    }
+}
 
 // static
-void Sensor::restartSensors() {
+void Sensor::restartSensors()
+{
     for (uint8_t lCounter = 0; lCounter < sNumSensors; lCounter++)
         sSensors[lCounter]->restartSensor();
 }
@@ -72,7 +76,8 @@ bool Sensor::beginSensors()
 {
     bool lResult = true;
     // fist we start i2c with the right speed
-    if (sNumSensors > 0) {
+    if (sNumSensors > 0)
+    {
         sWire.begin();
         sWire.setClock(sMaxI2cSpeed * 100000);
         delay(1);
@@ -89,7 +94,8 @@ uint8_t Sensor::getMaxI2cSpeed()
     return sMaxI2cSpeed; // n * 100kHz
 }
 
-void Sensor::restartSensor() {
+void Sensor::restartSensor()
+{
     // pSensorStateDelay = 0;
     // gSensorState = Wakeup;
 }
@@ -108,47 +114,51 @@ bool Sensor::checkSensorConnection()
     // just valid for i2c sensors, in other cases this should be overridden
     bool lResult = false;
     // if (gSensorState == Running) {
-        // check for I2C ack
-        gWire.beginTransmission(gAddress);
-        lResult = (gWire.endTransmission() == 0);
-        if (!lResult)
-            restartSensor();
+    // check for I2C ack
+    gWire.beginTransmission(gAddress);
+    lResult = (gWire.endTransmission() == 0);
+    if (!lResult)
+        restartSensor();
     // }
     return lResult;
 }
 
-void Sensor::sensorLoopInternal() {
+void Sensor::sensorLoopInternal()
+{
     switch (gSensorState)
     {
-    case Wakeup:
-        // try immediately to start the sensor, then every second
-        if (pSensorStateDelay == 0 || delayCheck(pSensorStateDelay, 1000)) {
-            // if (begin()) gSensorState = Calibrate;
-            gSensorState = begin() ? Calibrate : Off;
-            pSensorStateDelay = millis();
-        }
-        break;
-    case Calibrate:
-        // no calibration necessary
-        gSensorState = Finalize;
-        break;
-    case Finalize:
-        // give the sensor 100 ms before querying starts
-        if (delayCheck(pSensorStateDelay, 100)) gSensorState = Running;
-        break;
-    default:
-        pSensorStateDelay = 0;
-        break;
+        case Wakeup:
+            // try immediately to start the sensor, then every second
+            if (pSensorStateDelay == 0 || delayCheck(pSensorStateDelay, 1000))
+            {
+                // if (begin()) gSensorState = Calibrate;
+                gSensorState = begin() ? Calibrate : Off;
+                pSensorStateDelay = millis();
+            }
+            break;
+        case Calibrate:
+            // no calibration necessary
+            gSensorState = Finalize;
+            break;
+        case Finalize:
+            // give the sensor 100 ms before querying starts
+            if (delayCheck(pSensorStateDelay, 100)) gSensorState = Running;
+            break;
+        default:
+            pSensorStateDelay = 0;
+            break;
     }
 }
 
-bool Sensor::begin() {
+bool Sensor::begin()
+{
     // gSensorState = Running;
     return checkSensorConnection();
 }
 
-uint8_t Sensor::getI2cSpeed() {
-    return 1;  // n * 100kHz
+uint8_t Sensor::getI2cSpeed()
+{
+    return 1; // n * 100kHz
 }
 
 bool Sensor::prepareTemperatureOffset(float iTemp)
@@ -156,22 +166,70 @@ bool Sensor::prepareTemperatureOffset(float iTemp)
     return false;
 }
 
+// // should be overridden, if there is a state to save before power failure
+// void Sensor::sensorSaveState(){};
+
 // should be overridden, if there is a state to save before power failure
-void Sensor::sensorSaveState() {};
+void Sensor::sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize)
+{
+    if (iSize == 0) // first call - without data
+        return;
+}
+
+// should be overridden, if there is a state to save before power failure
+void Sensor::sensorWriteFlash()
+{
+    openknx.flash.writeByte(1); // Version
+}
+
+// should be overridden, if there is a state to save before power failure
+uint16_t Sensor::sensorFlashSize()
+{
+    return 0;
+}
+
+// // static
+// void Sensor::saveState()
+// {
+//     // dispatch the call to all sensors
+//     for (uint8_t lCounter = 0; lCounter < sNumSensors; lCounter++)
+//         sSensors[lCounter]->sensorSaveState();
+// }
 
 // static
-void Sensor::saveState() {
+void Sensor::readFlash(const uint8_t* iBuffer, const uint16_t iSize)
+{
     // dispatch the call to all sensors
     for (uint8_t lCounter = 0; lCounter < sNumSensors; lCounter++)
-        sSensors[lCounter]->sensorSaveState();
+        sSensors[lCounter]->sensorReadFlash(iBuffer, iSize);
 }
 
 // static
-bool Sensor::measureValue(MeasureType iMeasureType, float& eValue) {
+void Sensor::writeFlash()
+{
+    // dispatch the call to all sensors
+    for (uint8_t lCounter = 0; lCounter < sNumSensors; lCounter++)
+        sSensors[lCounter]->sensorWriteFlash();
+}
+
+// static
+uint16_t Sensor::flashSize()
+{
+    uint16_t lResult = 0;
+    // dispatch the call to all sensors
+    for (uint8_t lCounter = 0; lCounter < sNumSensors; lCounter++)
+        lResult += sSensors[lCounter]->sensorFlashSize();
+    return lResult;
+}
+
+// static
+bool Sensor::measureValue(MeasureType iMeasureType, float& eValue)
+{
     bool lResult = false;
     for (uint8_t lCounter = 0; lCounter < sNumSensors; lCounter++)
     {
-        if (sSensors[lCounter]->gMeasureTypes & iMeasureType) {
+        if (sSensors[lCounter]->gMeasureTypes & iMeasureType)
+        {
             lResult = sSensors[lCounter]->checkSensorConnection();
             if (lResult)
                 lResult = sSensors[lCounter]->gSensorState == Running;
@@ -184,8 +242,9 @@ bool Sensor::measureValue(MeasureType iMeasureType, float& eValue) {
     return lResult;
 }
 
-//static
-uint8_t Sensor::getError() {
+// static
+uint8_t Sensor::getError()
+{
     uint8_t lResult = 0;
     // for (uint8_t lCounter = 0; lCounter < sNumSensors; lCounter++)
     // {
@@ -206,4 +265,3 @@ void Sensor::logResult(bool iResult)
 {
     logDebugP(iResult ? "OK" : "FAIL");
 }
-

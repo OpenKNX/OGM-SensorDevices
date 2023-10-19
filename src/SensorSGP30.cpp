@@ -1,28 +1,28 @@
 // #include "IncludeManager.h"
 #ifdef SENSORMODULE
-#include "Wire.h"
-#include "SensorSGP30.h"
-#include "EepromManager.h"
+    #include "SensorSGP30.h"
+    #include "Wire.h"
+// #include "EepromManager.h"
 
-#define STATE_SAVE_PERIOD  UINT32_C(360 * 60 * 1000) // 360 minutes - 4 times a day
-#define EEPROM_BME680_START_ADDRESS 0xC80
+    #define STATE_SAVE_PERIOD UINT32_C(360 * 60 * 1000) // 360 minutes - 4 times a day
+    #define EEPROM_BME680_START_ADDRESS 0xC80
 
 SensorSGP30::SensorSGP30(uint16_t iMeasureTypes)
     : Sensor(iMeasureTypes, SGP30_I2C_ADDR)
 {
-    mEEPROM = new EepromManager(100, 5, sMagicWord);
+    // mEEPROM = new EepromManager(100, 5, sMagicWord);
 }
 
 SensorSGP30::SensorSGP30(uint16_t iMeasureTypes, uint8_t iAddress)
     : Sensor(iMeasureTypes, iAddress)
 {
-    mEEPROM = new EepromManager(100, 5, sMagicWord);
+    // mEEPROM = new EepromManager(100, 5, sMagicWord);
 }
 
 SensorSGP30::SensorSGP30(uint16_t iMeasureTypes, uint8_t iAddress, uint8_t iMagicKeyOffset)
     : Sensor(iMeasureTypes, iAddress)
 {
-    mEEPROM = new EepromManager(100, 5, sMagicWord);
+    // mEEPROM = new EepromManager(100, 5, sMagicWord);
     sMagicWord[0] ^= iMagicKeyOffset;
 };
 
@@ -40,8 +40,8 @@ void SensorSGP30::setMagicKeyOffset(uint8_t iMagicKeyOffset)
 }
 
 /*!
-* @brief implements a state engine to restart the sensor without delays
-*/
+ * @brief implements a state engine to restart the sensor without delays
+ */
 void SensorSGP30::sensorLoopInternal()
 {
     bool lResult = false;
@@ -71,7 +71,7 @@ void SensorSGP30::sensorLoopInternal()
                 pSensorStateDelay = millis();
                 if (lResult)
                     // Bsec::run();
-                logResult(lResult);
+                    logResult(lResult);
             }
             break;
         case Finalize:
@@ -128,13 +128,16 @@ bool SensorSGP30::begin()
 {
     logDebugP("Starting sensor BME680... ");
     bool lResult = checkIaqSensorStatus();
-    if (lResult) {
+    if (lResult)
+    {
         lResult = checkIaqSensorStatus();
     }
-    if (lResult) {
+    if (lResult)
+    {
         lResult = checkIaqSensorStatus();
     }
-    if (lResult) {
+    if (lResult)
+    {
         sensorLoadState();
         lResult = checkIaqSensorStatus();
         if (!lResult)
@@ -181,28 +184,34 @@ void SensorSGP30::sensorLoadState()
     uint8_t buffer[144]; //[BSEC_MAX_STATE_BLOB_SIZE];
     // Existing state in EEPROM
     logDebugP("Reading BME680 state from EEPROM\n");
-    mEEPROM->prepareRead(EEPROM_BME680_START_ADDRESS, 144);
+    // mEEPROM->prepareRead(EEPROM_BME680_START_ADDRESS, 144);
     if (gWire.available()) gWire.readBytes(buffer, 144);
 
-    for (uint8_t i = 0; i < 144; i+=16)
-        printHEX("<-- ", buffer + i, 16);
+    // for (uint8_t i = 0; i < 144; i += 16)
+    //     printHEX("<-- ", buffer + i, 16);
     bool lCheck = true;
     for (uint8_t lIndex = 0; lIndex < 4 && lCheck; lIndex++)
         lCheck = (buffer[lIndex] == sMagicWord[lIndex]);
-    
-    if (lCheck) {
+
+    if (lCheck)
+    {
         // Bsec::setState(buffer + 4);
         bool lResult = checkIaqSensorStatus();
-        if (lResult) {
+        if (lResult)
+        {
             logDebugP("BME680 was successfully calibrated from EEPROM\n");
-        } else {
-            // if sensor state was not correctly loaded, we delete EEPROM data 
-            mEEPROM->beginPage(EEPROM_BME680_START_ADDRESS);
-            mEEPROM->write4Bytes(sMagicWord, 1); // this is correct, it deletes the last 3 bytes of magic word
-            mEEPROM->endPage();
+        }
+        else
+        {
+            // if sensor state was not correctly loaded, we delete EEPROM data
+            // mEEPROM->beginPage(EEPROM_BME680_START_ADDRESS);
+            // mEEPROM->write4Bytes(sMagicWord, 1); // this is correct, it deletes the last 3 bytes of magic word
+            // mEEPROM->endPage();
             logDebugP("*** BME680 calibration from EEPROM failed! ***\n");
         }
-    } else {
+    }
+    else
+    {
         logDebugP("BME680 calibration data in EEPROM has wrong ID and will be deleted!\n");
     }
 }
@@ -210,31 +219,32 @@ void SensorSGP30::sensorLoadState()
 // We store sensor data in EEPROM stating at page 100 (100 * 32 = 3200 = 0xC80).
 // We write in 16 Byte chunks, a maximum of 139 bytes, means 139/16 = 9 chunks (which is in fact 144 Bytes).
 // Timing is 9 * 5 ms = 45 ms write time
-void SensorSGP30::sensorSaveState()
-{
-    // buffer gets freed inside knx object after saved
-    uint8_t buffer[144] = {0}; //[BSEC_MAX_STATE_BLOB_SIZE];
-    for (uint8_t lIndex = 0; lIndex < 4; lIndex++)
-        buffer[lIndex] = sMagicWord[lIndex];
+// void SensorSGP30::sensorSaveState()
+// {
+//     // buffer gets freed inside knx object after saved
+//     // uint8_t buffer[144] = {0}; //[BSEC_MAX_STATE_BLOB_SIZE];
+//     // for (uint8_t lIndex = 0; lIndex < 4; lIndex++)
+//     //     buffer[lIndex] = sMagicWord[lIndex];
 
-    // Bsec::getState(buffer + 4);
-    bool lCheck = checkIaqSensorStatus();
-    if (lCheck) { 
-    logDebugP("Writing BME680 state to EEPROM\n");
+//     // Bsec::getState(buffer + 4);
+//     bool lCheck = checkIaqSensorStatus();
+//     if (lCheck)
+//     {
+//         logDebugP("Writing BME680 state to EEPROM\n");
 
-    for (uint8_t lCount = 0; lCount < 144; lCount += 16)
-        {
-            mEEPROM->beginPage(EEPROM_BME680_START_ADDRESS + lCount);
-            gWire.write(buffer + lCount, 16);
-            mEEPROM->endPage();
-            printHEX("--> ", buffer + lCount, 16);
-        }
-    }
-}
+//         for (uint8_t lCount = 0; lCount < 144; lCount += 16)
+//         {
+//             // mEEPROM->beginPage(EEPROM_BME680_START_ADDRESS + lCount);
+//             // gWire.write(buffer + lCount, 16);
+//             // mEEPROM->endPage();
+//             // printHEX("--> ", buffer + lCount, 16);
+//         }
+//     }
+// }
 
 void SensorSGP30::sensorUpdateState(void)
 {
-    // we save the sensor state each time accuracy is raised 
+    // we save the sensor state each time accuracy is raised
     // and 4 times a day if accuracy is 3 (this might be senseless, if we save with each restart)
     // if ((Bsec::iaqAccuracy > mLastAccuracy && mLastAccuracy == 2) || (Bsec::iaqAccuracy >= 3 && delayCheck(stateUpdateTimer, STATE_SAVE_PERIOD)))
     // {

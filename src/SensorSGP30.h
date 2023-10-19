@@ -2,18 +2,18 @@
 // #include "IncludeManager.h"
 #ifdef SENSORMODULE
 
-#include "Sensor.h"
-#include "EepromManager.h"
+    #include "Sensor.h"
+// #include "EepromManager.h"
 
-#define SGP30_I2C_ADDR (0x58)
+    #define SGP30_I2C_ADDR (0x58)
 
 class SensorSGP30 : public Sensor
 {
 
-protected:
+  protected:
     uint8_t getSensorClass() override; // returns unique ID for this sensor type
     float measureValue(MeasureType iMeasureType) override;
-    void sensorSaveState() override;
+    // void sensorSaveState() override;
     void sensorLoopInternal() override;
     bool checkIaqSensorStatus(void);
     void sensorLoadState();
@@ -33,7 +33,7 @@ protected:
   private:
     static uint8_t sMagicWord[];
     static uint8_t bsec_config_iaq[454];
-    EepromManager *mEEPROM;
+    // EepromManager *mEEPROM;
     uint8_t mLastAccuracy = 0;
 };
 #endif

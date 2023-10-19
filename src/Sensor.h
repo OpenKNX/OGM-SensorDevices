@@ -1,7 +1,7 @@
 #pragma once
 // #include <knx/bits.h>
-#include <Wire.h>
 #include "OpenKNX.h"
+#include <Wire.h>
 
 #define SENSOR_COUNT 5
 
@@ -39,7 +39,8 @@ enum SensorState
     Running
 };
 
-enum MeasureType {
+enum MeasureType
+{
     OneWireBM = 1,
     Temperature = 2,
     Humidity = 4,
@@ -58,11 +59,32 @@ enum MeasureType {
 
 #if defined(SENSORMODULE) || defined(PMMODULE)
 // #include "OpenKNX/Helper.h"
+struct sSensorInfo
+{
+    float lastValue;
+    float lastSentValue;
+    uint32_t sendDelay;
+    uint32_t readDelay;
+};
+
+struct sActorInfo
+{
+    uint8_t lastOutputValue;
+    uint8_t lastInputValue;
+    uint32_t sendDelay;
+    uint32_t readDelay;
+};
+
+union uData
+{
+    sSensorInfo sensor;
+    sActorInfo actor;
+};
 
 class Sensor
 {
   private:
-    static Sensor* sSensors[SENSOR_COUNT];
+    static Sensor *sSensors[SENSOR_COUNT];
     static uint8_t sNumSensors;
     static uint8_t sMaxI2cSpeed;
 
@@ -81,26 +103,32 @@ class Sensor
 
     virtual uint8_t getSensorClass() = 0; // pure; returns unique ID for this sensor type
     virtual bool checkSensorConnection();
-    virtual float measureValue(MeasureType iMeasureType) = 0; //pure
+    virtual float measureValue(MeasureType iMeasureType) = 0; // pure
     virtual void sensorLoopInternal();
-    virtual void sensorSaveState();
+    // virtual void sensorSaveState();
+    virtual void sensorReadFlash(const uint8_t *iBuffer, const uint16_t iSize);
+    virtual void sensorWriteFlash();
+    virtual uint16_t sensorFlashSize();
     // non blocking restart approach for a sensor
     void restartSensor();
     virtual bool begin(); // first initialization, may be blocking, should be called druing setup(), not during loop()
     void logResult(bool iResult);
 
   public:
-    // static 
+    // static
     static void SetWire(TwoWire &iWire);
-    static Sensor* factory(uint8_t iSensorClass, MeasureType iMeasureType);
+    static Sensor *factory(uint8_t iSensorClass, MeasureType iMeasureType);
     static void sensorLoop();
-    static bool measureValue(MeasureType iMeasureType, float& eValue);
+    static bool measureValue(MeasureType iMeasureType, float &eValue);
     static uint8_t getError();
     static void saveState();
+    static void readFlash(const uint8_t *iBuffer, const uint16_t iSize);
+    static void writeFlash();
+    static uint16_t flashSize();
     static void restartSensors();
     static bool beginSensors();
     static uint8_t getMaxI2cSpeed();
-    
+
     virtual uint8_t getI2cSpeed();
     virtual bool prepareTemperatureOffset(float iTempOffset);
     virtual std::string logPrefix();

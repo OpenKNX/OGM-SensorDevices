@@ -18,17 +18,18 @@
 #define BIT_PRESENCE 1024
 
 #define SENS_NO 0
-#define SENS_SHT3X 1     // Temp/Hum
-#define SENS_BME280 2    // Temp/Hum/Pressure
-#define SENS_BME680 3    // Temp/Hum/Pressure/Voc
-#define SENS_SCD30 4     // Temp/Hum/Co2
-#define SENS_IAQCORE 5   // Voc
-#define SENS_OPT300X 6   // Lux
-#define SENS_VL53L1X 7   // Tof
-#define SENS_SGP30 8     // Temp/Hum/Voc
-#define SENS_SCD41 9     // Temp/Hum/Co2
-#define SENS_MR24xxB1 10 // HF-Presence
-#define SENS_VEML7700 11 // Lux
+#define SENS_SHT3X 1      // Temp/Hum
+#define SENS_BME280 2     // Temp/Hum/Pressure
+#define SENS_BME680 3     // Temp/Hum/Pressure/Voc
+#define SENS_SCD30 4      // Temp/Hum/Co2
+#define SENS_IAQCORE 5    // Voc
+#define SENS_OPT300X 6    // Lux
+#define SENS_VL53L1X 7    // Tof
+#define SENS_SGP30 8      // Temp/Hum/Voc
+#define SENS_SCD41 9      // Temp/Hum/Co2
+#define SENS_MR24xxB1 10  // HF-Presence
+#define SENS_VEML7700 11  // Lux
+#define SENS_HLKLD2420 12 // HF-Presence
 
 enum SensorState
 {

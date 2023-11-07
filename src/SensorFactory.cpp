@@ -13,6 +13,7 @@
     #include "SensorSGP30.h"
     #include "SensorSHT3x.h"
     #include "SensorVEML7700.h"
+    #include "SensorHLKLD2420.h"
     #include "SensorVL53L1X.h"
 
 Sensor* newSensor(uint8_t iSensorClass, MeasureType iMeasureType)
@@ -67,6 +68,9 @@ Sensor* newSensor(uint8_t iSensorClass, MeasureType iMeasureType)
         #ifdef HF_POWER_PIN
         case SENS_MR24xxB1:
             lSensor = new SensorMR24xxB1(iMeasureType);
+            break;
+        case SENS_HLKLD2420:
+            lSensor = new SensorHLKLD2420(iMeasureType);
             break;
         #endif
     #endif

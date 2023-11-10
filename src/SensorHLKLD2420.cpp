@@ -1,9 +1,9 @@
 // #include "IncludeManager.h"
 #ifdef PMMODULE
-    #ifdef SERIAL_HF
-        #include "SensorHLKLD2420.h"
-        #include <Arduino.h>
-        #include <Wire.h>
+#ifdef SERIAL_HF
+#include <Arduino.h>
+#include <Wire.h>
+#include "SensorHLKLD2420.h"
 
 SensorHLKLD2420::SensorHLKLD2420(uint16_t iMeasureTypes)
     : SensorHLKLD2420(iMeasureTypes, 0){};
@@ -622,9 +622,9 @@ bool SensorHLKLD2420::checkSensorConnection()
 
 bool SensorHLKLD2420::begin()
 {
-    printDebug("Starting sensor HLK-LD2420 (Presence)... ");
+    SERIAL_DEBUG.println("Starting sensor HLK-LD2420 (Presence)... ");
     bool lResult = Sensor::begin();
-    printResult(lResult);
+    SERIAL_DEBUG.println(lResult);
     return lResult;
 }
 

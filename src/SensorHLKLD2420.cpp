@@ -14,6 +14,11 @@ SensorHLKLD2420::SensorHLKLD2420(uint16_t iMeasureTypes, uint8_t iAddress)
     gMeasureTypes |= Pres | Sensitivity | Scenario;
 };
 
+std::string SensorHLKLD2420::logPrefix()
+{
+    return "Sensor<HLKLD2420>";
+}
+
 void SensorHLKLD2420::defaultSensorParameters(int8_t iScenario, uint8_t iSensitivity)
 {
     mDefaultScenario = iScenario;
@@ -60,7 +65,7 @@ void SensorHLKLD2420::sensorLoopInternal()
 // and sends default values as soon as the sensor can consume them
 void SensorHLKLD2420::sendDefaultSensorValues()
 {
-    // SERIAL_DEBUG.printf("sendDefaultSensorValues: %d, %.2f\n", mHfSensorStartupStates, lastDetectedRange);
+    // logDebugP("sendDefaultSensorValues: %d, %.2f", mHfSensorStartupStates, lastDetectedRange);
     switch (mHfSensorStartupStates)
     {
         case START_INIT:
@@ -147,13 +152,14 @@ void SensorHLKLD2420::uartGetPacket()
             {
                 if (SERIAL_HF.available() > 0 && SERIAL_HF.readBytes(&rxByte, 1) == 1)
                 {
-                    // SERIAL_DEBUG.print("Sync-Byte: ");
-                    // SERIAL_DEBUG.print(rxByte < 16 ? "0" : "");
-                    // SERIAL_DEBUG.print(rxByte, HEX);
-                    // SERIAL_DEBUG.println();
                     mBuffer.push_back((byte)rxByte);
                     if (mBuffer.size() == HEADER_FOOTER_SIZE)
                     {
+                        /*logTraceP("Header:");
+                        logIndentUp();
+                        logHexTraceP(mBuffer.data(), mBuffer.size());
+                        logIndentDown();*/
+
                         if (mBuffer == HEADER_ON)
                         {
                             mPacketType = ON;
@@ -200,13 +206,6 @@ void SensorHLKLD2420::uartGetPacket()
             {
                 if (SERIAL_HF.available() > 0 && SERIAL_HF.readBytes(&rxByte, 1) == 1)
                 {
-                    // SERIAL_DEBUG.print("Get-Byte: ");
-                    // SERIAL_DEBUG.print(rxByte < 16 ? "0" : "");
-                    // SERIAL_DEBUG.print(rxByte, HEX);
-                    // SERIAL_DEBUG.println();
-                    // if (mBuffer.size() % 10 == 0)
-                    //     SERIAL_DEBUG.println(mBuffer.size());
-
                     mBuffer.push_back((byte)rxByte);
                     if (mPacketType == COMMAND_RESPONSE && equal(mBuffer.end() - HEADER_FOOTER_SIZE, mBuffer.end(), FOOTER.begin()) ||
                         mPacketType == RAW_DATA && equal(mBuffer.end() - HEADER_FOOTER_SIZE, mBuffer.end(), FOOTER_RAW_DATA.begin()))
@@ -275,6 +274,8 @@ void SensorHLKLD2420::resetRawDataRecording()
 
     rawDataLastRecordingReceived = millis();
     rawDataRecordingCount = 0;
+
+    logDebugP("Start sensor calibration");
 }
 
 bool SensorHLKLD2420::getSensorData()
@@ -297,6 +298,11 @@ bool SensorHLKLD2420::getSensorData()
     switch (mPacketType)
     {
         case ON:
+            /*logTraceP("Content ON:");
+            logIndentUp();
+            logHexTraceP(mBuffer.data(), mBuffer.size());
+            logIndentDown();*/
+
             // cut 10 bytes at the beginning: 4F 4E 0D 0A 52 61 6E 67 65 20 ("ON  RANGE ")
             // and 2 bytes at the end
             mBuffer.erase(mBuffer.begin(), mBuffer.begin() + 10);
@@ -309,17 +315,22 @@ bool SensorHLKLD2420::getSensorData()
             if (lastDetectedRange != newDetectedRange)
             {
                 lastDetectedRange = newDetectedRange;
-                SERIAL_DEBUG.printf("Presence detected, range: %.1f m\n", lastDetectedRange);
+                logDebugP("Presence detected, range: %.1f m", lastDetectedRange);
             }
 
             result = true;
             break;
 
         case OFF:
+            /*logTraceP("Content OFF:");
+            logIndentUp();
+            logHexTraceP(mBuffer.data(), mBuffer.size());
+            logIndentDown();*/
+
             if (lastDetectedRange != -1)
             {
                 lastDetectedRange = -1;
-                SERIAL_DEBUG.println("No presence detected");
+                logDebugP("No presence detected");
             }
 
             result = true;
@@ -334,7 +345,7 @@ bool SensorHLKLD2420::getSensorData()
 
             if (mBuffer.size() != payloadSize)
             {
-                SERIAL_DEBUG.printf("Invalid command reponse packet size: %d\n", mBuffer.size());
+                logDebugP("Invalid command reponse packet size: %d", mBuffer.size());
                 break;
             }
 
@@ -345,15 +356,15 @@ bool SensorHLKLD2420::getSensorData()
             switch (mBuffer[0])
             {
                 case CMD_OPEN_COMMAND_MODE:
-                    SERIAL_DEBUG.printf("Received response: CMD_OPEN_COMMAND_MODE (%s)\n", successMessage.c_str());
+                    logDebugP("Received response: CMD_OPEN_COMMAND_MODE (%s)", successMessage.c_str());
                     result = true;
                     break;
                 case CMD_CLOSE_COMMAND_MODE:
-                    SERIAL_DEBUG.printf("Received response: CMD_CLOSE_COMMAND_MODE (%s)\n", successMessage.c_str());
+                    logDebugP("Received response: CMD_CLOSE_COMMAND_MODE (%s)", successMessage.c_str());
                     result = true;
                     break;
                 case CMD_READ_VERSION:
-                    SERIAL_DEBUG.printf("Received response: CMD_READ_VERSION (%s)\n", successMessage.c_str());
+                    logDebugP("Received response: CMD_READ_VERSION (%s)", successMessage.c_str());
 
                     if (!success)
                         break;
@@ -363,17 +374,17 @@ bool SensorHLKLD2420::getSensorData()
 
                     // mBuffer now holds the version value as string
                     moduleVersion = std::string(reinterpret_cast<const char *>(&mBuffer[0]), mBuffer.size());
-                    SERIAL_DEBUG.printf("Module version: %s\n", moduleVersion.c_str());
+                    logDebugP("Module version: %s", moduleVersion.c_str());
                     result = true;
                     break;
                 case CMD_READ_MODULE_CONFIG:
-                    SERIAL_DEBUG.printf("Received response: CMD_READ_MODULE_CONFIG (%s)\n", successMessage.c_str());
+                    logDebugP("Received response: CMD_READ_MODULE_CONFIG (%s)", successMessage.c_str());
 
                     if (!success)
                         break;
 
                     // We only support 2 types of read requests:
-                    // - Read both distance and all trigger thresholds (= in total 18)
+                    // - Read both distances and all trigger thresholds (= in total 18)
                     // - Read the delay and all metain thresholds (= in total 17)
                     // This way, based on the returned amount of data we can recognize which read request was fullfilled.
 
@@ -381,56 +392,70 @@ bool SensorHLKLD2420::getSensorData()
                     mBuffer.erase(mBuffer.begin(), mBuffer.begin() + 4);
 
                     if (payloadSize == 0x4C)
-                    { // 76 - 4 = 72 bytes (18 x 4 bytes)
-                        // - Read both distance and all trigger thresholds (= in total 18)
+                    {
+                        // 76 - 4 = 72 bytes (18 x 4 bytes)
+                        // - Read both distances and all trigger thresholds (= in total 18)
+
+                        logDebugP("Read config part 1 from sensor:");
+                        logIndentUp();
 
                         minDistance = bytesToInt(mBuffer[0], mBuffer[1], mBuffer[2], mBuffer[3]);
-                        SERIAL_DEBUG.printf("minDistance: %d\n", minDistance);
+                        logDebugP("minDistance: %d", minDistance);
 
                         maxDistance = bytesToInt(mBuffer[4], mBuffer[5], mBuffer[6], mBuffer[7]);
-                        SERIAL_DEBUG.printf("maxDistance: %d\n", maxDistance);
+                        logDebugP("maxDistance: %d", maxDistance);
 
-                        SERIAL_DEBUG.print("triggerThreshold:");
+                        logDebugP("triggerThreshold:");
+                        logIndentUp();
                         for (int i = 0; i < 16; i++)
                         {
                             triggerThreshold[i] = bytesToInt(mBuffer[i * 4 + 8], mBuffer[i * 4 + 9], mBuffer[i * 4 + 10], mBuffer[i * 4 + 11]);
-                            SERIAL_DEBUG.printf(" %.2f", rawToDb(triggerThreshold[i]));
+                            logDebugP("Gate %i: %.2f", i, rawToDb(triggerThreshold[i]));
                         }
-                        SERIAL_DEBUG.println();
+                        logIndentDown();
+
+                        logIndentDown();
                     }
                     else if (payloadSize == 0x48)
-                    { // 72 - 4 = 68 bytes (17 x 4 bytes)
+                    {
+                        // 72 - 4 = 68 bytes (17 x 4 bytes)
                         // - Read the delay and all metain thresholds (= in total 17)
 
-                        delayTime = bytesToInt(mBuffer[0], mBuffer[1], mBuffer[2], mBuffer[3]);
-                        SERIAL_DEBUG.printf("delayTime: %d\n", delayTime);
+                        logDebugP("Read config part 2 from sensor:");
+                        logIndentUp();
 
-                        SERIAL_DEBUG.print("holdThreshold:");
+                        delayTime = bytesToInt(mBuffer[0], mBuffer[1], mBuffer[2], mBuffer[3]);
+                        logDebugP("delayTime: %d", delayTime);
+
+                        logDebugP("holdThreshold:");
+                        logIndentUp();
                         for (int i = 0; i < 16; i++)
                         {
                             holdThreshold[i] = bytesToInt(mBuffer[i * 4 + 4], mBuffer[i * 4 + 5], mBuffer[i * 4 + 6], mBuffer[i * 4 + 7]);
-                            SERIAL_DEBUG.printf(" %.2f", rawToDb(holdThreshold[i]));
+                            logDebugP("Gate %i: %.2f", i, rawToDb(holdThreshold[i]));
                         }
-                        SERIAL_DEBUG.println();
+                        logIndentDown();
+
+                        logIndentDown();
                     }
                     else
                     {
-                        SERIAL_DEBUG.printf("Unknown read response, payload size: %d\n", payloadSize);
+                        logDebugP("Unknown read response, payload size: %d", payloadSize);
                         break;
                     }
 
                     result = true;
                     break;
                 case CMD_WRITE_MODULE_CONFIG:
-                    SERIAL_DEBUG.printf("Received response: CMD_WRITE_MODULE_CONFIG (%s)\n", successMessage.c_str());
+                    logDebugP("Received response: CMD_WRITE_MODULE_CONFIG (%s)", successMessage.c_str());
                     result = true;
                     break;
                 case CMD_RAW_DATA_MODE:
-                    SERIAL_DEBUG.printf("Received response: CMD_RAW_DATA_MODE (%s)\n", successMessage.c_str());
+                    logDebugP("Received response: CMD_RAW_DATA_MODE (%s)", successMessage.c_str());
                     result = true;
                     break;
                 default:
-                    SERIAL_DEBUG.printf("Unknown response code: %d (%s)\n", mBuffer[0], successMessage.c_str());
+                    logDebugP("Unknown response code: %d (%s)", mBuffer[0], successMessage.c_str());
                     break;
             }
 
@@ -453,14 +478,13 @@ bool SensorHLKLD2420::getSensorData()
                 }
             }
 
-        #ifdef debugOutput
-            SERIAL_DEBUG.printf("Range values received (%d):", rawDataRecordingCount);
+            logTraceP("Range values received (%d):", rawDataRecordingCount);
+            logIndentUp();
             for (int i = 0; i < 16; i++)
             {
-                SERIAL_DEBUG.printf(" %.2f", rawToDb(rangeMax[i]));
+                logTraceP("Gate %i: %.2f", i, rawToDb(rangeMax[i]));
             }
-            SERIAL_DEBUG.println();
-        #endif
+            logIndentDown();
 
             // if more than 1 sec. past since last raw data value (should be 4-5/sec.),
             // something when wrong, start recording from scratch
@@ -486,12 +510,18 @@ bool SensorHLKLD2420::getSensorData()
                 // enter command mode to stop raw data transfer
                 sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE);
 
+                logTraceP("rawDataRangeAverage:");
+                logIndentUp();
+
                 // convert to dB values and add trigger offset
                 double triggerThresholdDb[16];
                 for (int i = 0; i < 16; i++)
                 {
                     triggerThresholdDb[i] = rawToDb(rawDataRangeAverage[i]) + CALIBRATION_TRIGGER_OFFSET_DB;
+                    logTraceP("Gate %i:  %.2f", i, rawToDb(rawDataRangeAverage[i]));
                 }
+
+                logIndentDown();
 
                 // substract hold offset
                 double holdThresholdDb[16];
@@ -500,26 +530,11 @@ bool SensorHLKLD2420::getSensorData()
                     holdThresholdDb[i] = triggerThresholdDb[i] - CALIBRATION_HOLD_OFFSET_DB;
                 }
 
-        #ifdef debugOutput
-                SERIAL_DEBUG.print("rawDataRangeAverage:");
-                for (int i = 0; i < 16; i++)
-                {
-                    SERIAL_DEBUG.printf(" %.2f", rawDataRangeAverage[i]);
-                }
-                SERIAL_DEBUG.println();
-                SERIAL_DEBUG.print("triggerThresholdDb:");
-                for (int i = 0; i < 16; i++)
-                {
-                    SERIAL_DEBUG.printf(" %.2f", triggerThresholdDb[i]);
-                }
-                SERIAL_DEBUG.println();
-                SERIAL_DEBUG.print("holdThresholdDb:");
-                for (int i = 0; i < 16; i++)
-                {
-                    SERIAL_DEBUG.printf(" %.2f", holdThresholdDb[i]);
-                }
-                SERIAL_DEBUG.println();
-        #endif
+                logDebugP("Write config to sensor:");
+                logIndentUp();
+
+                logDebugP("triggerThreshold:");
+                logIndentUp();
 
                 // write back trigger thresholds, for each:
                 // first 2 bytes parameter offset, then 4 bytes value
@@ -532,8 +547,14 @@ bool SensorHLKLD2420::getSensorData()
 
                     bytes = intToBytes(dBToRaw(triggerThresholdDb[i]));
                     param.insert(param.end(), bytes.cbegin(), bytes.cend());
+
+                    logDebugP("Gate %i:  %.2f", i, triggerThresholdDb[i]);
                 }
-                // sendCommand(CMD_WRITE_MODULE_CONFIG, param);
+                sendCommand(CMD_WRITE_MODULE_CONFIG, param);
+                logIndentDown();
+
+                logDebugP("holdThreshold:");
+                logIndentUp();
 
                 // write back hold thresholds, for each:
                 // first 2 bytes parameter offset, then 4 bytes value
@@ -545,8 +566,15 @@ bool SensorHLKLD2420::getSensorData()
 
                     bytes = intToBytes(dBToRaw(holdThresholdDb[i]));
                     param.insert(param.end(), bytes.cbegin(), bytes.cend());
+
+                    logDebugP("Gate %i:  %.2f", i, holdThresholdDb[i]);
                 }
-                // sendCommand(CMD_WRITE_MODULE_CONFIG, param);
+                sendCommand(CMD_WRITE_MODULE_CONFIG, param);
+                logIndentDown();
+
+                logIndentDown();
+
+                logDebugP("Sensor calibration finished");
 
                 // reboot module to return to normal (not raw data) operation
                 sendCommand(CMD_REBOOT_MODULE);
@@ -556,7 +584,7 @@ bool SensorHLKLD2420::getSensorData()
             break;
 
         default:
-            SERIAL_DEBUG.printf("Unknown packet type: %d\n", mPacketType);
+            logDebugP("Unknown packet type: %d", mPacketType);
             break;
     }
 
@@ -577,19 +605,12 @@ void SensorHLKLD2420::sendCommand(byte command, std::vector<byte> paramter)
     cmdData.insert(cmdData.end(), paramter.cbegin(), paramter.cend());
     cmdData.insert(cmdData.end(), FOOTER.cbegin(), FOOTER.cend());
 
-    const char *cmdDataRaw = reinterpret_cast<const char *>(cmdData.data());
-    SERIAL_HF.write(cmdDataRaw, cmdData.size());
+    SERIAL_HF.write(cmdData.data(), cmdData.size());
 
-        #ifdef debugOutput
-    SERIAL_DEBUG.print("Sending to sensor: ");
-    for (int i = 0; i < cmdData.size(); i++)
-    {
-        SERIAL_DEBUG.print(cmdData[i] < 16 ? "0" : "");
-        SERIAL_DEBUG.print(cmdData[i], HEX);
-        SERIAL_DEBUG.print(" ");
-    }
-    SERIAL_DEBUG.println();
-        #endif
+    logTraceP("Sending to sensor:");
+    logIndentUp();
+    logHexTraceP(cmdData.data(), cmdData.size());
+    logIndentDown();
 }
 
 float SensorHLKLD2420::measureValue(MeasureType iMeasureType)
@@ -622,9 +643,9 @@ bool SensorHLKLD2420::checkSensorConnection()
 
 bool SensorHLKLD2420::begin()
 {
-    SERIAL_DEBUG.println("Starting sensor HLK-LD2420 (Presence)... ");
+    logDebugP("Starting sensor HLK-LD2420 (Presence)... ");
     bool lResult = Sensor::begin();
-    SERIAL_DEBUG.println(lResult);
+    logResult(lResult);
     return lResult;
 }
 

@@ -126,6 +126,7 @@ class SensorHLKLD2420 : public Sensor
     // void writeScenario(uint8_t iValue);
     // void readScenario();
     void sendCommand(byte command, std::vector<byte> paramter = {});
+    std::string logPrefix() override;
 };
 #endif
 #endif

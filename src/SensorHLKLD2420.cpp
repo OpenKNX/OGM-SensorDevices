@@ -11,7 +11,7 @@ SensorHLKLD2420::SensorHLKLD2420(uint16_t iMeasureTypes)
 SensorHLKLD2420::SensorHLKLD2420(uint16_t iMeasureTypes, uint8_t iAddress)
     : Sensor(iMeasureTypes, iAddress)
 {
-    gMeasureTypes |= Pres | Sensitivity | Scenario;
+    gMeasureTypes |= Pres | Sensitivity;
 };
 
 std::string SensorHLKLD2420::logPrefix()
@@ -19,10 +19,17 @@ std::string SensorHLKLD2420::logPrefix()
     return "Sensor<HLKLD2420>";
 }
 
-void SensorHLKLD2420::defaultSensorParameters(int8_t iScenario, uint8_t iSensitivity)
+void SensorHLKLD2420::defaultSensorParameters(uint8_t iSensitivity)
 {
-    mDefaultScenario = iScenario;
     mDefaultSensitivity = iSensitivity;
+}
+
+void SensorHLKLD2420::writeSensitivity(int8_t iSensitivity)
+{
+    mDefaultSensitivity = iSensitivity;
+
+    // restart calibration with new sensitivity value
+    mHfSensorStartupStates = START_READ2_DONE;
 }
 
 uint8_t SensorHLKLD2420::getSensorClass()
@@ -513,21 +520,25 @@ bool SensorHLKLD2420::getSensorData()
                 logTraceP("rawDataRangeAverage:");
                 logIndentUp();
 
+                double triggerOffsetDb = CALIBRATION_TRIGGER_OFFSET_DB - SENSITIVIY_TRIGGER_RANGE * (mSensitivity / 10);
+
                 // convert to dB values and add trigger offset
                 double triggerThresholdDb[16];
                 for (int i = 0; i < 16; i++)
                 {
-                    triggerThresholdDb[i] = rawToDb(rawDataRangeAverage[i]) + CALIBRATION_TRIGGER_OFFSET_DB;
+                    triggerThresholdDb[i] = rawToDb(rawDataRangeAverage[i]) + triggerOffsetDb;
                     logTraceP("Gate %i:  %.2f", i, rawToDb(rawDataRangeAverage[i]));
                 }
 
                 logIndentDown();
 
+                double holdOffsetDb = CALIBRATION_HOLD_OFFSET_DB - SENSITIVIY_HOLD_RANGE * (mSensitivity / 10);
+
                 // substract hold offset
                 double holdThresholdDb[16];
                 for (int i = 0; i < 16; i++)
                 {
-                    holdThresholdDb[i] = triggerThresholdDb[i] - CALIBRATION_HOLD_OFFSET_DB;
+                    holdThresholdDb[i] = triggerThresholdDb[i] - holdOffsetDb;
                 }
 
                 logDebugP("Write config to sensor:");
@@ -625,10 +636,6 @@ float SensorHLKLD2420::measureValue(MeasureType iMeasureType)
         case Sensitivity:
             if (mSensitivity >= 0)
                 return mSensitivity;
-            break;
-        case Scenario:
-            if (mScenario >= 0)
-                return mScenario;
             break;
         default:
             break;

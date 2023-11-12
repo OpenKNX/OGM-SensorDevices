@@ -33,9 +33,14 @@ const std::vector<byte> PARAM_READ_DELAY_MAINTAIN = {(byte)0x04, (byte)0x00, (by
 const std::vector<byte> PARAM_RAW_DATA_MODE = {(byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00};
 
 #define CALIBRATION_VALUE_COUNT 100
-#define CALIBRATION_TRIGGER_OFFSET_DB 3
-#define CALIBRATION_HOLD_OFFSET_DB 1.5
+#define CALIBRATION_TRIGGER_OFFSET_DB 5 // = min. sensitivity, range 1 - 5
+#define CALIBRATION_HOLD_OFFSET_DB 2.5  // = min. sensitivity, range 1.5 - 2.5
 
+// these will be deducted from trigger/hold offset based on sensitivity percentage
+// e. g. sensitivity 5 (= 50 %): trigger offset 5-2=3, hold offset 2.5-1=1.5
+// lower offsets = higher sensitivity
+#define SENSITIVIY_TRIGGER_RANGE 4
+#define SENSITIVIY_HOLD_RANGE 2
 
 #define START_INIT 0
 #define START_SENSOR_ACTIVE 1
@@ -88,8 +93,7 @@ class SensorHLKLD2420 : public Sensor
     double rawDataRangeAverage[16];
     int rawDataRecordingCount = 0;
     
-    int8_t mDefaultScenario = 0;
-    int8_t mDefaultSensitivity = 8;
+    int8_t mDefaultSensitivity = 5;
     uint8_t mHfSensorStartupStates = 0;
 
     void uartGetPacket();
@@ -119,12 +123,10 @@ class SensorHLKLD2420 : public Sensor
     //static bool decodePresenceResult(uint8_t iResult, bool &ePresence, uint8_t &eMove, uint8_t &eFall, uint8_t &eAlarm);
     bool begin() override;
     uint8_t getI2cSpeed() override;
-    void defaultSensorParameters(int8_t iScenario, uint8_t iSensitivity);
+    void defaultSensorParameters(uint8_t iSensitivity);
     // void resetSensor();
-    // void writeSensitivity(uint8_t iValue);
+    void writeSensitivity(int8_t iSensitivity);
     // void readSensitivity();
-    // void writeScenario(uint8_t iValue);
-    // void readScenario();
     void sendCommand(byte command, std::vector<byte> paramter = {});
     std::string logPrefix() override;
 };

@@ -39,8 +39,9 @@ const std::vector<byte> PARAM_RAW_DATA_MODE = {(byte)0x00, (byte)0x00, (byte)0x0
 // these will be deducted from trigger/hold offset based on sensitivity percentage
 // e. g. sensitivity 5 (= 50 %): trigger offset 5-2=3, hold offset 2.5-1=1.5
 // lower offsets = higher sensitivity
-#define SENSITIVIY_TRIGGER_RANGE 4
-#define SENSITIVIY_HOLD_RANGE 2
+#define SENSITIVITY_TRIGGER_RANGE 4
+#define SENSITIVITY_HOLD_RANGE 2
+#define SENSITIVITY_DEFAULT 5 // in case user setting invalid
 
 #define START_INIT 0
 #define START_SENSOR_ACTIVE 1
@@ -108,7 +109,6 @@ class SensorHLKLD2420 : public Sensor
     uint8_t mPresence = -1;
     float mMoveSpeed = NO_NUM;
     int8_t mSensitivity = -1;
-    int8_t mScenario = -1;
     uint8_t getSensorClass() override; // returns unique ID for this sensor type
     void sensorLoopInternal() override;
     bool checkSensorConnection() override;

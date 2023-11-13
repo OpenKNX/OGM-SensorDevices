@@ -21,12 +21,12 @@ std::string SensorHLKLD2420::logPrefix()
 
 void SensorHLKLD2420::defaultSensorParameters(uint8_t iSensitivity)
 {
-    mDefaultSensitivity = iSensitivity;
+    mSensitivity = iSensitivity;
 }
 
 void SensorHLKLD2420::writeSensitivity(int8_t iSensitivity)
 {
-    mDefaultSensitivity = iSensitivity;
+    mSensitivity = iSensitivity;
 
     // restart calibration with new sensitivity value
     mHfSensorStartupStates = START_READ2_DONE;
@@ -520,7 +520,8 @@ bool SensorHLKLD2420::getSensorData()
                 logTraceP("rawDataRangeAverage:");
                 logIndentUp();
 
-                double triggerOffsetDb = CALIBRATION_TRIGGER_OFFSET_DB - SENSITIVIY_TRIGGER_RANGE * (mSensitivity / 10);
+                int8_t lSensitivity = mSensitivity > 0 && mSensitivity <= 10 ? mSensitivity : SENSITIVITY_DEFAULT;
+                double triggerOffsetDb = CALIBRATION_TRIGGER_OFFSET_DB - SENSITIVITY_TRIGGER_RANGE * (lSensitivity / 10.0);
 
                 // convert to dB values and add trigger offset
                 double triggerThresholdDb[16];
@@ -532,7 +533,7 @@ bool SensorHLKLD2420::getSensorData()
 
                 logIndentDown();
 
-                double holdOffsetDb = CALIBRATION_HOLD_OFFSET_DB - SENSITIVIY_HOLD_RANGE * (mSensitivity / 10);
+                double holdOffsetDb = CALIBRATION_HOLD_OFFSET_DB - SENSITIVITY_HOLD_RANGE * (lSensitivity / 10.0);
 
                 // substract hold offset
                 double holdThresholdDb[16];
@@ -540,6 +541,13 @@ bool SensorHLKLD2420::getSensorData()
                 {
                     holdThresholdDb[i] = triggerThresholdDb[i] - holdOffsetDb;
                 }
+
+                logDebugP("Sensitivity used:");
+                logIndentUp();
+                logDebugP("User setting: %d", mSensitivity);
+                logDebugP("Calculated trigger offset : %.2f", triggerOffsetDb);
+                logDebugP("Calculated hold offset: %.2f", holdOffsetDb);
+                logIndentDown();
 
                 logDebugP("Write config to sensor:");
                 logIndentUp();

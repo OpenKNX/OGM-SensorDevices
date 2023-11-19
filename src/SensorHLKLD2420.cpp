@@ -11,7 +11,7 @@ SensorHLKLD2420::SensorHLKLD2420(uint16_t iMeasureTypes)
 SensorHLKLD2420::SensorHLKLD2420(uint16_t iMeasureTypes, uint8_t iAddress)
     : Sensor(iMeasureTypes, iAddress)
 {
-    gMeasureTypes |= Pres | Sensitivity;
+    gMeasureTypes |= Pres | Sensitivity | Distance;
 };
 
 std::string SensorHLKLD2420::logPrefix()
@@ -19,9 +19,14 @@ std::string SensorHLKLD2420::logPrefix()
     return "Sensor<HLKLD2420>";
 }
 
-void SensorHLKLD2420::defaultSensorParameters(uint8_t iSensitivity)
+void SensorHLKLD2420::defaultSensorParameters(uint8_t iSensitivity, uint16_t iDelayTime, uint8_t iRangeGateMin, uint8_t iRangeGateMax)
 {
     mSensitivity = iSensitivity;
+    mDelayTime = iDelayTime;
+    mRangeGateMin = iRangeGateMin;
+
+    if (mRangeGateMax > mRangeGateMin)
+        mRangeGateMax = iRangeGateMax;
 }
 
 void SensorHLKLD2420::writeSensitivity(int8_t iSensitivity)
@@ -259,6 +264,15 @@ std::vector<byte> SensorHLKLD2420::intToBytes(int intValue)
     bytes.push_back((byte)((intValue >> 8) & 0xFF));
     bytes.push_back((byte)((intValue >> 16) & 0xFF));
     bytes.push_back((byte)((intValue >> 24) & 0xFF));
+    return bytes;
+}
+
+std::vector<byte> SensorHLKLD2420::shortToBytes(short shortValue)
+{
+    std::vector<byte> bytes;
+
+    bytes.push_back((byte)(shortValue & 0xFF));
+    bytes.push_back((byte)((shortValue >> 8) & 0xFF));
     return bytes;
 }
 
@@ -551,14 +565,44 @@ bool SensorHLKLD2420::getSensorData()
 
                 logDebugP("Write config to sensor:");
                 logIndentUp();
+                logDebugP("Range gate min.: %d", mRangeGateMin);
+                logDebugP("Range gate max.: %d", mRangeGateMax);
+                logDebugP("Delay time: %d", mDelayTime);
+
+                std::vector<byte> param;
+                std::vector<byte> bytes;
+
+                // write range gate min./max. and delay time, for each:
+                // first 2 bytes parameter offset, then 4 bytes value
+
+                param.push_back(OFFSET_PARAM_RANGE_GATE_MIN);
+                param.push_back(0);
+                param.push_back(mRangeGateMin);
+                param.push_back(0);
+                param.push_back(0);
+                param.push_back(0);
+                param.push_back(OFFSET_PARAM_RANGE_GATE_MAX);
+                param.push_back(0);
+                param.push_back(mRangeGateMax);
+                param.push_back(0);
+                param.push_back(0);
+                param.push_back(0);
+
+                param.push_back(OFFSET_PARAM_DELAY_TIME);
+                param.push_back(0);
+                bytes = shortToBytes(mDelayTime);
+                param.insert(param.end(), bytes.cbegin(), bytes.cend());
+                param.push_back(0);
+                param.push_back(0);
+
+                sendCommand(CMD_WRITE_MODULE_CONFIG, param);
 
                 logDebugP("triggerThreshold:");
                 logIndentUp();
 
                 // write back trigger thresholds, for each:
                 // first 2 bytes parameter offset, then 4 bytes value
-                std::vector<byte> param;
-                std::vector<byte> bytes;
+                param.clear();
                 for (int i = 0; i < 16; i++)
                 {
                     param.push_back(OFFSET_PARAM_TRIGGERS + (byte)i);
@@ -639,13 +683,14 @@ float SensorHLKLD2420::measureValue(MeasureType iMeasureType)
     switch (iMeasureType)
     {
         case Pres:
-            return lastDetectedRange;
-            break;
+            return lastDetectedRange > 0 ? 1 : 0;
         case Sensitivity:
             if (mSensitivity >= 0)
                 return mSensitivity;
             break;
-        default:
+         case Distance:
+            return lastDetectedRange;
+       default:
             break;
     }
     return NO_NUM;

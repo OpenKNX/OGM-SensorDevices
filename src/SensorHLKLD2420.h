@@ -24,6 +24,9 @@ const std::vector<byte> FOOTER_RAW_DATA = {(byte)0xFD, (byte)0xFC, (byte)0xFB, (
 #define CMD_WRITE_MODULE_CONFIG 0x07
 #define CMD_RAW_DATA_MODE 0x12
 
+#define OFFSET_PARAM_RANGE_GATE_MIN 0x00
+#define OFFSET_PARAM_RANGE_GATE_MAX 0x01
+#define OFFSET_PARAM_DELAY_TIME 0x04
 #define OFFSET_PARAM_TRIGGERS 0x10
 #define OFFSET_PARAM_HOLDS 0x20
 
@@ -100,6 +103,7 @@ class SensorHLKLD2420 : public Sensor
     void uartGetPacket();
     int bytesToInt(byte byte1, byte byte2, byte byte3, byte byte4);
     std::vector<byte> intToBytes(int intValue);
+    std::vector<byte> shortToBytes(short shortValue);
     double rawToDb(int rawValue);
     int dBToRaw(double dbValue);
     void resetRawDataRecording();
@@ -109,6 +113,9 @@ class SensorHLKLD2420 : public Sensor
     uint8_t mPresence = -1;
     float mMoveSpeed = NO_NUM;
     int8_t mSensitivity = -1;
+    uint16_t mDelayTime = 30;
+    uint8_t mRangeGateMin = 0;
+    uint8_t mRangeGateMax = 15;
     uint8_t getSensorClass() override; // returns unique ID for this sensor type
     void sensorLoopInternal() override;
     bool checkSensorConnection() override;
@@ -120,10 +127,9 @@ class SensorHLKLD2420 : public Sensor
     SensorHLKLD2420(uint16_t iMeasureTypes, uint8_t iAddress);
     virtual ~SensorHLKLD2420() {}
 
-    //static bool decodePresenceResult(uint8_t iResult, bool &ePresence, uint8_t &eMove, uint8_t &eFall, uint8_t &eAlarm);
     bool begin() override;
     uint8_t getI2cSpeed() override;
-    void defaultSensorParameters(uint8_t iSensitivity);
+    void defaultSensorParameters(uint8_t iSensitivity, uint16_t iDelayTime, uint8_t iRangeGateMin, uint8_t iRangeGateMax);
     // void resetSensor();
     void writeSensitivity(int8_t iSensitivity);
     // void readSensitivity();

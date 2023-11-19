@@ -55,7 +55,8 @@ enum MeasureType
     Pres = 1024,
     Speed = 2048,
     Sensitivity = 4096,
-    Scenario = 8192
+    Scenario = 8192,
+    Distance = 16384
 };
 
 #if defined(SENSORMODULE) || defined(PMMODULE)

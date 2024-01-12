@@ -1,6 +1,6 @@
 // #include "IncludeManager.h"
 #ifdef PMMODULE
-#ifdef SERIAL_HF
+#ifdef HF_SERIAL
 #include <Arduino.h>
 #include <Wire.h>
 #include "SensorMR24xxB1.h"
@@ -236,7 +236,7 @@ void SensorMR24xxB1::uartGetPacket()
     {
         // Waiting for packet sync byte 0x55
         case GET_SYNC_STATE:
-            if (SERIAL_HF.available() > 0 && SERIAL_HF.readBytes(&lRxByte, 1) == 1)
+            if (HF_SERIAL.available() > 0 && HF_SERIAL.readBytes(&lRxByte, 1) == 1)
                 if (lRxByte == MESSAGE_HEAD)
                     mPacketState = PROCESS_SYNC_STATE;
             break;
@@ -247,10 +247,10 @@ void SensorMR24xxB1::uartGetPacket()
             mBufferIndex = 1;
         case GET_PACKET_STATE:
             // uncomment following while if scheduler is implemented in future
-            // which ensures a more regular call to SERIAL_HF
+            // which ensures a more regular call to HF_SERIAL
             while (mPacketState == GET_PACKET_STATE)
             {
-                if (SERIAL_HF.available() > 0 && SERIAL_HF.readBytes(&lRxByte, 1) == 1)
+                if (HF_SERIAL.available() > 0 && HF_SERIAL.readBytes(&lRxByte, 1) == 1)
                 {
                     // SERIAL_DEBUG.println(lRxByte);
                     mBuffer[mBufferIndex++] = lRxByte;
@@ -267,10 +267,10 @@ void SensorMR24xxB1::uartGetPacket()
             break;
         case GET_PACKET_DATA:
             // uncomment following while if scheduler is implemented in future
-            // which ensures a more regular call to SERIAL_HF
+            // which ensures a more regular call to HF_SERIAL
             while (mPacketState == GET_PACKET_DATA)
             {
-                if (SERIAL_HF.available() > 0 && SERIAL_HF.readBytes(&lRxByte, 1) == 1)
+                if (HF_SERIAL.available() > 0 && HF_SERIAL.readBytes(&lRxByte, 1) == 1)
                 {
                     // SERIAL_DEBUG.println(lRxByte);
                     mBuffer[mBufferIndex++] = lRxByte;
@@ -648,7 +648,7 @@ void SensorMR24xxB1::sendCommand(uint8_t iCommandId, int8_t iValue /* = -1 */)
     calculateCrcLoHi(lFrame, lFramePtr - lFrame, lCRCLo, lCRCHi);
     *lFramePtr++ = lCRCLo;
     *lFramePtr++ = lCRCHi;
-    SERIAL_HF.write(lFrame, lFramePtr - lFrame);
+    HF_SERIAL.write(lFrame, lFramePtr - lFrame);
 #ifdef debugOutput
     SERIAL_DEBUG.println(F("Reboot Sensor!"));
     for (int i = 0; i < 8; i++)

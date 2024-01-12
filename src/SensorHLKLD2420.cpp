@@ -1,6 +1,6 @@
 // #include "IncludeManager.h"
 #ifdef PMMODULE
-#ifdef SERIAL_HF
+#ifdef HF_SERIAL
 #include <Arduino.h>
 #include <Wire.h>
 #include "SensorHLKLD2420.h"
@@ -162,7 +162,7 @@ void SensorHLKLD2420::uartGetPacket()
             // wait for a valid header
             while (mPacketState == GET_SYNC_STATE)
             {
-                if (SERIAL_HF.available() > 0 && SERIAL_HF.readBytes(&rxByte, 1) == 1)
+                if (HF_SERIAL.available() > 0 && HF_SERIAL.readBytes(&rxByte, 1) == 1)
                 {
                     mBuffer.push_back((byte)rxByte);
                     if (mBuffer.size() == HEADER_FOOTER_SIZE)
@@ -216,7 +216,7 @@ void SensorHLKLD2420::uartGetPacket()
             // add data till valid footer received
             while (mPacketState == GET_PACKET_DATA)
             {
-                if (SERIAL_HF.available() > 0 && SERIAL_HF.readBytes(&rxByte, 1) == 1)
+                if (HF_SERIAL.available() > 0 && HF_SERIAL.readBytes(&rxByte, 1) == 1)
                 {
                     mBuffer.push_back((byte)rxByte);
                     if (mPacketType == COMMAND_RESPONSE && equal(mBuffer.end() - HEADER_FOOTER_SIZE, mBuffer.end(), FOOTER.begin()) ||
@@ -668,7 +668,7 @@ void SensorHLKLD2420::sendCommand(byte command, std::vector<byte> paramter)
     cmdData.insert(cmdData.end(), paramter.cbegin(), paramter.cend());
     cmdData.insert(cmdData.end(), FOOTER.cbegin(), FOOTER.cend());
 
-    SERIAL_HF.write(cmdData.data(), cmdData.size());
+    HF_SERIAL.write(cmdData.data(), cmdData.size());
 
     logTraceP("Sending to sensor:");
     logIndentUp();

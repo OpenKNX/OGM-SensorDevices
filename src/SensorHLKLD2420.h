@@ -1,7 +1,7 @@
 #pragma once
 // #include "IncludeManager.h"
 #ifdef PMMODULE
-#ifdef SERIAL_HF
+#ifdef HF_SERIAL
 #include <string>
 #include <vector>
 #include "Sensor.h"

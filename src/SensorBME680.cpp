@@ -164,7 +164,9 @@ bool SensorBME680::begin()
         Bsec::updateSubscription(sensorList, sizeof(sensorList), BSEC_SAMPLE_RATE_LP);
         lResult = checkIaqSensorStatus();
     }
-    Bsec::setTemperatureOffset(-gTempOffset);
+    if (lResult)
+        Bsec::setTemperatureOffset(-gTempOffset);
+    logResult(lResult);
     return lResult;
 }
 

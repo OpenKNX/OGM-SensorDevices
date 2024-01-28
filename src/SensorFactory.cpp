@@ -10,6 +10,7 @@
     #include "SensorOPT300x.h"
     #include "SensorSCD30.h"
     #include "SensorSCD40.h"
+    #include "SensorSCD41.h"
     #include "SensorSGP30.h"
     #include "SensorSHT3x.h"
     #include "SensorVEML7700.h"
@@ -38,8 +39,11 @@ Sensor* newSensor(uint8_t iSensorClass, MeasureType iMeasureType)
             lSensor = new SensorSCD30(iMeasureType);
             break;
         #endif
-        case SENS_SCD41:
+        case SENS_SCD40:
             lSensor = new SensorSCD40(iMeasureType);
+            break;
+        case SENS_SCD41:
+            lSensor = new SensorSCD41(iMeasureType);
             break;
 
         case SENS_IAQCORE:

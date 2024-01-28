@@ -12,12 +12,13 @@ class SensorSCD40 : public Sensor, protected SensirionI2CScd4x
     float mTemp = NO_NUM;
     float mHum = NO_NUM;
     float mCo2 = NO_NUM;
-    bool getSensorData();
 
   protected:
     uint8_t getSensorClass() override; // returns unique ID for this sensor type
     void sensorLoopInternal() override;
     float measureValue(MeasureType iMeasureType) override;
+    bool beginInternal();
+    bool getSensorData();
 
   public:
     SensorSCD40(uint16_t iMeasureTypes);

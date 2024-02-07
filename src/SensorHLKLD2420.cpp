@@ -668,12 +668,19 @@ void SensorHLKLD2420::sendCommand(byte command, std::vector<byte> paramter)
     cmdData.insert(cmdData.end(), paramter.cbegin(), paramter.cend());
     cmdData.insert(cmdData.end(), FOOTER.cbegin(), FOOTER.cend());
 
-    HF_SERIAL.write(cmdData.data(), cmdData.size());
+    if (HF_SERIAL.availableForWrite())
+    {
+        HF_SERIAL.write(cmdData.data(), cmdData.size());
 
-    logTraceP("Sending to sensor:");
-    logIndentUp();
-    logHexTraceP(cmdData.data(), cmdData.size());
-    logIndentDown();
+        logTraceP("Sending to sensor:");
+        logIndentUp();
+        logHexTraceP(cmdData.data(), cmdData.size());
+        logIndentDown();
+    }
+    else
+    {
+        logInfoP("Cannot send command, serial not ready to write!");
+    }
 }
 
 float SensorHLKLD2420::measureValue(MeasureType iMeasureType)

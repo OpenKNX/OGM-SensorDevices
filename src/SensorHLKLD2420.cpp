@@ -156,89 +156,100 @@ void SensorHLKLD2420::sendDefaultSensorValues()
 void SensorHLKLD2420::uartGetPacket()
 {
     uint8_t rxByte;
+    long lastDataReceived = millis();
     switch (mPacketState)
     {
         case GET_SYNC_STATE:
             // wait for a valid header
-            while (mPacketState == GET_SYNC_STATE)
+            while (
+                mPacketState == GET_SYNC_STATE &&
+                HF_SERIAL.available() > 0 && HF_SERIAL.readBytes(&rxByte, 1) == 1)
             {
-                if (HF_SERIAL.available() > 0 && HF_SERIAL.readBytes(&rxByte, 1) == 1)
+                lastDataReceived = millis();
+
+                mBuffer.push_back((byte)rxByte);
+                if (mBuffer.size() == HEADER_FOOTER_SIZE)
                 {
-                    mBuffer.push_back((byte)rxByte);
-                    if (mBuffer.size() == HEADER_FOOTER_SIZE)
-                    {
-                        /*logTraceP("Header:");
-                        logIndentUp();
-                        logHexTraceP(mBuffer.data(), mBuffer.size());
-                        logIndentDown();*/
+                    /*logTraceP("Header:");
+                    logIndentUp();
+                    logHexTraceP(mBuffer.data(), mBuffer.size());
+                    logIndentDown();*/
 
-                        if (mBuffer == HEADER_ON)
-                        {
-                            mPacketType = ON;
-                            mPacketState = GET_PACKET_DATA;
-                            break;
-                        }
-                        if (mBuffer == HEADER_OFF)
-                        {
-                            mPacketType = OFF;
-                            mPacketState = GET_PACKET_DATA;
-                            break;
-                        }
-                        if (mBuffer == HEADER_COMMAND)
-                        {
-                            mPacketType = COMMAND_RESPONSE;
-                            mPacketState = GET_PACKET_DATA;
-                            break;
-                        }
-                        if (mBuffer == HEADER_RAW_DATA)
-                        {
-                            mPacketType = RAW_DATA;
-                            mPacketState = GET_PACKET_DATA;
-                            break;
-                        }
+                    if (mBuffer == HEADER_ON)
+                    {
+                        mPacketType = ON;
+                        mPacketState = GET_PACKET_DATA;
+                        break;
                     }
-
-                    // if the current buffer is the expected size of the header,
-                    // but we did not find a valid header yet, we remove the first element
-                    if (mBuffer.size() == HEADER_FOOTER_SIZE)
+                    if (mBuffer == HEADER_OFF)
                     {
-                        mBuffer.erase(mBuffer.begin());
+                        mPacketType = OFF;
+                        mPacketState = GET_PACKET_DATA;
+                        break;
+                    }
+                    if (mBuffer == HEADER_COMMAND)
+                    {
+                        mPacketType = COMMAND_RESPONSE;
+                        mPacketState = GET_PACKET_DATA;
+                        break;
+                    }
+                    if (mBuffer == HEADER_RAW_DATA)
+                    {
+                        mPacketType = RAW_DATA;
+                        mPacketState = GET_PACKET_DATA;
+                        break;
                     }
                 }
-                else if (delayCheck(pSensorStateDelay, 1000))
+
+                // if the current buffer is the expected size of the header,
+                // but we did not find a valid header yet, we remove the first element
+                if (mBuffer.size() == HEADER_FOOTER_SIZE)
                 {
-                    // no data received for 1 sec., cancel header sync
-                    break;
+                    mBuffer.erase(mBuffer.begin());
                 }
             }
+
+            if (delayCheck(lastDataReceived, 100))
+            {
+                // no data received for 100 millisec., cancel header sync
+                mBuffer.clear();
+                mPacketState = GET_SYNC_STATE;
+                break;
+            }
+
             break;
         case GET_PACKET_DATA:
             // add data till valid footer received
-            while (mPacketState == GET_PACKET_DATA)
+            while (
+                mPacketState == GET_PACKET_DATA &&
+                HF_SERIAL.available() > 0 && HF_SERIAL.readBytes(&rxByte, 1) == 1)
             {
-                if (HF_SERIAL.available() > 0 && HF_SERIAL.readBytes(&rxByte, 1) == 1)
-                {
-                    mBuffer.push_back((byte)rxByte);
-                    if (mPacketType == COMMAND_RESPONSE && equal(mBuffer.end() - HEADER_FOOTER_SIZE, mBuffer.end(), FOOTER.begin()) ||
-                        mPacketType == RAW_DATA && equal(mBuffer.end() - HEADER_FOOTER_SIZE, mBuffer.end(), FOOTER_RAW_DATA.begin()))
-                    {
-                        mPacketState = PROCESS_PACKET_STATE;
-                        break;
-                    }
+                lastDataReceived = millis();
 
-                    if ((mPacketType == OFF || mPacketType == ON && mBuffer.size() > 10) &&
-                        mBuffer.end()[-2] == 13 && mBuffer.end()[-1] == 10)
-                    { // new line
-                        mPacketState = PROCESS_PACKET_STATE;
-                        break;
-                    }
-                }
-                else if (delayCheck(pSensorStateDelay, 1000))
+                mBuffer.push_back((byte)rxByte);
+                if (mPacketType == COMMAND_RESPONSE && equal(mBuffer.end() - HEADER_FOOTER_SIZE, mBuffer.end(), FOOTER.begin()) ||
+                    mPacketType == RAW_DATA && equal(mBuffer.end() - HEADER_FOOTER_SIZE, mBuffer.end(), FOOTER_RAW_DATA.begin()))
                 {
-                    // no data received for 1 sec., cancel get packet data
+                    mPacketState = PROCESS_PACKET_STATE;
+                    break;
+                }
+
+                if ((mPacketType == OFF || mPacketType == ON && mBuffer.size() > 10) &&
+                    mBuffer.end()[-2] == 13 && mBuffer.end()[-1] == 10)
+                { // new line
+                    mPacketState = PROCESS_PACKET_STATE;
                     break;
                 }
             }
+
+            if (delayCheck(lastDataReceived, 100))
+            {
+                // no data received for 100 millisec., cancel get packet data
+                mBuffer.clear();
+                mPacketState = GET_SYNC_STATE;
+                break;
+            }
+
             break;
         case PROCESS_PACKET_STATE:
             getSensorData();

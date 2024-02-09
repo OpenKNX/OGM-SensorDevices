@@ -38,7 +38,7 @@ void SensorSCD41::sensorLoopInternal()
                 // 44 h for 5 min. intervals, scaled inversely proportional for other intervals
                 uint16_t lAscInitial = 44 * (300 / mMeasureInterval);
 
-                // it has to be devidable by 4
+                // it has to be dividable by 4
                 lAscInitial = (lAscInitial + 3) & ~(decltype(lAscInitial))3;
 
                 setAutomaticSelfCalibrationInitialPeriod(lAscInitial);
@@ -47,7 +47,7 @@ void SensorSCD41::sensorLoopInternal()
                 // 156 h for 5 min. intervals, scaled inversely proportional for other intervals
                 uint16_t lAscStandard = 156 * (300 / mMeasureInterval);
 
-                // it has to be devidable by 4
+                // it has to be dividable by 4
                 lAscStandard = (lAscStandard + 3) & ~(decltype(lAscStandard))3;
 
                 setAutomaticSelfCalibrationStandardPeriod(lAscStandard);
@@ -83,7 +83,7 @@ void SensorSCD41::sensorLoopInternal()
             }
             else
             {
-                // for other intervals measurement is triggered manually
+                // for other intervals, measurement is triggered manually
                 if (mIsMeasuring)
                 {
                     if (delayCheck(mMeasureDelay, MEASURE_DELAY))

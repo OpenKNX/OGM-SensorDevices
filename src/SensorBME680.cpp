@@ -64,6 +64,11 @@ void SensorBME680::delayCallback(bme680_delay_fptr_t iDelayCallback)
     mDelayCallback = iDelayCallback;
 }
 
+void SensorBME680::delayCallbackActive(bool iOn)
+{
+    mDelayCallbackIsActive = iOn;
+}
+
 void SensorBME680::setMagicKeyOffset(uint8_t iMagicKeyOffset)
 {
     sMagicWord[0] ^= iMagicKeyOffset;
@@ -75,6 +80,8 @@ void SensorBME680::setMagicKeyOffset(uint8_t iMagicKeyOffset)
 void SensorBME680::sensorLoopInternal()
 {
     bool lResult = false;
+    if (mDelayCallbackIsActive)
+        return;
     switch (gSensorState)
     {
         case Wakeup:

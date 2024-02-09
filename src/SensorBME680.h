@@ -24,6 +24,7 @@ class SensorBME680 : public Sensor, protected Bsec
     uint32_t stateUpdateTimer = 0;
     static bsec_virtual_sensor_t sensorList[];
     bme680_delay_fptr_t mDelayCallback = 0;
+    bool mDelayCallbackIsActive = false;
 
     const uint8_t *mFlashBuffer = nullptr; // Pointer to stored flash content
     // new flash handling
@@ -43,6 +44,7 @@ class SensorBME680 : public Sensor, protected Bsec
     void setMagicKeyOffset(uint8_t iMagicKeyOffset);
     bool prepareTemperatureOffset(float iTemp) override;
     virtual std::string logPrefix() override;
+    void delayCallbackActive(bool iOn);
 
   private:
     static uint8_t sMagicWord[];

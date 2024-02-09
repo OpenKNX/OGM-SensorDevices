@@ -11,7 +11,7 @@ SensorSCD40::SensorSCD40(uint16_t iMeasureTypes, uint8_t iAddress)
 
 uint8_t SensorSCD40::getSensorClass()
 {
-    return SENS_SCD41;
+    return SENS_SCD40;
 }
 
 void SensorSCD40::sensorLoopInternal()
@@ -70,6 +70,11 @@ float SensorSCD40::measureValue(MeasureType iMeasureType)
 bool SensorSCD40::begin()
 {
     logDebugP("Starting sensor SCD40... ");
+    return beginInternal();
+}
+
+bool SensorSCD40::beginInternal()
+{
     SensirionI2CScd4x::begin(gWire);
     bool lResult = false;
     lResult = (stopPeriodicMeasurement() == 0);
@@ -88,11 +93,10 @@ uint8_t SensorSCD40::getI2cSpeed()
 
 bool SensorSCD40::getSensorData()
 {
-    uint16_t lDataReady;
-    bool lResult = (SensirionI2CScd4x::getDataReadyStatus(lDataReady) == 0);
+    bool lDataReady;
+    bool lResult = (SensirionI2CScd4x::getDataReadyFlag(lDataReady) == 0);
    
     if (lResult) {
-        lDataReady &= 0x07FF;
         if (lDataReady) {
             uint16_t lTemp;
             uint16_t lHum;
@@ -112,5 +116,10 @@ bool SensorSCD40::getSensorData()
 bool SensorSCD40::prepareTemperatureOffset(float iTempOffset) {
     gTempOffset = -4.0 + iTempOffset;
     return true;
+}
+
+bool SensorSCD40::setPressure(float pressure)
+{
+    return setAmbientPressure(static_cast<uint16_t>(pressure * 100.0 + 0.5));
 }
 #endif

@@ -26,7 +26,8 @@
 #define SENS_OPT300X 6    // Lux
 #define SENS_VL53L1X 7    // Tof
 #define SENS_SGP30 8      // Temp/Hum/Voc
-#define SENS_SCD41 9      // Temp/Hum/Co2
+#define SENS_SCD40 9      // Temp/Hum/Co2
+#define SENS_SCD41 13     // Temp/Hum/Co2
 #define SENS_MR24xxB1 10  // HF-Presence
 #define SENS_VEML7700 11  // Lux
 #define SENS_HLKLD2420 12 // HF-Presence

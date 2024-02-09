@@ -1,7 +1,7 @@
 #pragma once
 // #include "IncludeManager.h"
 #ifdef PMMODULE
-#ifdef SERIAL_HF
+#ifdef HF_SERIAL
 #include "Sensor.h"
 
 // Radar commands, value is index to command table cCommands

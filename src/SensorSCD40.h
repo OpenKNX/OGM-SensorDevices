@@ -28,5 +28,6 @@ class SensorSCD40 : public Sensor, protected SensirionI2CScd4x
     bool begin() override;
     uint8_t getI2cSpeed() override;
     bool prepareTemperatureOffset(float iTempOffset) override;
+    bool setPressure(float pressure);
 };
 #endif

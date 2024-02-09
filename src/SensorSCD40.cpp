@@ -117,4 +117,9 @@ bool SensorSCD40::prepareTemperatureOffset(float iTempOffset) {
     gTempOffset = -4.0 + iTempOffset;
     return true;
 }
+
+bool SensorSCD40::setPressure(float pressure)
+{
+    return setAmbientPressure(static_cast<uint16_t>(pressure * 100.0 + 0.5));
+}
 #endif

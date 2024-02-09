@@ -10,7 +10,7 @@
 class SensorSCD41 : public SensorSCD40
 {
   private:
-    uint16_t mMeasureInterval = 30;
+    uint32_t mMeasureInterval = 30;
     uint32_t mMeasureDelay = 0;
     bool mIsMeasuring = false;
 
@@ -24,6 +24,6 @@ class SensorSCD41 : public SensorSCD40
     virtual ~SensorSCD41() {}
 
     bool begin() override;
-    void setMeasureInterval(uint16_t iMeasureInterval);
+    void setMeasureInterval(uint32_t iMeasureInterval);
 };
 #endif

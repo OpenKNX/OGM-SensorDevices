@@ -14,7 +14,7 @@ uint8_t SensorSCD41::getSensorClass()
     return SENS_SCD41;
 }
 
-void SensorSCD41::setMeasureInterval(uint16_t iMeasureInterval)
+void SensorSCD41::setMeasureInterval(uint32_t iMeasureInterval)
 {
     mMeasureInterval = iMeasureInterval;
 }

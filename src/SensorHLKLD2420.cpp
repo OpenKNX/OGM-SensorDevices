@@ -50,22 +50,23 @@ void SensorHLKLD2420::sensorLoopInternal()
             Sensor::sensorLoopInternal();
             break;
         case Calibrate:
-            if (delayCheck(pSensorStateDelay, 50))
-            {
+            uartGetPacket();
+            startupLoop();
+
+            if (mHfSensorStartupStates == START_FINISHED)
                 gSensorState = Finalize;
-                pSensorStateDelay = millis();
-            }
+
             break;
         case Finalize:
-            if (delayCheck(pSensorStateDelay, 50))
-            {
-                gSensorState = Running;
-                pSensorStateDelay = millis();
-            }
+            uartGetPacket();
+
+            // close command mode and resume normal operation
+            sendCommand(CMD_CLOSE_COMMAND_MODE);
+
+            gSensorState = Running;
             break;
         case Running:
             uartGetPacket();
-            sendDefaultSensorValues();
             break;
         default:
             pSensorStateDelay = millis();
@@ -73,11 +74,9 @@ void SensorHLKLD2420::sensorLoopInternal()
     }
 }
 
-// this state engine calculates startup behaviour of HF sensor
-// and sends default values as soon as the sensor can consume them
-void SensorHLKLD2420::sendDefaultSensorValues()
+// state machine handles startup behavior and calibration of HF sensor
+void SensorHLKLD2420::startupLoop()
 {
-    // logDebugP("sendDefaultSensorValues: %d, %.2f", mHfSensorStartupStates, lastDetectedRange);
     switch (mHfSensorStartupStates)
     {
         case START_INIT:
@@ -133,16 +132,23 @@ void SensorHLKLD2420::sendDefaultSensorValues()
             if (delayCheck(pSensorStateDelay, 50))
             {
                 pSensorStateDelay = millis();
-                mHfSensorStartupStates = START_FINISHED;
+                mHfSensorStartupStates = START_CALIBRATING;
 
                 resetRawDataRecording();
                 sendCommand(CMD_RAW_DATA_MODE, PARAM_RAW_DATA_MODE);
-
                 sendCommand(CMD_CLOSE_COMMAND_MODE);
             }
             break;
-        default:
-            mHfSensorStartupStates = START_FINISHED;
+        case START_CALIBRATING:
+            if (calibrationCompleted)
+            {
+                mHfSensorStartupStates = START_FINISHED;
+            }
+            else if (delayCheck(pSensorStateDelay, 40000))
+            {
+                // if not complete after 40 sec., restart calibration
+                mHfSensorStartupStates = START_READ2_DONE;
+            }
             break;
     }
 }
@@ -676,9 +682,7 @@ bool SensorHLKLD2420::getSensorData()
                 logIndentDown();
 
                 logDebugP("Sensor calibration finished");
-
-                // close command mode and resume normal operation
-                sendCommand(CMD_CLOSE_COMMAND_MODE);
+                calibrationCompleted = true;
             }
 
             result = true;

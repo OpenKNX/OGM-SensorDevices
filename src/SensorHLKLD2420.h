@@ -51,6 +51,7 @@ const std::vector<byte> PARAM_RAW_DATA_MODE = {(byte)0x00, (byte)0x00, (byte)0x0
 #define START_VERSION_RECEIVED 2
 #define START_READ1_DONE 3
 #define START_READ2_DONE 4
+#define START_CALIBRATING 5
 #define START_FINISHED 255
 
 
@@ -92,6 +93,7 @@ class SensorHLKLD2420 : public Sensor
     int delayTime = NO_NUM;
     int triggerThreshold[16];
     int holdThreshold[16];
+    bool calibrationCompleted = false;
 
     uint32_t rawDataLastRecordingReceived = 0;
     double rawDataRangeAverage[16];
@@ -100,6 +102,7 @@ class SensorHLKLD2420 : public Sensor
     int8_t mDefaultSensitivity = 5;
     uint8_t mHfSensorStartupStates = 0;
 
+    void startupLoop();
     void uartGetPacket();
     int bytesToInt(byte byte1, byte byte2, byte byte3, byte byte4);
     std::vector<byte> intToBytes(int intValue);
@@ -120,7 +123,6 @@ class SensorHLKLD2420 : public Sensor
     void sensorLoopInternal() override;
     bool checkSensorConnection() override;
     float measureValue(MeasureType iMeasureType) override;
-    void sendDefaultSensorValues();
 
   public:
     SensorHLKLD2420(uint16_t iMeasureTypes);

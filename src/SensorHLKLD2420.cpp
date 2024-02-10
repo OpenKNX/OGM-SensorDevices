@@ -542,6 +542,13 @@ bool SensorHLKLD2420::getSensorData()
                 // enter command mode to stop raw data transfer
                 sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE);
 
+                // reboot module to return to normal (not raw data) operation
+                sendCommand(CMD_REBOOT_MODULE);
+                delay(1000);
+
+                // after reboot enter command mode again to store data
+                sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE);
+
                 logTraceP("rawDataRangeAverage:");
                 logIndentUp();
 
@@ -613,8 +620,21 @@ bool SensorHLKLD2420::getSensorData()
 
                 // write back trigger thresholds, for each:
                 // first 2 bytes parameter offset, then 4 bytes value
+                // write in 2 steps as it seems 100 bytes are maximum in one package
                 param.clear();
-                for (int i = 0; i < 16; i++)
+                for (int i = 0; i < 8; i++)
+                {
+                    param.push_back(OFFSET_PARAM_TRIGGERS + (byte)i);
+                    param.push_back(0);
+
+                    bytes = intToBytes(dBToRaw(triggerThresholdDb[i]));
+                    param.insert(param.end(), bytes.cbegin(), bytes.cend());
+
+                    logDebugP("Gate %i:  %.2f", i, triggerThresholdDb[i]);
+                }
+                sendCommand(CMD_WRITE_MODULE_CONFIG, param);
+                param.clear();
+                for (int i = 8; i < 16; i++)
                 {
                     param.push_back(OFFSET_PARAM_TRIGGERS + (byte)i);
                     param.push_back(0);
@@ -632,8 +652,21 @@ bool SensorHLKLD2420::getSensorData()
 
                 // write back hold thresholds, for each:
                 // first 2 bytes parameter offset, then 4 bytes value
+                // write in 2 steps as it seems 100 bytes are maximum in one package
                 param.clear();
-                for (int i = 0; i < 16; i++)
+                for (int i = 0; i < 8; i++)
+                {
+                    param.push_back(OFFSET_PARAM_HOLDS + (byte)i);
+                    param.push_back(0);
+
+                    bytes = intToBytes(dBToRaw(holdThresholdDb[i]));
+                    param.insert(param.end(), bytes.cbegin(), bytes.cend());
+
+                    logDebugP("Gate %i:  %.2f", i, holdThresholdDb[i]);
+                }
+                sendCommand(CMD_WRITE_MODULE_CONFIG, param);
+                param.clear();
+                for (int i = 8; i < 16; i++)
                 {
                     param.push_back(OFFSET_PARAM_HOLDS + (byte)i);
                     param.push_back(0);
@@ -650,8 +683,8 @@ bool SensorHLKLD2420::getSensorData()
 
                 logDebugP("Sensor calibration finished");
 
-                // reboot module to return to normal (not raw data) operation
-                sendCommand(CMD_REBOOT_MODULE);
+                // close command mode and resume normal operation
+                sendCommand(CMD_CLOSE_COMMAND_MODE);
             }
 
             result = true;

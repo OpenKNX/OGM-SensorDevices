@@ -100,7 +100,7 @@ class SensorHLKLD2420 : public Sensor
     int rawDataRecordingCount = 0;
     
     int8_t mDefaultSensitivity = 5;
-    uint8_t mHfSensorStartupStates = 0;
+    uint8_t mHfSensorStartupState = 0;
 
     void startupLoop();
     void uartGetPacket();

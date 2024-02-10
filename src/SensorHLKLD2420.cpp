@@ -34,7 +34,7 @@ void SensorHLKLD2420::writeSensitivity(int8_t iSensitivity)
     mSensitivity = iSensitivity;
 
     // restart calibration with new sensitivity value
-    mHfSensorStartupStates = START_READ2_DONE;
+    mHfSensorStartupState = START_READ2_DONE;
 }
 
 uint8_t SensorHLKLD2420::getSensorClass()
@@ -53,7 +53,7 @@ void SensorHLKLD2420::sensorLoopInternal()
             uartGetPacket();
             startupLoop();
 
-            if (mHfSensorStartupStates == START_FINISHED)
+            if (mHfSensorStartupState == START_FINISHED)
                 gSensorState = Finalize;
 
             break;
@@ -77,13 +77,13 @@ void SensorHLKLD2420::sensorLoopInternal()
 // state machine handles startup behavior and calibration of HF sensor
 void SensorHLKLD2420::startupLoop()
 {
-    switch (mHfSensorStartupStates)
+    switch (mHfSensorStartupState)
     {
         case START_INIT:
             if (lastDetectedRange > NO_NUM)
             {
                 pSensorStateDelay = millis();
-                mHfSensorStartupStates = START_SENSOR_ACTIVE;
+                mHfSensorStartupState = START_SENSOR_ACTIVE;
 
                 sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE);
             }
@@ -93,7 +93,7 @@ void SensorHLKLD2420::startupLoop()
             if (!moduleVersion.empty())
             {
                 pSensorStateDelay = millis();
-                mHfSensorStartupStates = START_VERSION_RECEIVED;
+                mHfSensorStartupState = START_VERSION_RECEIVED;
             }
             else if (delayCheck(pSensorStateDelay, 1000))
             {
@@ -106,7 +106,7 @@ void SensorHLKLD2420::startupLoop()
             if (minDistance > NO_NUM)
             {
                 pSensorStateDelay = millis();
-                mHfSensorStartupStates = START_READ1_DONE;
+                mHfSensorStartupState = START_READ1_DONE;
             }
             else if (delayCheck(pSensorStateDelay, 2000))
             {
@@ -119,7 +119,7 @@ void SensorHLKLD2420::startupLoop()
             if (delayTime > NO_NUM)
             {
                 pSensorStateDelay = millis();
-                mHfSensorStartupStates = START_READ2_DONE;
+                mHfSensorStartupState = START_READ2_DONE;
             }
             else if (delayCheck(pSensorStateDelay, 2000))
             {
@@ -132,7 +132,7 @@ void SensorHLKLD2420::startupLoop()
             if (delayCheck(pSensorStateDelay, 50))
             {
                 pSensorStateDelay = millis();
-                mHfSensorStartupStates = START_CALIBRATING;
+                mHfSensorStartupState = START_CALIBRATING;
 
                 resetRawDataRecording();
                 sendCommand(CMD_RAW_DATA_MODE, PARAM_RAW_DATA_MODE);
@@ -142,12 +142,12 @@ void SensorHLKLD2420::startupLoop()
         case START_CALIBRATING:
             if (calibrationCompleted)
             {
-                mHfSensorStartupStates = START_FINISHED;
+                mHfSensorStartupState = START_FINISHED;
             }
             else if (delayCheck(pSensorStateDelay, 40000))
             {
                 // if not complete after 40 sec., restart calibration
-                mHfSensorStartupStates = START_READ2_DONE;
+                mHfSensorStartupState = START_READ2_DONE;
             }
             break;
     }
@@ -727,7 +727,7 @@ void SensorHLKLD2420::sendCommand(byte command, std::vector<byte> paramter)
 
 float SensorHLKLD2420::measureValue(MeasureType iMeasureType)
 {
-    if (mHfSensorStartupStates < START_FINISHED)
+    if (mHfSensorStartupState < START_FINISHED)
         return NO_NUM;
     switch (iMeasureType)
     {

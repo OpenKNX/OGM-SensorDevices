@@ -91,52 +91,46 @@ void SensorHLKLD2420::sendDefaultSensorValues()
             break;
         case START_SENSOR_ACTIVE:
             // Communication is established, we wait for version info from Sensor
-            if (delayCheck(pSensorStateDelay, 1000))
+            if (!moduleVersion.empty())
             {
                 pSensorStateDelay = millis();
-                if (!moduleVersion.empty())
-                {
-                    mHfSensorStartupStates = START_VERSION_RECEIVED;
-                }
-                else
-                {
-                    sendCommand(CMD_READ_VERSION);
-                }
+                mHfSensorStartupStates = START_VERSION_RECEIVED;
+            }
+            else if (delayCheck(pSensorStateDelay, 1000))
+            {
+                pSensorStateDelay = millis();
+                sendCommand(CMD_READ_VERSION);
             }
             break;
         case START_VERSION_RECEIVED:
             // We got version, we wait for read 1 done
-            if (delayCheck(pSensorStateDelay, 2000))
+            if (minDistance > NO_NUM)
             {
                 pSensorStateDelay = millis();
-                if (minDistance > NO_NUM)
-                {
-                    mHfSensorStartupStates = START_READ1_DONE;
-                }
-                else
-                {
-                    sendCommand(CMD_READ_MODULE_CONFIG, PARAM_READ_DISTANCE_TRIGGER);
-                }
+                mHfSensorStartupStates = START_READ1_DONE;
+            }
+            else if (delayCheck(pSensorStateDelay, 2000))
+            {
+                pSensorStateDelay = millis();
+                sendCommand(CMD_READ_MODULE_CONFIG, PARAM_READ_DISTANCE_TRIGGER);
             }
             break;
         case START_READ1_DONE:
             // Read 1 is done, we wait for read 2 done
-            if (delayCheck(pSensorStateDelay, 2000))
+            if (delayTime > NO_NUM)
             {
                 pSensorStateDelay = millis();
-                if (delayTime > NO_NUM)
-                {
-                    mHfSensorStartupStates = START_READ2_DONE;
-                }
-                else
-                {
-                    sendCommand(CMD_READ_MODULE_CONFIG, PARAM_READ_DELAY_MAINTAIN);
-                }
+                mHfSensorStartupStates = START_READ2_DONE;
+            }
+            else if (delayCheck(pSensorStateDelay, 2000))
+            {
+                pSensorStateDelay = millis();
+                sendCommand(CMD_READ_MODULE_CONFIG, PARAM_READ_DELAY_MAINTAIN);
             }
             break;
         case START_READ2_DONE:
             // All done, close command mode again
-            if (delayCheck(pSensorStateDelay, 1000))
+            if (delayCheck(pSensorStateDelay, 50))
             {
                 pSensorStateDelay = millis();
                 mHfSensorStartupStates = START_FINISHED;

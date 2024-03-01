@@ -7,20 +7,20 @@
     #define STATE_SAVE_PERIOD UINT32_C(360 * 60 * 1000) // 360 minutes - 4 times a day
     #define EEPROM_BME680_START_ADDRESS 0xC80
 
-SensorSGP30::SensorSGP30(uint16_t iMeasureTypes)
-    : Sensor(iMeasureTypes, SGP30_I2C_ADDR)
+SensorSGP30::SensorSGP30(uint16_t iMeasureTypes, TwoWire &iWire)
+    : Sensor(iMeasureTypes, iWire, SGP30_I2C_ADDR)
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
 }
 
-SensorSGP30::SensorSGP30(uint16_t iMeasureTypes, uint8_t iAddress)
-    : Sensor(iMeasureTypes, iAddress)
+SensorSGP30::SensorSGP30(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+    : Sensor(iMeasureTypes, iWire, iAddress)
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
 }
 
-SensorSGP30::SensorSGP30(uint16_t iMeasureTypes, uint8_t iAddress, uint8_t iMagicKeyOffset)
-    : Sensor(iMeasureTypes, iAddress)
+SensorSGP30::SensorSGP30(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress, uint8_t iMagicKeyOffset)
+    : Sensor(iMeasureTypes, iWire, iAddress)
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
     sMagicWord[0] ^= iMagicKeyOffset;
@@ -34,6 +34,11 @@ uint8_t SensorSGP30::getSensorClass()
     return SENS_SGP30;
 }
 
+std::string SensorSGP30::logPrefix()
+{
+    return "Sensor<SGP30>";
+}
+
 void SensorSGP30::setMagicKeyOffset(uint8_t iMagicKeyOffset)
 {
     sMagicWord[0] ^= iMagicKeyOffset;
@@ -45,7 +50,7 @@ void SensorSGP30::setMagicKeyOffset(uint8_t iMagicKeyOffset)
 void SensorSGP30::sensorLoopInternal()
 {
     bool lResult = false;
-    switch (gSensorState)
+    switch (pSensorState)
     {
         case Wakeup:
             if (pSensorStateDelay == 0 || delayCheck(pSensorStateDelay, 1000))
@@ -59,7 +64,7 @@ void SensorSGP30::sensorLoopInternal()
                     // Bsec::updateSubscription(sensorList, sizeof(sensorList) / sizeof(bsec_virtual_sensor_t), BSEC_SAMPLE_RATE_LP);
                     lResult = checkIaqSensorStatus();
                 }
-                gSensorState = lResult ? Calibrate : Off;
+                pSensorState = lResult ? Calibrate : Off;
             }
             break;
         case Calibrate:
@@ -67,7 +72,7 @@ void SensorSGP30::sensorLoopInternal()
             {
                 sensorLoadState();
                 lResult = checkIaqSensorStatus();
-                gSensorState = lResult ? Finalize : Off;
+                pSensorState = lResult ? Finalize : Off;
                 pSensorStateDelay = millis();
                 if (lResult)
                     // Bsec::run();
@@ -145,7 +150,7 @@ bool SensorSGP30::begin()
     }
     if (lResult)
         lResult = Sensor::begin();
-    gSensorState = Finalize;
+    pSensorState = Finalize;
     pSensorStateDelay = millis();
     logResult(lResult);
     return lResult;
@@ -185,7 +190,7 @@ void SensorSGP30::sensorLoadState()
     // Existing state in EEPROM
     logDebugP("Reading BME680 state from EEPROM\n");
     // mEEPROM->prepareRead(EEPROM_BME680_START_ADDRESS, 144);
-    if (gWire.available()) gWire.readBytes(buffer, 144);
+    if (pWire.available()) pWire.readBytes(buffer, 144);
 
     // for (uint8_t i = 0; i < 144; i += 16)
     //     printHEX("<-- ", buffer + i, 16);

@@ -20,11 +20,12 @@ class SensorVEML7700 : public Sensor
     // bool checkSensorConnection() override;
 
   public:
-    SensorVEML7700(uint16_t iMeasureTypes);
-    SensorVEML7700(uint16_t iMeasureTypes, uint8_t iAddress);
+    SensorVEML7700(uint16_t iMeasureTypes, TwoWire &iWire);
+    SensorVEML7700(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress);
     virtual ~SensorVEML7700() {}
 
     bool begin() override;
     uint8_t getI2cSpeed() override;
+    std::string logPrefix() override;
 };
 #endif

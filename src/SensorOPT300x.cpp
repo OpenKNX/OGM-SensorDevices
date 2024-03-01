@@ -1,23 +1,28 @@
 // #include "IncludeManager.h"
 #if defined(SENSORMODULE) || defined(PMMODULE)
-#include <Wire.h>
-// #include "OpenKNX/Hardware.h"
-#include "SensorOPT300x.h"
+    #include <Wire.h>
+    // #include "OpenKNX/Hardware.h"
+    #include "SensorOPT300x.h"
 
-SensorOPT300x::SensorOPT300x(uint16_t iMeasureTypes)
-    : Sensor(iMeasureTypes, OPT300X_I2C_ADDR){};
+SensorOPT300x::SensorOPT300x(uint16_t iMeasureTypes, TwoWire &iWire)
+    : Sensor(iMeasureTypes, iWire, OPT300X_I2C_ADDR){};
 
-SensorOPT300x::SensorOPT300x(uint16_t iMeasureTypes, uint8_t iAddress)
-    : Sensor(iMeasureTypes, iAddress){};
+SensorOPT300x::SensorOPT300x(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+    : Sensor(iMeasureTypes, iWire, iAddress){};
 
 uint8_t SensorOPT300x::getSensorClass()
 {
     return SENS_OPT300X;
 }
 
+std::string SensorOPT300x::logPrefix()
+{
+    return "Sensor<OPT300x>";
+}
+
 void SensorOPT300x::sensorLoopInternal()
 {
-    switch (gSensorState)
+    switch (pSensorState)
     {
         case Wakeup:
             Sensor::sensorLoopInternal();
@@ -30,7 +35,7 @@ void SensorOPT300x::sensorLoopInternal()
             if (delayCheck(pSensorStateDelay, 200))
             {
                 if (getSensorData())
-                    gSensorState = Running;
+                    pSensorState = Running;
                 pSensorStateDelay = millis();
             }
             break;
@@ -51,12 +56,12 @@ float SensorOPT300x::measureValue(MeasureType iMeasureType)
 {
     switch (iMeasureType)
     {
-    case Lux:
-        // hardware calibration
-        return mLux;
-        break;
-    default:
-        break;
+        case Lux:
+            // hardware calibration
+            return mLux;
+            break;
+        default:
+            break;
     }
     return NO_NUM;
 }
@@ -64,12 +69,13 @@ float SensorOPT300x::measureValue(MeasureType iMeasureType)
 bool SensorOPT300x::begin()
 {
     logDebugP("Starting sensor OPT300x... ");
-// #ifdef SENSOR_I2C_OPT300x
-//     gWire = SENSOR_I2C_OPT300x;
-//     gWire.begin();
-// #endif
+    // #ifdef SENSOR_I2C_OPT300x
+    //     gWire = SENSOR_I2C_OPT300x;
+    //     gWire.begin();
+    // #endif
     bool lResult = Sensor::begin();
-    if (lResult) {
+    if (lResult)
+    {
         OPT300xConfig lConfig;
         lConfig.rangeNumber = OPT300X_CONF_AUTO_FULL_RANGE;
         lConfig.conversionTime = OPT300X_CONF_CONV_TIME_800;
@@ -93,16 +99,16 @@ bool SensorOPT300x::getSensorData()
     mBuffer[1] = 0;
     uint16_t lRaw;
 
-    gWire.beginTransmission(gAddress);
-    gWire.write(OPT300X_REG_RESULT); // Send result register address
-    if (gWire.endTransmission() != 0)
+    pWire.beginTransmission(pI2CAddress);
+    pWire.write(OPT300X_REG_RESULT); // Send result register address
+    if (pWire.endTransmission() != 0)
         return false;
 
     // request sensor data
-    gWire.requestFrom(gAddress, 2);
-    if (gWire.available() != 2)
+    pWire.requestFrom(pI2CAddress, 2);
+    if (pWire.available() != 2)
         return false;
-    gWire.readBytes(mBuffer, 2);
+    pWire.readBytes(mBuffer, 2);
     lRaw = (mBuffer[0] << 8) | mBuffer[1];
     mLux = (lRaw & 0x0FFF) * (0.01 * pow(2, (lRaw & 0xF000) >> 12));
     return true;
@@ -110,10 +116,10 @@ bool SensorOPT300x::getSensorData()
 
 bool SensorOPT300x::writeConfig(OPT300xConfig iConfig)
 {
-    gWire.beginTransmission(gAddress);
-    gWire.write(OPT300X_REG_CONFIG);
-    gWire.write(iConfig.rawData >> 8);
-    gWire.write(iConfig.rawData & 0x00FF);
-    return (gWire.endTransmission() == 0);
+    pWire.beginTransmission(pI2CAddress);
+    pWire.write(OPT300X_REG_CONFIG);
+    pWire.write(iConfig.rawData >> 8);
+    pWire.write(iConfig.rawData & 0x00FF);
+    return (pWire.endTransmission() == 0);
 }
 #endif

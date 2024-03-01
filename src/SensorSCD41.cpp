@@ -1,17 +1,22 @@
 // #include "IncludeManager.h"
 #ifdef SENSORMODULE
-#include <Wire.h>
-#include "SensorSCD41.h"
+    #include "SensorSCD41.h"
+    #include <Wire.h>
 
-SensorSCD41::SensorSCD41(uint16_t iMeasureTypes)
-    : SensorSCD40(iMeasureTypes, SCD40_I2C_ADDR){};
+SensorSCD41::SensorSCD41(uint16_t iMeasureTypes, TwoWire &iWire)
+    : SensorSCD40(iMeasureTypes, iWire, SCD40_I2C_ADDR){};
 
-SensorSCD41::SensorSCD41(uint16_t iMeasureTypes, uint8_t iAddress)
-    : SensorSCD40(iMeasureTypes, iAddress){};
+SensorSCD41::SensorSCD41(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+    : SensorSCD40(iMeasureTypes, iWire, iAddress){};
 
 uint8_t SensorSCD41::getSensorClass()
 {
     return SENS_SCD41;
+}
+
+std::string SensorSCD41::logPrefix()
+{
+    return "Sensor<SCD41>";
 }
 
 void SensorSCD41::setMeasureInterval(uint32_t iMeasureInterval)
@@ -21,7 +26,7 @@ void SensorSCD41::setMeasureInterval(uint32_t iMeasureInterval)
 
 void SensorSCD41::sensorLoopInternal()
 {
-    switch (gSensorState)
+    switch (pSensorState)
     {
         case Wakeup:
             Sensor::sensorLoopInternal();
@@ -52,7 +57,7 @@ void SensorSCD41::sensorLoopInternal()
 
                 setAutomaticSelfCalibrationStandardPeriod(lAscStandard);
             }
-            
+
             Sensor::sensorLoopInternal();
             break;
         case Finalize:
@@ -63,12 +68,12 @@ void SensorSCD41::sensorLoopInternal()
                 if (delayCheck(pSensorStateDelay, 2000))
                 {
                     if (getSensorData())
-                        gSensorState = Running;
+                        pSensorState = Running;
                     pSensorStateDelay = millis();
                 }
             }
             else
-                gSensorState = Running;
+                pSensorState = Running;
 
             break;
         case Running:

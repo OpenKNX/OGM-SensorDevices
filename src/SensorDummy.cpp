@@ -1,17 +1,22 @@
 // #include "IncludeManager.h"
 #if defined(SENSORMODULE) || defined(PMMODULE)
-#include <Wire.h>
-#include "SensorDummy.h"
+    #include "SensorDummy.h"
+    #include <Wire.h>
 
-SensorDummy::SensorDummy(uint16_t iMeasureTypes)
-    : Sensor(iMeasureTypes, 0){};
+SensorDummy::SensorDummy(uint16_t iMeasureTypes, TwoWire &iWire)
+    : Sensor(iMeasureTypes, iWire, 0){};
 
-SensorDummy::SensorDummy(uint16_t iMeasureTypes, uint8_t iAddress)
-    : Sensor(iMeasureTypes, iAddress){};
+SensorDummy::SensorDummy(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+    : Sensor(iMeasureTypes, iWire, iAddress){};
 
 uint8_t SensorDummy::getSensorClass()
 {
     return SENS_NO;
+}
+
+std::string SensorDummy::logPrefix()
+{
+    return "Sensor<Dummy>";
 }
 
 float SensorDummy::measureValue(MeasureType iMeasureType)

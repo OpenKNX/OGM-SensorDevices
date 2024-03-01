@@ -1,11 +1,11 @@
 // #include "IncludeManager.h"
 #pragma once
 #ifdef SENSORMODULE
-#include "Sensor.h"
-#include <SensorSCD40.h>
-#include <SensirionI2CScd4x.h>
+    #include "Sensor.h"
+    #include <SensirionI2CScd4x.h>
+    #include <SensorSCD40.h>
 
-#define MEASURE_DELAY 5000
+    #define MEASURE_DELAY 5000
 
 class SensorSCD41 : public SensorSCD40
 {
@@ -19,11 +19,12 @@ class SensorSCD41 : public SensorSCD40
     void sensorLoopInternal() override;
 
   public:
-    SensorSCD41(uint16_t iMeasureTypes);
-    SensorSCD41(uint16_t iMeasureTypes, uint8_t iAddress);
+    SensorSCD41(uint16_t iMeasureTypes, TwoWire &iWire);
+    SensorSCD41(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress);
     virtual ~SensorSCD41() {}
 
     bool begin() override;
     void setMeasureInterval(uint32_t iMeasureInterval);
+    std::string logPrefix() override;
 };
 #endif

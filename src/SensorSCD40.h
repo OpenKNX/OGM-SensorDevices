@@ -1,10 +1,10 @@
 // #include "IncludeManager.h"
 #pragma once
 #ifdef SENSORMODULE
-#include "Sensor.h"
-#include <SensirionI2CScd4x.h>
+    #include "Sensor.h"
+    #include <SensirionI2CScd4x.h>
 
-#define SCD40_I2C_ADDR 0x62
+    #define SCD40_I2C_ADDR 0x62
 
 class SensorSCD40 : public Sensor, protected SensirionI2CScd4x
 {
@@ -21,13 +21,14 @@ class SensorSCD40 : public Sensor, protected SensirionI2CScd4x
     bool getSensorData();
 
   public:
-    SensorSCD40(uint16_t iMeasureTypes);
-    SensorSCD40(uint16_t iMeasureTypes, uint8_t iAddress);
+    SensorSCD40(uint16_t iMeasureTypes, TwoWire &iWire);
+    SensorSCD40(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress);
     virtual ~SensorSCD40() {}
-    
+
     bool begin() override;
     uint8_t getI2cSpeed() override;
     bool prepareTemperatureOffset(float iTempOffset) override;
     bool setPressure(float pressure);
+    std::string logPrefix() override;
 };
 #endif

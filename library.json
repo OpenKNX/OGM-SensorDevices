@@ -1,0 +1,26 @@
+{
+    "name": "OGM-SensorDevices",
+    "version": "2.0.0",
+    "description": "Module implementing non-blocking sensor access for use with OpenKNX. Has no ETS Application.",
+    "dependencies": {
+        "adafruit/Adafruit VEML7700 Library": "2.1.0",
+        "adafruit/Adafruit BusIO": "^1.14.1",
+        "adafruit/Adafruit BME280 Library": "2.1.2",
+        "adafruit/Adafruit Unified Sensor": "1.1.13",
+        "sparkfun/SparkFun SCD30 Arduino Library": "1.0.14",
+        "sensirion/Sensirion I2C SCD4x": "0.4.0",
+        "sensirion/Sensirion Core": "0.6.0",
+        "pololu/VL53L1X": "1.2.1"
+    },
+    "homepage": "https://openknx.de",
+    "authors": {
+        "name": "OpenKNX",
+        "email": "info@openknx.de",
+        "url": "https://openknx.de",
+        "maintainer": true
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/OpenKNX/OGM-SensorDevices"
+    }
+}

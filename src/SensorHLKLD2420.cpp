@@ -1,17 +1,17 @@
 // #include "IncludeManager.h"
 #ifdef PMMODULE
-#ifdef HF_SERIAL
-#include <Arduino.h>
-#include <Wire.h>
-#include "SensorHLKLD2420.h"
+    #ifdef HF_SERIAL
+        #include "SensorHLKLD2420.h"
+        #include <Arduino.h>
+        #include <Wire.h>
 
-SensorHLKLD2420::SensorHLKLD2420(uint16_t iMeasureTypes)
-    : SensorHLKLD2420(iMeasureTypes, 0){};
+SensorHLKLD2420::SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire &iWire)
+    : SensorHLKLD2420(iMeasureTypes, Wire, 0){};
 
-SensorHLKLD2420::SensorHLKLD2420(uint16_t iMeasureTypes, uint8_t iAddress)
-    : Sensor(iMeasureTypes, iAddress)
+SensorHLKLD2420::SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+    : Sensor(iMeasureTypes, Wire, iAddress)
 {
-    gMeasureTypes |= Pres | Sensitivity | Distance;
+    pMeasureTypes |= Pres | Sensitivity | Distance;
 };
 
 std::string SensorHLKLD2420::logPrefix()
@@ -44,7 +44,7 @@ uint8_t SensorHLKLD2420::getSensorClass()
 
 void SensorHLKLD2420::sensorLoopInternal()
 {
-    switch (gSensorState)
+    switch (pSensorState)
     {
         case Wakeup:
             Sensor::sensorLoopInternal();
@@ -54,7 +54,7 @@ void SensorHLKLD2420::sensorLoopInternal()
             startupLoop();
 
             if (mHfSensorStartupState == START_FINISHED)
-                gSensorState = Finalize;
+                pSensorState = Finalize;
 
             break;
         case Finalize:
@@ -63,7 +63,7 @@ void SensorHLKLD2420::sensorLoopInternal()
             // close command mode and resume normal operation
             sendCommand(CMD_CLOSE_COMMAND_MODE);
 
-            gSensorState = Running;
+            pSensorState = Running;
             break;
         case Running:
             uartGetPacket();
@@ -696,18 +696,18 @@ bool SensorHLKLD2420::getSensorData()
     return result;
 }
 
-void SensorHLKLD2420::sendCommand(byte command, std::vector<byte> paramter)
+void SensorHLKLD2420::sendCommand(byte command, std::vector<byte> parameter)
 {
     std::vector<byte> cmdData = HEADER_COMMAND;
 
-    byte payloadSize = 2 + paramter.size();
+    byte payloadSize = 2 + parameter.size();
     cmdData.push_back(payloadSize);
     cmdData.push_back(0x00);
 
     cmdData.push_back(command);
     cmdData.push_back(0x00);
 
-    cmdData.insert(cmdData.end(), paramter.cbegin(), paramter.cend());
+    cmdData.insert(cmdData.end(), parameter.cbegin(), parameter.cend());
     cmdData.insert(cmdData.end(), FOOTER.cbegin(), FOOTER.cend());
 
     if (HF_SERIAL.availableForWrite())
@@ -737,9 +737,9 @@ float SensorHLKLD2420::measureValue(MeasureType iMeasureType)
             if (mSensitivity >= 0)
                 return mSensitivity;
             break;
-         case Distance:
+        case Distance:
             return lastDetectedRange;
-       default:
+        default:
             break;
     }
     return NO_NUM;

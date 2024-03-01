@@ -33,9 +33,9 @@ class SensorBME680 : public Sensor, protected Bsec
     uint16_t sensorFlashSize() override;
 
   public:
-    SensorBME680(uint16_t iMeasureTypes);
-    SensorBME680(uint16_t iMeasureTypes, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback);
-    SensorBME680(uint16_t iMeasureTypes, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback, uint8_t iMagicKeyOffset);
+    SensorBME680(uint16_t iMeasureTypes, TwoWire &iWire);
+    SensorBME680(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback);
+    SensorBME680(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback, uint8_t iMagicKeyOffset);
     virtual ~SensorBME680() {}
 
     bool begin() override;

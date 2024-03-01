@@ -1,22 +1,27 @@
 // #include "IncludeManager.h"
 #ifdef SENSORMODULE
-#include <Wire.h>
-#include "SensorVL53L1X.h"
+    #include "SensorVL53L1X.h"
+    #include <Wire.h>
 
-SensorVL53L1X::SensorVL53L1X(uint16_t iMeasureTypes)
-    : Sensor(iMeasureTypes, VL53L1X_I2C_ADDR), VL53L1X(){};
+SensorVL53L1X::SensorVL53L1X(uint16_t iMeasureTypes, TwoWire &iWire)
+    : Sensor(iMeasureTypes, iWire, VL53L1X_I2C_ADDR), VL53L1X(){};
 
-SensorVL53L1X::SensorVL53L1X(uint16_t iMeasureTypes, uint8_t iAddress)
-    : Sensor(iMeasureTypes, iAddress), VL53L1X(){};
+SensorVL53L1X::SensorVL53L1X(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+    : Sensor(iMeasureTypes, iWire, iAddress), VL53L1X(){};
 
 uint8_t SensorVL53L1X::getSensorClass()
 {
     return SENS_VL53L1X;
 }
 
+std::string SensorVL53L1X::logPrefix()
+{
+    return "Sensor<VL53L1X>";
+}
+
 void SensorVL53L1X::sensorLoopInternal()
 {
-    switch (gSensorState)
+    switch (pSensorState)
     {
         case Wakeup:
             Sensor::sensorLoopInternal();
@@ -31,7 +36,7 @@ void SensorVL53L1X::sensorLoopInternal()
             if (delayCheck(pSensorStateDelay, 2000))
             {
                 if (getSensorData())
-                    gSensorState = Running;
+                    pSensorState = Running;
                 pSensorStateDelay = millis();
             }
             break;
@@ -52,12 +57,12 @@ float SensorVL53L1X::measureValue(MeasureType iMeasureType)
 {
     switch (iMeasureType)
     {
-    case Tof:
-        return (float)mDistance;
-        // return ((float)this->ranging_data.range_mm);
-        break;
-    default:
-        break;
+        case Tof:
+            return (float)mDistance;
+            // return ((float)this->ranging_data.range_mm);
+            break;
+        default:
+            break;
     }
     return NO_NUM;
 }
@@ -67,7 +72,8 @@ bool SensorVL53L1X::begin()
     logDebugP("Starting sensor VL53L1X... ");
     this->setTimeout(500);
     bool lResult = this->init();
-    if (lResult) {
+    if (lResult)
+    {
         // Use long distance mode and allow up to 50000 us (50 ms) for a measurement.
         // You can change these settings to adjust the performance of the sensor, but
         // the minimum timing budget is 20 ms for short distance mode and 33 ms for
@@ -94,7 +100,8 @@ uint8_t SensorVL53L1X::getI2cSpeed()
 bool SensorVL53L1X::getSensorData()
 {
     bool lResult = this->dataReady();
-    if (lResult) {
+    if (lResult)
+    {
         mDistance = this->read(false);
         // do the next reading
         this->readSingle(false);

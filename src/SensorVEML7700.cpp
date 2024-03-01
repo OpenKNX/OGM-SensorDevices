@@ -1,23 +1,28 @@
 // #include "IncludeManager.h"
 #if defined(SENSORMODULE) || defined(PMMODULE)
-#include <Wire.h>
-// #include "HardwareDevices.h"
-#include "SensorVEML7700.h"
+    #include <Wire.h>
+    // #include "HardwareDevices.h"
+    #include "SensorVEML7700.h"
 
-SensorVEML7700::SensorVEML7700(uint16_t iMeasureTypes)
-    : Sensor(iMeasureTypes, VEML7700_I2C_ADDR){};
+SensorVEML7700::SensorVEML7700(uint16_t iMeasureTypes, TwoWire &iWire)
+    : Sensor(iMeasureTypes, iWire, VEML7700_I2C_ADDR){};
 
-SensorVEML7700::SensorVEML7700(uint16_t iMeasureTypes, uint8_t iAddress)
-    : Sensor(iMeasureTypes, iAddress){};
+SensorVEML7700::SensorVEML7700(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+    : Sensor(iMeasureTypes, iWire, iAddress){};
 
 uint8_t SensorVEML7700::getSensorClass()
 {
-    return SENS_OPT300X;
+    return SENS_VEML7700;
+}
+
+std::string SensorVEML7700::logPrefix()
+{
+    return "Sensor<VEML7700>";
 }
 
 void SensorVEML7700::sensorLoopInternal()
 {
-    switch (gSensorState)
+    switch (pSensorState)
     {
         case Wakeup:
             Sensor::sensorLoopInternal();
@@ -30,7 +35,7 @@ void SensorVEML7700::sensorLoopInternal()
             if (delayCheck(pSensorStateDelay, 200))
             {
                 if (getSensorData())
-                    gSensorState = Running;
+                    pSensorState = Running;
                 pSensorStateDelay = millis();
             }
             break;
@@ -65,12 +70,12 @@ float SensorVEML7700::measureValue(MeasureType iMeasureType)
 {
     switch (iMeasureType)
     {
-    case Lux:
-        // hardware calibration
-        return mLux;
-        break;
-    default:
-        break;
+        case Lux:
+            // hardware calibration
+            return mLux;
+            break;
+        default:
+            break;
     }
     return NO_NUM;
 }
@@ -78,14 +83,15 @@ float SensorVEML7700::measureValue(MeasureType iMeasureType)
 bool SensorVEML7700::begin()
 {
     logDebugP("Starting sensor VEML7700... ");
-// #ifdef SENSOR_I2C_VEML7700
-//     gWire = SENSOR_I2C_VEML7700;
-//     gWire.begin();
-// #endif
+    // #ifdef SENSOR_I2C_VEML7700
+    //     gWire = SENSOR_I2C_VEML7700;
+    //     gWire.begin();
+    // #endif
     bool lResult = Sensor::begin();
-    if (lResult) {
-        gWire.setClock(400000);
-        lResult = mVeml.begin(&gWire);
+    if (lResult)
+    {
+        pWire.setClock(400000);
+        lResult = mVeml.begin(&pWire);
     }
     logResult(lResult);
     return lResult;

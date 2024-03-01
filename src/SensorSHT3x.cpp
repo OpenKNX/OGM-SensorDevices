@@ -1,23 +1,28 @@
 // #include "IncludeManager.h"
 #ifdef SENSORMODULE
-#include <Wire.h>
-#include "SensorSHT3x.h"
+    #include "SensorSHT3x.h"
+    #include <Wire.h>
 
-SensorSHT3x::SensorSHT3x(uint16_t iMeasureTypes)
-    : Sensor(iMeasureTypes, SHT3X_ADDR){};
+SensorSHT3x::SensorSHT3x(uint16_t iMeasureTypes, TwoWire &iWire)
+    : Sensor(iMeasureTypes, iWire, SHT3X_ADDR){};
 
-SensorSHT3x::SensorSHT3x(uint16_t iMeasureTypes, uint8_t iAddress)
-    : Sensor(iMeasureTypes, iAddress){};
+SensorSHT3x::SensorSHT3x(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+    : Sensor(iMeasureTypes, iWire, iAddress){};
 
 uint8_t SensorSHT3x::getSensorClass()
 {
     return SENS_SHT3X;
 }
 
+std::string SensorSHT3x::logPrefix()
+{
+    return "Sensor<SHT3x>";
+}
+
 void SensorSHT3x::sensorLoopInternal()
 {
     static uint32_t sCommandSent = 0;
-    switch (gSensorState)
+    switch (pSensorState)
     {
         case Wakeup:
             Sensor::sensorLoopInternal();
@@ -27,21 +32,24 @@ void SensorSHT3x::sensorLoopInternal()
             Sensor::sensorLoopInternal();
             break;
         case Finalize:
-            if (delayCheck(pSensorStateDelay, 100)) {
+            if (delayCheck(pSensorStateDelay, 100))
+            {
                 // start first measurement
                 getTempHum();
                 sCommandSent = 0;
-                gSensorState = Running;
+                pSensorState = Running;
                 pSensorStateDelay = millis();
             }
             break;
         case Running:
             // quick hack: We use a static member to toggle between aquirering values and fetching them
-            if (sCommandSent && delayCheck(sCommandSent, 50)) {
+            if (sCommandSent && delayCheck(sCommandSent, 50))
+            {
                 getTempHum();
                 sCommandSent = 0;
-            } 
-            else if (delayCheck(pSensorStateDelay, 2000)) {
+            }
+            else if (delayCheck(pSensorStateDelay, 2000))
+            {
                 writeCommand(SHT3X_MEAS_HIGHREP);
                 sCommandSent = millis();
                 pSensorStateDelay = millis();
@@ -57,15 +65,15 @@ float SensorSHT3x::measureValue(MeasureType iMeasureType)
 {
     switch (iMeasureType)
     {
-    case Temperature:
-        // hardware calibration
-        return mTemp;
-        break;
-    case Humidity:
-        return mHumidity;
-        break;
-    default:
-        break;
+        case Temperature:
+            // hardware calibration
+            return mTemp;
+            break;
+        case Humidity:
+            return mHumidity;
+            break;
+        default:
+            break;
     }
     return NO_NUM;
 }
@@ -133,12 +141,12 @@ bool SensorSHT3x::getTempHum(void)
     // writeCommand(SHT3X_MEAS_HIGHREP);
 
     // delay(50);
-    gWire.requestFrom(gAddress, 6);
-    if (gWire.available() != 6)
+    pWire.requestFrom(pI2CAddress, 6);
+    if (pWire.available() != 6)
         return false;
     for (uint8_t i = 0; i < 6; i++)
     {
-        readbuffer[i] = gWire.read();
+        readbuffer[i] = pWire.read();
     }
     if (readbuffer[2] != crc8(readbuffer, 2) ||
         readbuffer[5] != crc8(readbuffer + 3, 2))
@@ -161,9 +169,9 @@ bool SensorSHT3x::getTempHum(void)
 
 void SensorSHT3x::writeCommand(uint16_t iCmd)
 {
-    gWire.beginTransmission(gAddress);
-    gWire.write(iCmd >> 8);
-    gWire.write(iCmd & 0xFF);
-    gWire.endTransmission();
+    pWire.beginTransmission(pI2CAddress);
+    pWire.write(iCmd >> 8);
+    pWire.write(iCmd & 0xFF);
+    pWire.endTransmission();
 }
 #endif

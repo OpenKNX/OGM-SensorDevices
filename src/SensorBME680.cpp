@@ -8,20 +8,20 @@
 #define STATE_SAVE_PERIOD UINT32_C(360 * 60 * 1000) // 360 minutes - 4 times a day
 // #define EEPROM_BME680_START_ADDRESS 0xC80
 
-SensorBME680::SensorBME680(uint16_t iMeasureTypes)
-    : Sensor(iMeasureTypes, BME680_I2C_ADDR), Bsec()
+SensorBME680::SensorBME680(uint16_t iMeasureTypes, TwoWire &iWire)
+    : Sensor(iMeasureTypes, iWire, BME680_I2C_ADDR), Bsec()
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
 }
 
-SensorBME680::SensorBME680(uint16_t iMeasureTypes, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback)
-    : Sensor(iMeasureTypes, iAddress), Bsec(), mDelayCallback(iDelayCallback)
+SensorBME680::SensorBME680(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback)
+    : Sensor(iMeasureTypes, iWire, iAddress), Bsec(), mDelayCallback(iDelayCallback)
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
 }
 
-SensorBME680::SensorBME680(uint16_t iMeasureTypes, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback, uint8_t iMagicKeyOffset)
-    : Sensor(iMeasureTypes, iAddress), Bsec(), mDelayCallback(iDelayCallback)
+SensorBME680::SensorBME680(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback, uint8_t iMagicKeyOffset)
+    : Sensor(iMeasureTypes, iWire, iAddress), Bsec(), mDelayCallback(iDelayCallback)
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
     sMagicWord[0] ^= iMagicKeyOffset;
@@ -59,6 +59,11 @@ uint8_t SensorBME680::getSensorClass()
     return SENS_BME680;
 }
 
+std::string SensorBME680::logPrefix()
+{
+    return "Sensor<BME680>";
+}
+
 void SensorBME680::delayCallback(bme680_delay_fptr_t iDelayCallback)
 {
     mDelayCallback = iDelayCallback;
@@ -82,7 +87,7 @@ void SensorBME680::sensorLoopInternal()
     bool lResult = false;
     if (mDelayCallbackIsActive)
         return;
-    switch (gSensorState)
+    switch (pSensorState)
     {
         case Wakeup:
             if (pSensorStateDelay == 0 || delayCheck(pSensorStateDelay, 1000))
@@ -95,7 +100,7 @@ void SensorBME680::sensorLoopInternal()
             {
                 sensorLoadState();
                 lResult = checkIaqSensorStatus();
-                gSensorState = lResult ? Finalize : Off;
+                pSensorState = lResult ? Finalize : Off;
                 pSensorStateDelay = millis();
                 if (lResult)
                     Bsec::run();
@@ -106,7 +111,7 @@ void SensorBME680::sensorLoopInternal()
             if (delayCheck(pSensorStateDelay, 100))
             {
                 // as long as there are no new values, sensor is not yet ready
-                gSensorState = Bsec::run() ? Running : Finalize;
+                pSensorState = Bsec::run() ? Running : Finalize;
                 pSensorStateDelay = millis();
             }
             break;
@@ -158,7 +163,7 @@ bool SensorBME680::begin()
     bool lResult = Sensor::begin();
     if (lResult)
     {
-        Bsec::begin(gAddress, gWire, mDelayCallback);
+        Bsec::begin(pI2CAddress, pWire, mDelayCallback);
         lResult = checkIaqSensorStatus();
     }
     if (lResult)
@@ -172,7 +177,7 @@ bool SensorBME680::begin()
         lResult = checkIaqSensorStatus();
     }
     if (lResult)
-        Bsec::setTemperatureOffset(-gTempOffset);
+        Bsec::setTemperatureOffset(-pTempOffset);
     logResult(lResult);
     return lResult;
 }
@@ -264,7 +269,7 @@ void SensorBME680::sensorLoadState()
 
 bool SensorBME680::prepareTemperatureOffset(float iTemp)
 {
-    gTempOffset = iTemp;
+    pTempOffset = iTemp;
     return true;
 }
 // #endif
@@ -309,9 +314,4 @@ void SensorBME680::sensorWriteFlash()
 uint16_t SensorBME680::sensorFlashSize()
 {
     return BME680_SAVE_SIZE;
-}
-
-std::string SensorBME680::logPrefix()
-{
-    return "BME680";
 }

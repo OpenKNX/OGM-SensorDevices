@@ -86,54 +86,38 @@ union uData
 
 class Sensor
 {
-  private:
-    static Sensor *sSensors[SENSOR_COUNT];
-    static uint8_t sNumSensors;
-    static uint8_t sMaxI2cSpeed;
-
   protected:
     // Sensor();
-    Sensor(uint16_t iMeasureTypes, uint8_t iAddress);
+    Sensor(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress);
     virtual ~Sensor() {}
-    uint16_t gMeasureTypes;
 
-    uint8_t gAddress;
-    static TwoWire &sWire;
-    TwoWire &gWire = Wire;
-    SensorState gSensorState = Wakeup;
+    TwoWire &pWire = Wire;
+
+    uint16_t pMeasureTypes;
+    uint8_t pI2CAddress;
+    SensorState pSensorState = Wakeup;
     uint32_t pSensorStateDelay = 0;
-    float gTempOffset = 0.0;
+    float pTempOffset = 0.0;
 
-    virtual uint8_t getSensorClass() = 0; // pure; returns unique ID for this sensor type
     virtual bool checkSensorConnection();
     virtual float measureValue(MeasureType iMeasureType) = 0; // pure
-    virtual void sensorLoopInternal();
     // virtual void sensorSaveState();
-    virtual void sensorReadFlash(const uint8_t *iBuffer, const uint16_t iSize);
-    virtual void sensorWriteFlash();
-    virtual uint16_t sensorFlashSize();
     // non blocking restart approach for a sensor
-    void restartSensor();
-    virtual bool begin(); // first initialization, may be blocking, should be called druing setup(), not during loop()
+    virtual bool begin(); // first initialization, may be blocking, should be called during setup(), not during loop()
     void logResult(bool iResult);
 
   public:
-    // static
-    static void SetWire(TwoWire &iWire);
-    static Sensor *factory(uint8_t iSensorClass, MeasureType iMeasureType);
-    static void sensorLoop();
-    static bool measureValue(MeasureType iMeasureType, float &eValue);
-    static uint8_t getError();
-    static void saveState();
-    static void readFlash(const uint8_t *iBuffer, const uint16_t iSize);
-    static void writeFlash();
-    static uint16_t flashSize();
-    static void restartSensors();
-    static bool beginSensors();
-    static uint8_t getMaxI2cSpeed();
-
     virtual uint8_t getI2cSpeed();
     virtual bool prepareTemperatureOffset(float iTempOffset);
+    virtual void sensorReadFlash(const uint8_t *iBuffer, const uint16_t iSize);
+    virtual void sensorWriteFlash();
+    virtual uint16_t sensorFlashSize();
     virtual std::string logPrefix();
+    virtual uint8_t getSensorClass() = 0; // pure; returns unique ID for this sensor type
+    void addMeasureType(MeasureType iMeasureType);
+    bool checkMeasureType(MeasureType iMeasureType);
+    virtual void sensorLoopInternal();
+    void restartSensor();
+    bool measureValue(MeasureType iMeasureType, float &eValue);
 };
 #endif

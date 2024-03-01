@@ -1,28 +1,33 @@
 // #include "IncludeManager.h"
 #ifdef SENSORMODULE
-#include <Wire.h>
-#include "SensorSCD40.h"
+    #include "SensorSCD40.h"
+    #include <Wire.h>
 
-SensorSCD40::SensorSCD40(uint16_t iMeasureTypes)
-    : Sensor(iMeasureTypes, SCD40_I2C_ADDR), SensirionI2CScd4x(){};
+SensorSCD40::SensorSCD40(uint16_t iMeasureTypes, TwoWire &iWire)
+    : Sensor(iMeasureTypes, iWire, SCD40_I2C_ADDR), SensirionI2CScd4x(){};
 
-SensorSCD40::SensorSCD40(uint16_t iMeasureTypes, uint8_t iAddress)
-    : Sensor(iMeasureTypes, iAddress), SensirionI2CScd4x(){};
+SensorSCD40::SensorSCD40(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+    : Sensor(iMeasureTypes, iWire, iAddress), SensirionI2CScd4x(){};
 
 uint8_t SensorSCD40::getSensorClass()
 {
     return SENS_SCD40;
 }
 
+std::string SensorSCD40::logPrefix()
+{
+    return "Sensor<SCD40>";
+}
+
 void SensorSCD40::sensorLoopInternal()
 {
-    switch (gSensorState)
+    switch (pSensorState)
     {
         case Wakeup:
             Sensor::sensorLoopInternal();
             break;
         case Calibrate:
-            
+
             startLowPowerPeriodicMeasurement();
             Sensor::sensorLoopInternal();
             break;
@@ -31,7 +36,7 @@ void SensorSCD40::sensorLoopInternal()
             if (delayCheck(pSensorStateDelay, 2000))
             {
                 if (getSensorData())
-                    gSensorState = Running;
+                    pSensorState = Running;
                 pSensorStateDelay = millis();
             }
             break;
@@ -75,11 +80,11 @@ bool SensorSCD40::begin()
 
 bool SensorSCD40::beginInternal()
 {
-    SensirionI2CScd4x::begin(gWire);
+    SensirionI2CScd4x::begin(pWire);
     bool lResult = false;
     lResult = (stopPeriodicMeasurement() == 0);
     if (lResult)
-        lResult = (setTemperatureOffset(-gTempOffset) == 0);
+        lResult = (setTemperatureOffset(-pTempOffset) == 0);
     if (lResult)
         lResult = Sensor::begin();
     logResult(lResult);
@@ -95,15 +100,18 @@ bool SensorSCD40::getSensorData()
 {
     bool lDataReady;
     bool lResult = (SensirionI2CScd4x::getDataReadyFlag(lDataReady) == 0);
-   
-    if (lResult) {
-        if (lDataReady) {
+
+    if (lResult)
+    {
+        if (lDataReady)
+        {
             uint16_t lTemp;
             uint16_t lHum;
             uint16_t lCo2;
             lResult = (SensirionI2CScd4x::readMeasurementTicks(lCo2, lTemp, lHum) == 0);
             lResult = (lCo2 > 0);
-            if (lResult) {
+            if (lResult)
+            {
                 mTemp = lTemp * 175.0 / 65536.0 - 45.0;
                 mHum = lHum * 100.0 / 65536.0;
                 mCo2 = lCo2;
@@ -113,8 +121,9 @@ bool SensorSCD40::getSensorData()
     return lResult;
 }
 
-bool SensorSCD40::prepareTemperatureOffset(float iTempOffset) {
-    gTempOffset = -4.0 + iTempOffset;
+bool SensorSCD40::prepareTemperatureOffset(float iTempOffset)
+{
+    pTempOffset = -4.0 + iTempOffset;
     return true;
 }
 

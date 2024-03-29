@@ -123,9 +123,9 @@ bool SensorDevices::measureValue(MeasureType iMeasureType, float& eValue)
 {
     bool lResult = false;
     for (uint8_t lCounter = 0; lCounter < mNumSensors; lCounter++)
-        if (mSensors[mMeasureValueIterator]->checkMeasureType(iMeasureType))
+        if (mSensors[lCounter]->checkMeasureType(iMeasureType))
         {
-            lResult = mSensors[mMeasureValueIterator]->measureValue(iMeasureType, eValue);
+            lResult = mSensors[lCounter]->measureValue(iMeasureType, eValue);
             break;
         }
     return lResult;

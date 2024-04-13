@@ -35,8 +35,8 @@ class SensorIAQCore : public Sensor
     float measureValue(MeasureType iMeasureType) override;
 
   public:
-    SensorIAQCore(uint16_t iMeasureTypes, TwoWire &iWire);
-    SensorIAQCore(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress);
+    SensorIAQCore(uint16_t iMeasureTypes, TwoWire* iWire);
+    SensorIAQCore(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress);
     virtual ~SensorIAQCore() {}
 
     bool begin() override;

@@ -57,8 +57,8 @@ class SensorOPT300x : public Sensor
     float measureValue(MeasureType iMeasureType) override;
 
   public:
-    SensorOPT300x(uint16_t iMeasureTypes, TwoWire &iWire);
-    SensorOPT300x(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress);
+    SensorOPT300x(uint16_t iMeasureTypes, TwoWire* iWire);
+    SensorOPT300x(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress);
     virtual ~SensorOPT300x() {}
 
     bool begin() override;

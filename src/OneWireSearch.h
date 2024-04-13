@@ -1,8 +1,8 @@
 #pragma once
-#include <inttypes.h>
-#include <Arduino.h>
 #include "OneWire.h"
-#ifdef COUNT_1WIRE_CHANNEL
+#include <Arduino.h>
+#include <inttypes.h>
+#ifdef WIREMODULE
 // #include <OneWireDS2482.h>
 
 // #define DebugInfoSearch
@@ -48,21 +48,21 @@ class OneWireSearch
     OneWireDS2482 *mBM = NULL;
     uint32_t mDelay = 0;
     uint8_t gInstance = 255;
-    
-#ifdef DebugInfoSearch
+
+    #ifdef DebugInfoSearch
     uint32_t mDuration = 0;
     uint32_t mDurationOld = 0;
     uint32_t mCurrDelay = 0;
     uint32_t mMaxDelay = 0;
-#endif
+    #endif
     int searchDebug(const char *iFormat, ...);
 
     SearchState mSearchState = SearchNew;
     SearchMode mSearchMode = All;
-    
-    // search buffer has to be 8 Byte, 
+
+    // search buffer has to be 8 Byte,
     // part of search result is crc byte
-    uint8_t mSearchResultId[8]; 
+    uint8_t mSearchResultId[8];
     int8_t mSearchLastDiscrepancy = -1;
     uint8_t mSearchLastFamilyDiscrepancy;
     uint8_t mSearchLastDeviceFlag;

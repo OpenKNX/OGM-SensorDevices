@@ -3,10 +3,10 @@
     #include "SensorVL53L1X.h"
     #include <Wire.h>
 
-SensorVL53L1X::SensorVL53L1X(uint16_t iMeasureTypes, TwoWire &iWire)
+SensorVL53L1X::SensorVL53L1X(uint16_t iMeasureTypes, TwoWire* iWire)
     : Sensor(iMeasureTypes, iWire, VL53L1X_I2C_ADDR), VL53L1X(){};
 
-SensorVL53L1X::SensorVL53L1X(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+SensorVL53L1X::SensorVL53L1X(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress)
     : Sensor(iMeasureTypes, iWire, iAddress), VL53L1X(){};
 
 uint8_t SensorVL53L1X::getSensorClass()

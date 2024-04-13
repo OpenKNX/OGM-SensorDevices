@@ -1,6 +1,6 @@
 
 #include "OneWireDS2438Fromula.h"
-#ifdef COUNT_1WIRE_CHANNEL
+#ifdef WIREMODULE
 
 OneWireDS2438Fromula::OneWireDS2438Fromula(/* args */)
 {
@@ -40,13 +40,12 @@ float (*OneWireDS2438Fromula::userFunction[30])(float, float, float, float){
     userFunction27,
     userFunction28,
     userFunction29,
-    userFunction30
-};
+    userFunction30};
 
-const long Rref = 100000;       // Ohm
-const int bWert = 3590;         // b-Wert vom NTC
-const double Kref = 273.15;     // 0°Celsius in Kelvin
-const double Tn = Kref + 25.0;  // Nenntemperatur in Kelvin
+const long Rref = 100000;      // Ohm
+const int bWert = 3590;        // b-Wert vom NTC
+const double Kref = 273.15;    // 0°Celsius in Kelvin
+const double Tn = Kref + 25.0; // Nenntemperatur in Kelvin
 
 // native functions for value conversions (already implemented)
 float OneWireDS2438Fromula::nativeTemperatureNTC(float iTemp, float iVDD, float iVAD, float iVSens)
@@ -55,11 +54,13 @@ float OneWireDS2438Fromula::nativeTemperatureNTC(float iTemp, float iVDD, float 
     double TKelvin = 1 / ((1 / Tn) + ((double)1 / bWert) * log((double)Rntc / Rref));
     return TKelvin - Kref;
 }
-float OneWireDS2438Fromula::nativeHumidity(float iTemp, float iVDD, float iVAD, float iVSens) {
+float OneWireDS2438Fromula::nativeHumidity(float iTemp, float iVDD, float iVAD, float iVSens)
+{
     return ((iVAD / iVDD) - 0.16) / 0.0062 / (1.0546 - (0.00216 * iTemp));
 }
-float OneWireDS2438Fromula::nativeBrightness(float iTemp, float iVDD, float iVAD, float iVSens) {
-    if (iVSens > 0.0) 
+float OneWireDS2438Fromula::nativeBrightness(float iTemp, float iVDD, float iVAD, float iVSens)
+{
+    if (iVSens > 0.0)
         return pow(10.0, iVSens * 1000.0 / 47.0);
     else
         return 0.0;

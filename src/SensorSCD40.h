@@ -21,8 +21,8 @@ class SensorSCD40 : public Sensor, protected SensirionI2CScd4x
     bool getSensorData();
 
   public:
-    SensorSCD40(uint16_t iMeasureTypes, TwoWire &iWire);
-    SensorSCD40(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress);
+    SensorSCD40(uint16_t iMeasureTypes, TwoWire* iWire);
+    SensorSCD40(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress);
     virtual ~SensorSCD40() {}
 
     bool begin() override;

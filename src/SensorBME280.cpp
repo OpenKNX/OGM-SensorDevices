@@ -2,10 +2,10 @@
 #ifdef SENSORMODULE
     #include "SensorBME280.h"
 
-SensorBME280::SensorBME280(uint16_t iMeasureTypes, TwoWire &iWire)
+SensorBME280::SensorBME280(uint16_t iMeasureTypes, TwoWire* iWire)
     : Sensor(iMeasureTypes, iWire, BME280_I2C_ADDR), Adafruit_BME280(){};
 
-SensorBME280::SensorBME280(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+SensorBME280::SensorBME280(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress)
     : Sensor(iMeasureTypes, iWire, iAddress), Adafruit_BME280(){};
 
 uint8_t SensorBME280::getSensorClass()
@@ -101,7 +101,7 @@ bool SensorBME280::begin()
 {
     logDebugP("Starting sensor BME280... ");
     _i2caddr = pI2CAddress;
-    _wire = &pWire;
+    _wire = pWire;
     bool lResult = Sensor::begin();
     pSensorState = Wakeup;
     // logResult(lResult);

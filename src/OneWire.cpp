@@ -1,11 +1,11 @@
 #include "OneWire.h"
-#ifdef COUNT_1WIRE_CHANNEL
-#include "OneWireDS2482.h"
-#include "OneWireDS18B20.h"
-#include "OneWireDS1990.h"
-#include "OneWireDS2408.h"
-#include "OneWireDS2413.h"
-#include "OneWireDS2438.h"
+#ifdef WIREMODULE
+    #include "OneWireDS18B20.h"
+    #include "OneWireDS1990.h"
+    #include "OneWireDS2408.h"
+    #include "OneWireDS2413.h"
+    #include "OneWireDS2438.h"
+    #include "OneWireDS2482.h"
 
 uint8_t OneWire::sSensorCount = 0;
 OneWire* OneWire::sSensor[COUNT_1WIRE_CHANNEL] = {0};
@@ -34,7 +34,7 @@ void copyId(tIdRef iIdLeft, const tIdRef iIdRight)
 
 // static Factory method, creates OneWireSensors just in case, they do not exist
 // it returns also the information if a new sensor was created
-OneWire* OneWire::factory(tIdRef iId, bool *eIsNew)
+OneWire* OneWire::factory(tIdRef iId, bool* eIsNew)
 {
     OneWire* lSensor = NULL;
 
@@ -90,13 +90,15 @@ OneWire::OneWire(tIdRef iId)
 
 OneWire::~OneWire(){};
 
-OneWire::SensorMode OneWire::Mode() {
+OneWire::SensorMode OneWire::Mode()
+{
     return pMode;
 }
 
 void OneWire::setModeConnected(bool iForce /* = false */)
 {
-    if (iForce || pSearchCount >= cDisappearCount) {
+    if (iForce || pSearchCount >= cDisappearCount)
+    {
         pMode = Connected;
         pSearchCount = 0;
     }
@@ -116,7 +118,8 @@ void OneWire::setBusmaster(OneWireDS2482* iBM)
     pBM = iBM;
 }
 
-void OneWire::clearSearchCount() {
+void OneWire::clearSearchCount()
+{
     pSearchCount = 0;
 }
 
@@ -125,8 +128,10 @@ void OneWire::incrementSearchCount(bool iForce /* = false */)
     if (iForce || pMode != New) pSearchCount++;
 }
 
-void OneWire::wireSelectThisDevice() {
-    if (pBM) {
+void OneWire::wireSelectThisDevice()
+{
+    if (pBM)
+    {
         pBM->wireReset();
         pBM->wireSelect(pId);
     }
@@ -148,7 +153,8 @@ bool OneWire::setValue(uint8_t iValue, uint8_t iModelFunction)
     return false;
 }
 
-bool OneWire::setParameter(OneWire::ModelParameter iModelParameter, uint8_t iValue, uint8_t iModelFunction) {
+bool OneWire::setParameter(OneWire::ModelParameter iModelParameter, uint8_t iValue, uint8_t iModelFunction)
+{
     // default implementation for devices without parameters
     return false;
 }

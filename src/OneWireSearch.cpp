@@ -1,6 +1,6 @@
 #include "OneWireSearch.h"
 #include "OneWireDS2482.h"
-#ifdef COUNT_1WIRE_CHANNEL
+#ifdef WIREMODULE
 
 // #ifdef ONEWIRE_TRACE_SEARCH
 // onewire debug output
@@ -54,9 +54,9 @@ void OneWireSearch::newSearchAll()
     mSearchLastFamilyDiscrepancy = 0;
     for (uint8_t i = 0; i < 8; i++)
         mSearchResultId[i] = 0;
-#if ONEWIRE_TRACE_SEARCH == detail
+    #if ONEWIRE_TRACE_SEARCH == detail
     searchDebug("### Init search all ###\n");
-#endif
+    #endif
 }
 
 void OneWireSearch::newSearchFamily(uint8_t iFamily)
@@ -65,9 +65,9 @@ void OneWireSearch::newSearchFamily(uint8_t iFamily)
     mSearchState = SearchNew;
     mSearchMode = Family;
     mSearchFamily = iFamily;
-#if ONEWIRE_TRACE_SEARCH == detail
+    #if ONEWIRE_TRACE_SEARCH == detail
     searchDebug("### Init search Family %02x ###\n", iFamily);
-#endif
+    #endif
 }
 
 void OneWireSearch::newSearchNoFamily(uint8_t iFamily)
@@ -76,9 +76,9 @@ void OneWireSearch::newSearchNoFamily(uint8_t iFamily)
     mSearchState = SearchNew;
     mSearchMode = NoFamily;
     mSearchFamily = iFamily;
-#if ONEWIRE_TRACE_SEARCH == detail
+    #if ONEWIRE_TRACE_SEARCH == detail
     searchDebug("### Init search NoFamily %02x ###\n", iFamily);
-#endif
+    #endif
 }
 
 void OneWireSearch::newSearchForId(tIdRef iId)
@@ -91,9 +91,9 @@ void OneWireSearch::newSearchForId(tIdRef iId)
     mSearchLastDiscrepancy = 64;
     mSearchLastFamilyDiscrepancy = 0;
     copyId(mSearchResultId, iId);
-#if ONEWIRE_TRACE_SEARCH == detail
-    // searchDebug("### Init search for Id %02x %02x %02x %02x %02x %02x %02x ###\n", iId[0], iId[1], iId[2], iId[3], iId[4], iId[5], iId[6]);
-#endif
+    #if ONEWIRE_TRACE_SEARCH == detail
+        // searchDebug("### Init search for Id %02x %02x %02x %02x %02x %02x %02x ###\n", iId[0], iId[1], iId[2], iId[3], iId[4], iId[5], iId[6]);
+    #endif
 }
 
 bool OneWireSearch::MatchSearchMode(uint8_t iFamily)
@@ -111,7 +111,7 @@ bool OneWireSearch::MatchSearchMode(uint8_t iFamily)
             lResult = (iFamily != mSearchFamily);
             break;
         case Id:
-            lResult = false; //todo
+            lResult = false; // todo
             break;
         default:
             break;
@@ -121,11 +121,12 @@ bool OneWireSearch::MatchSearchMode(uint8_t iFamily)
 
 /****************************************
  * Due to the fact, that 1W-Devices might disappear shortly from bus
- * because of a short on the line or signal errors, we count such 
+ * because of a short on the line or signal errors, we count such
  * events and do a state change only if the event lasts for a specific
  * number of times (see cDisappearCount)
  * **************************************/
-void OneWireSearch::manageSearchCounter(OneWireSearch::SearchState iState) {
+void OneWireSearch::manageSearchCounter(OneWireSearch::SearchState iState)
+{
     for (uint8_t i = 0; i < mBM->DeviceCount(); i++)
     {
         if (MatchSearchMode(mBM->Sensor(i)->Family()))
@@ -219,7 +220,7 @@ void OneWireSearch::manageSearchCounter(OneWireSearch::SearchState iState) {
 // #ifdef DebugInfoSearch
 //             mMaxDelay = max(mMaxDelay, millis() - mCurrDelay);
 //             lDuration = millis() - mDuration;
-// 			if (abs(mDurationOld - lDuration) > 5) { 
+// 			if (abs(mDurationOld - lDuration) > 5) {
 // 				// print only if there is a big difference between cycles
 //                 logDebugP("(0x%X) Finished search %s (%s), took %d ms, max blocking was %d ms\n", mBM->mI2cAddress, mSearchMode == Family ? "Family" : "NoFamily", mSearchResultId, lDuration, mMaxDelay);
 //                 mDurationOld = lDuration;
@@ -246,9 +247,9 @@ bool OneWireSearch::wireSearchBlocking()
     bool lResult = true;
     uint8_t lCurrentByte = 0;
 
-#if ONEWIRE_TRACE_SEARCH == detail
-    // searchDebug("### start Blocking search ###\n");
-#endif
+    #if ONEWIRE_TRACE_SEARCH == detail
+        // searchDebug("### start Blocking search ###\n");
+    #endif
     if (mSearchLastDeviceFlag)
         lResult = false;
 
@@ -333,9 +334,9 @@ bool OneWireSearch::wireSearchBlocking()
             // 	eAddress[i] = mSearchResultId[i];
         }
     }
-#if ONEWIRE_TRACE_SEARCH == detail
-    // searchDebug("### End blocking search after %ld ms\n", millis() - lDelay);
-#endif
+    #if ONEWIRE_TRACE_SEARCH == detail
+        // searchDebug("### End blocking search after %ld ms\n", millis() - lDelay);
+    #endif
     return lResult;
 }
 

@@ -21,9 +21,9 @@ class SensorSGP30 : public Sensor
     uint32_t stateUpdateTimer = 0;
 
   public:
-    SensorSGP30(uint16_t iMeasureTypes, TwoWire &iWire);
-    SensorSGP30(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress);
-    SensorSGP30(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress, uint8_t iMagicKeyOffset);
+    SensorSGP30(uint16_t iMeasureTypes, TwoWire* iWire);
+    SensorSGP30(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress);
+    SensorSGP30(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress, uint8_t iMagicKeyOffset);
     virtual ~SensorSGP30() {}
 
     bool begin() override;

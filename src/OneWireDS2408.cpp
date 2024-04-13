@@ -1,11 +1,12 @@
-#include <Arduino.h>
-#include <stdio.h>
-#include <Wire.h>
 #include "OneWire.h"
-#ifdef COUNT_1WIRE_CHANNEL
-#include "OneWireDS2408.h"
+#include <Arduino.h>
+#include <Wire.h>
+#include <stdio.h>
+#ifdef WIREMODULE
+    #include "OneWireDS2408.h"
 
-OneWireDS2408::OneWireDS2408(tIdRef iId) : OneWire(iId) {
+OneWireDS2408::OneWireDS2408(tIdRef iId) : OneWire(iId)
+{
     pPrio = PrioNormal;
 };
 
@@ -13,7 +14,8 @@ void OneWireDS2408::init()
 {
 }
 
-void OneWireDS2408::loop() {
+void OneWireDS2408::loop()
+{
     bool lSuccess = false;
     switch (mState)
     {
@@ -67,13 +69,15 @@ void OneWireDS2408::loop() {
     }
 }
 
-uint8_t OneWireDS2408::getState() {
+uint8_t OneWireDS2408::getState()
+{
     wireSelectThisDevice();
     pBM->wireWriteByte(DS2408_CHANNEL_READ_CMD);
     return pBM->wireReadByte();
 }
 
-bool OneWireDS2408::setState(uint8_t iState) {
+bool OneWireDS2408::setState(uint8_t iState)
+{
     wireSelectThisDevice();
     iState |= mIoMask;
     pBM->wireWriteByte(DS2408_CHANNEL_WRITE_CMD);
@@ -81,7 +85,8 @@ bool OneWireDS2408::setState(uint8_t iState) {
     pBM->wireWriteByte(~iState);
     uint8_t lByte1 = pBM->wireReadByte();
     uint8_t lByte2 = pBM->wireReadByte();
-    if (lByte1 == 0xAA && lByte2 == iState) {
+    if (lByte1 == 0xAA && lByte2 == iState)
+    {
         mValue = lByte2;
         mLastValue = mValue;
         return true;
@@ -93,17 +98,26 @@ bool OneWireDS2408::setValue(uint8_t iValue, uint8_t iModelFunction)
 {
     // we set here the output according to given model funtion as byte or bit
     bool lResult = (Mode() == Connected);
-    if (lResult) {
-        if (iModelFunction == ModelFunction_IoByte || iModelFunction == ModelFunction_Default) {
+    if (lResult)
+    {
+        if (iModelFunction == ModelFunction_IoByte || iModelFunction == ModelFunction_Default)
+        {
             mValue = iValue ^ mIoInvertMask;
-        } else if (iModelFunction >= ModelFunction_IoBit0 && iModelFunction <= ModelFunction_IoBit7) {
+        }
+        else if (iModelFunction >= ModelFunction_IoBit0 && iModelFunction <= ModelFunction_IoBit7)
+        {
             uint8_t lBit = (1 << (iModelFunction - 1));
-            if (iValue != ((mIoInvertMask & lBit) ? 1 : 0)) {
+            if (iValue != ((mIoInvertMask & lBit) ? 1 : 0))
+            {
                 mValue |= lBit;
-            } else {
+            }
+            else
+            {
                 mValue &= ~lBit;
             }
-        } else {
+        }
+        else
+        {
             lResult = false;
         }
     }
@@ -117,13 +131,19 @@ bool OneWireDS2408::getValue(uint8_t &eValue, uint8_t iModelFunction)
 {
     // we get here the input according to given model funtion as byte or bit
     bool lResult = (Mode() == Connected);
-    if (lResult) {
-        if (iModelFunction == ModelFunction_IoByte || iModelFunction == ModelFunction_Default) {
+    if (lResult)
+    {
+        if (iModelFunction == ModelFunction_IoByte || iModelFunction == ModelFunction_Default)
+        {
             eValue = mValue ^ mIoInvertMask;
-        } else if (iModelFunction >= ModelFunction_IoBit0 && iModelFunction <= ModelFunction_IoBit7) {
+        }
+        else if (iModelFunction >= ModelFunction_IoBit0 && iModelFunction <= ModelFunction_IoBit7)
+        {
             uint8_t lBit = (1 << (iModelFunction - 1));
             eValue = ((mValue & lBit) ^ (mIoInvertMask & lBit)) ? 1 : 0;
-        } else {
+        }
+        else
+        {
             lResult = false;
         }
     }

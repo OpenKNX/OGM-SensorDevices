@@ -5,7 +5,7 @@
     #include <Wire.h>
 // #include "OpenKNX/Hardware.h"
 
-Sensor::Sensor(uint16_t iMeasureTypes, TwoWire& iWire, uint8_t iAddress)
+Sensor::Sensor(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress)
 {
     pMeasureTypes = iMeasureTypes;
     pI2CAddress = iAddress;
@@ -33,8 +33,8 @@ bool Sensor::checkSensorConnection()
     bool lResult = false;
     // if (gSensorState == Running) {
     // check for I2C ack
-    pWire.beginTransmission(pI2CAddress);
-    lResult = (pWire.endTransmission() == 0);
+    pWire->beginTransmission(pI2CAddress);
+    lResult = (pWire->endTransmission() == 0);
     if (!lResult)
         restartSensor();
     // }

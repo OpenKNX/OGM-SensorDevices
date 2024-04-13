@@ -8,19 +8,19 @@
 #define STATE_SAVE_PERIOD UINT32_C(360 * 60 * 1000) // 360 minutes - 4 times a day
 // #define EEPROM_BME680_START_ADDRESS 0xC80
 
-SensorBME680::SensorBME680(uint16_t iMeasureTypes, TwoWire &iWire)
+SensorBME680::SensorBME680(uint16_t iMeasureTypes, TwoWire* iWire)
     : Sensor(iMeasureTypes, iWire, BME680_I2C_ADDR), Bsec()
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
 }
 
-SensorBME680::SensorBME680(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback)
+SensorBME680::SensorBME680(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback)
     : Sensor(iMeasureTypes, iWire, iAddress), Bsec(), mDelayCallback(iDelayCallback)
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
 }
 
-SensorBME680::SensorBME680(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback, uint8_t iMagicKeyOffset)
+SensorBME680::SensorBME680(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback, uint8_t iMagicKeyOffset)
     : Sensor(iMeasureTypes, iWire, iAddress), Bsec(), mDelayCallback(iDelayCallback)
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
@@ -163,7 +163,7 @@ bool SensorBME680::begin()
     bool lResult = Sensor::begin();
     if (lResult)
     {
-        Bsec::begin(pI2CAddress, pWire, mDelayCallback);
+        Bsec::begin(pI2CAddress, *pWire, mDelayCallback);
         lResult = checkIaqSensorStatus();
     }
     if (lResult)
@@ -214,7 +214,7 @@ void SensorBME680::sensorLoadState()
 {
     if (mFlashBuffer)
     {
-        Bsec::setState((uint8_t *)mFlashBuffer);
+        Bsec::setState((uint8_t*)mFlashBuffer);
         bool lResult = checkIaqSensorStatus();
         if (lResult)
         {
@@ -275,7 +275,7 @@ bool SensorBME680::prepareTemperatureOffset(float iTemp)
 // #endif
 
 // IFlashUserData
-void SensorBME680::sensorReadFlash(const uint8_t *iBuffer, const uint16_t iSize)
+void SensorBME680::sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize)
 {
     bool lValid = (iBuffer[0] == 1); // check version first
     openknx.logger.log("test");

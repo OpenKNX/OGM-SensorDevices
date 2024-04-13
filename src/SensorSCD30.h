@@ -14,8 +14,8 @@ class SensorSCD30 : public Sensor, protected SCD30
     float measureValue(MeasureType iMeasureType) override;
 
   public:
-    SensorSCD30(uint16_t iMeasureTypes, TwoWire &iWire);
-    SensorSCD30(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress);
+    SensorSCD30(uint16_t iMeasureTypes, TwoWire* iWire);
+    SensorSCD30(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress);
     virtual ~SensorSCD30() {}
 
     bool begin() override;

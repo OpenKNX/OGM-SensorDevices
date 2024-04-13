@@ -13,11 +13,11 @@ class SensorDevices : public OpenKNX::Module
     uint8_t mMaxI2cSpeed = 255;
     uint8_t mCurrentSensorIterator = 0;
     uint8_t mMeasureValueIterator = 0;
-    TwoWire &mWire = Wire;
+    TwoWire *mWire = &Wire;
 
     // forward declaration
     // this allows to avoid include all sensors as in sensorFactory
-    Sensor *newSensor(uint8_t iSensorClass, MeasureType iMeasureType, TwoWire &iWire);
+    Sensor *newSensor(uint8_t iSensorClass, MeasureType iMeasureType, TwoWire *iWire);
 
   public:
     SensorDevices(/* args */);

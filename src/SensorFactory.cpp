@@ -18,7 +18,7 @@
     #include "SensorVEML7700.h"
     #include "SensorVL53L1X.h"
 
-Sensor* SensorDevices::newSensor(uint8_t iSensorClass, MeasureType iMeasureType, TwoWire& iWire)
+Sensor* SensorDevices::newSensor(uint8_t iSensorClass, MeasureType iMeasureType, TwoWire* iWire)
 {
     Sensor* lSensor = nullptr;
     switch (iSensorClass)

@@ -7,19 +7,19 @@
     #define STATE_SAVE_PERIOD UINT32_C(360 * 60 * 1000) // 360 minutes - 4 times a day
     #define EEPROM_BME680_START_ADDRESS 0xC80
 
-SensorSGP30::SensorSGP30(uint16_t iMeasureTypes, TwoWire &iWire)
+SensorSGP30::SensorSGP30(uint16_t iMeasureTypes, TwoWire* iWire)
     : Sensor(iMeasureTypes, iWire, SGP30_I2C_ADDR)
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
 }
 
-SensorSGP30::SensorSGP30(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+SensorSGP30::SensorSGP30(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress)
     : Sensor(iMeasureTypes, iWire, iAddress)
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
 }
 
-SensorSGP30::SensorSGP30(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress, uint8_t iMagicKeyOffset)
+SensorSGP30::SensorSGP30(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress, uint8_t iMagicKeyOffset)
     : Sensor(iMeasureTypes, iWire, iAddress)
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
@@ -190,7 +190,7 @@ void SensorSGP30::sensorLoadState()
     // Existing state in EEPROM
     logDebugP("Reading BME680 state from EEPROM\n");
     // mEEPROM->prepareRead(EEPROM_BME680_START_ADDRESS, 144);
-    if (pWire.available()) pWire.readBytes(buffer, 144);
+    if (pWire->available()) pWire->readBytes(buffer, 144);
 
     // for (uint8_t i = 0; i < 144; i += 16)
     //     printHEX("<-- ", buffer + i, 16);

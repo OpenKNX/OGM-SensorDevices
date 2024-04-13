@@ -17,8 +17,8 @@ class SensorBME280 : public Sensor, protected Adafruit_BME280
     bool initFinalize();
 
   public:
-    SensorBME280(uint16_t iMeasureTypes, TwoWire &iWire);
-    SensorBME280(uint16_t iMeasureTypes, TwoWire &iWir, uint8_t iAddresse);
+    SensorBME280(uint16_t iMeasureTypes, TwoWire* iWire);
+    SensorBME280(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress);
     virtual ~SensorBME280() {}
 
     bool begin() override;

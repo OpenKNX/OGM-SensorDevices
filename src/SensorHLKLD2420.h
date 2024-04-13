@@ -124,8 +124,8 @@ class SensorHLKLD2420 : public Sensor
     float measureValue(MeasureType iMeasureType) override;
 
   public:
-    SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire &iWire);
-    SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress);
+    SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire* iWire);
+    SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress);
     virtual ~SensorHLKLD2420() {}
 
     bool begin() override;

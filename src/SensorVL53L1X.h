@@ -18,8 +18,8 @@ class SensorVL53L1X : public Sensor, protected VL53L1X
     float measureValue(MeasureType iMeasureType) override;
 
   public:
-    SensorVL53L1X(uint16_t iMeasureTypes, TwoWire &iWire);
-    SensorVL53L1X(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress);
+    SensorVL53L1X(uint16_t iMeasureTypes, TwoWire* iWire);
+    SensorVL53L1X(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress);
     virtual ~SensorVL53L1X() {}
 
     bool begin() override;

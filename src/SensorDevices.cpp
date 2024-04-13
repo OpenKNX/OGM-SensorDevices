@@ -12,6 +12,18 @@ SensorDevices::~SensorDevices()
 
 void SensorDevices::setup()
 {
+#ifdef ARDUINO_ARCH_RP2040
+    #ifndef I2C_WIRE
+        #define I2C_WIRE Wire
+    #endif
+    #ifdef I2C_SDA_PIN
+        #ifdef I2C_SCL_PIN
+    I2C_WIRE.setSDA(I2C_SDA_PIN);
+    I2C_WIRE.setSCL(I2C_SCL_PIN);
+        #endif
+    #endif
+    defaultWire(I2C_WIRE);
+#endif
 }
 
 const std::string SensorDevices::name()
@@ -80,8 +92,8 @@ bool SensorDevices::beginSensors()
     // fist we start i2c with the right speed
     if (mNumSensors > 0)
     {
-        mWire.begin();
-        mWire.setClock(mMaxI2cSpeed * 100000);
+        mWire->begin();
+        mWire->setClock(mMaxI2cSpeed * 100000);
         delay(1);
         // we use standard Wakeup procedure to start single sensors
         // for (uint8_t lCounter = 0; lCounter < sNumSensors; lCounter++)
@@ -145,5 +157,5 @@ uint8_t SensorDevices::getError()
 
 void SensorDevices::defaultWire(TwoWire& iWire)
 {
-    mWire = iWire;
+    mWire = &iWire;
 }

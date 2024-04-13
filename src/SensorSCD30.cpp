@@ -2,10 +2,10 @@
 #ifdef SENSOR_SCD30_SUPPORT
     #include "SensorSCD30.h"
 
-SensorSCD30::SensorSCD30(uint16_t iMeasureTypes, TwoWire &iWire)
+SensorSCD30::SensorSCD30(uint16_t iMeasureTypes, TwoWire* iWire)
     : Sensor(iMeasureTypes, iWire, SCD30_I2C_ADDR), SCD30(){};
 
-SensorSCD30::SensorSCD30(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+SensorSCD30::SensorSCD30(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress)
     : Sensor(iMeasureTypes, iWire, iAddress), SCD30(){};
 
 uint8_t SensorSCD30::getSensorClass()

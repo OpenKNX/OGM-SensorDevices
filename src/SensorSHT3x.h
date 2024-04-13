@@ -22,7 +22,7 @@ class SensorSHT3x : public Sensor
     float readHumidity();
     void reset();
     void heater(bool iOn);
-    uint8_t crc8(const uint8_t *iData, uint8_t iLen);
+    uint8_t crc8(const uint8_t* iData, uint8_t iLen);
     bool getTempHum();
     void writeCommand(uint16_t iCmd);
 
@@ -34,8 +34,8 @@ class SensorSHT3x : public Sensor
     float measureValue(MeasureType iMeasureType) override;
 
   public:
-    SensorSHT3x(uint16_t iMeasureTypes, TwoWire &iWire);
-    SensorSHT3x(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress);
+    SensorSHT3x(uint16_t iMeasureTypes, TwoWire* iWire);
+    SensorSHT3x(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress);
     virtual ~SensorSHT3x() {}
 
     bool begin() override;

@@ -1,45 +1,49 @@
-#include <Wire.h>
 #include <Arduino.h>
+#include <Wire.h>
 #include <math.h>
 
-#include "OneWireDS2482.h"
 #include "OneWireDS18B20.h"
-#ifdef COUNT_1WIRE_CHANNEL
+#include "OneWireDS2482.h"
+#ifdef WIREMODULE
 
 // #define DebugInfoTemp
 
 OneWireDS18B20::OneWireDS18B20(tIdRef iId)
     : OneWire(iId)
-{}
+{
+}
 
-void OneWireDS18B20::loop() {
+void OneWireDS18B20::loop()
+{
 
     switch (mState)
     {
-    case Startup:
-        init(true);
-        mState = Idle;
-        break;
-    case StartMeasurement:
-        mState = startConversionTemp() ? GetMeasure : Error;
-        pDelay = millis();
-        break;
-    case GetMeasure:
-        if (delayCheck(pDelay, 750)) {
-            mState = updateTemp() ? Idle : Error;
+        case Startup:
+            init(true);
+            mState = Idle;
+            break;
+        case StartMeasurement:
+            mState = startConversionTemp() ? GetMeasure : Error;
             pDelay = millis();
-        }
-        break;
-    case Idle:
-        if (delayCheck(pDelay, 2000)) {
-            mState = StartMeasurement;
-            pDelay = millis();
-        }
-        break;
-    default:
-        // error case, we stay here as long as there is a short on 1W-Line
-        mState = pBM->readStatusShortDet() ? Error : Idle;
-        break;
+            break;
+        case GetMeasure:
+            if (delayCheck(pDelay, 750))
+            {
+                mState = updateTemp() ? Idle : Error;
+                pDelay = millis();
+            }
+            break;
+        case Idle:
+            if (delayCheck(pDelay, 2000))
+            {
+                mState = StartMeasurement;
+                pDelay = millis();
+            }
+            break;
+        default:
+            // error case, we stay here as long as there is a short on 1W-Line
+            mState = pBM->readStatusShortDet() ? Error : Idle;
+            break;
     }
 }
 
@@ -109,17 +113,21 @@ bool OneWireDS18B20::startConversionTemp()
 //   }
 //   celsius = (float)raw / 16.0;
 
-// } 
+// }
 
 bool OneWireDS18B20::updateTemp()
 {
     uint8_t lResolution = resolution();
     int16_t lTempRaw = (mScratchPad[1] << 8) | mScratchPad[0];
     bool lResult = false;
-    if (lResolution) {
-        if (Family() == MODEL_DS18S20) {
+    if (lResolution)
+    {
+        if (Family() == MODEL_DS18S20)
+        {
             mTemp = (float)lTempRaw / 2.0;
-        } else {
+        }
+        else
+        {
             uint16_t lShift = 0xFFFF << abs(lResolution - 12);
             lTempRaw &= lShift;
             mTemp = (float)lTempRaw / 16.0;
@@ -230,7 +238,7 @@ void OneWireDS18B20::readScratchPad()
     //         DS18B20 & DS1822: store for crc
     // byte 8: SCRATCHPAD_CRC
     //
-    for(uint8_t i=0; i<9; i++)
+    for (uint8_t i = 0; i < 9; i++)
     {
         mScratchPad[i] = pBM->wireReadByte();
     }

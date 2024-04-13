@@ -1,55 +1,55 @@
 #pragma once
-#include <inttypes.h>
-#include <Wire.h>
 #include "OneWire.h"
-#ifdef COUNT_1WIRE_CHANNEL
-#include "OneWireSearch.h"
+#include <Wire.h>
+#include <inttypes.h>
+#ifdef WIREMODULE
+    #include "OneWireSearch.h"
 
-// Chose between a table based CRC (flash expensive, fast)
-// or a computed CRC (smaller, slow)
-#define ONEWIRE_CRC8_TABLE 1
+    // Chose between a table based CRC (flash expensive, fast)
+    // or a computed CRC (smaller, slow)
+    #define ONEWIRE_CRC8_TABLE 1
 
-#define DS2482_COMMAND_RESET 0xF0 // Device reset
+    #define DS2482_COMMAND_RESET 0xF0 // Device reset
 
-#define DS2482_COMMAND_SRP 0xE1 // Set read pointer
-#define DS2482_POINTER_STATUS 0xF0
-#define DS2482_STATUS_BUSY 0x01 // 1-Wire line is busy
-#define DS2482_STATUS_PPD 0x02 // 
-#define DS2482_STATUS_SD 0x04 // short wire
-#define DS2482_STATUS_LL 0x08 // logic level of 1W-Line is 1
-#define DS2482_STATUS_RST 0x10
-#define DS2482_STATUS_SBR 0x20
-#define DS2482_STATUS_TSB 0x40
-#define DS2482_STATUS_DIR 0x80
-#define DS2482_POINTER_DATA 0xE1
-#define DS2482_POINTER_CONFIG 0xC3
-#define DS2482_CONFIG_APU 0x01
-#define DS2482_CONFIG_SPU 0x04
-#define DS2482_CONFIG_1WS 0x08
+    #define DS2482_COMMAND_SRP 0xE1 // Set read pointer
+    #define DS2482_POINTER_STATUS 0xF0
+    #define DS2482_STATUS_BUSY 0x01 // 1-Wire line is busy
+    #define DS2482_STATUS_PPD 0x02  //
+    #define DS2482_STATUS_SD 0x04   // short wire
+    #define DS2482_STATUS_LL 0x08   // logic level of 1W-Line is 1
+    #define DS2482_STATUS_RST 0x10
+    #define DS2482_STATUS_SBR 0x20
+    #define DS2482_STATUS_TSB 0x40
+    #define DS2482_STATUS_DIR 0x80
+    #define DS2482_POINTER_DATA 0xE1
+    #define DS2482_POINTER_CONFIG 0xC3
+    #define DS2482_CONFIG_APU 0x01
+    #define DS2482_CONFIG_SPU 0x04
+    #define DS2482_CONFIG_1WS 0x08
 
-#define DS2482_COMMAND_WRITECONFIG 0xD2
-#define DS2482_COMMAND_RESETWIRE 0xB4
-#define DS2482_COMMAND_WRITEBYTE 0xA5
-#define DS2482_COMMAND_READBYTE 0x96
-#define DS2482_COMMAND_SINGLEBIT 0x87
-#define DS2482_COMMAND_TRIPLET 0x78
+    #define DS2482_COMMAND_WRITECONFIG 0xD2
+    #define DS2482_COMMAND_RESETWIRE 0xB4
+    #define DS2482_COMMAND_WRITEBYTE 0xA5
+    #define DS2482_COMMAND_READBYTE 0x96
+    #define DS2482_COMMAND_SINGLEBIT 0x87
+    #define DS2482_COMMAND_TRIPLET 0x78
 
-#define DS2484_COMMAND_ADJUSTPORT 0xC3
-#define DS2484_PORT_tRSTL 0x00
-#define DS2484_PORT_tMSP 0x20
-#define DS2484_PORT_tW0L 0x40
-#define DS2484_PORT_tREC0 0x60
-#define DS2484_PORT_RWPU 0x80
-#define DS2484_PORT_SPEED_STD 0x00 // standard speed
-#define DS2484_PORT_SPEED_OD 0x10  // overdrive speed
+    #define DS2484_COMMAND_ADJUSTPORT 0xC3
+    #define DS2484_PORT_tRSTL 0x00
+    #define DS2484_PORT_tMSP 0x20
+    #define DS2484_PORT_tW0L 0x40
+    #define DS2484_PORT_tREC0 0x60
+    #define DS2484_PORT_RWPU 0x80
+    #define DS2484_PORT_SPEED_STD 0x00 // standard speed
+    #define DS2484_PORT_SPEED_OD 0x10  // overdrive speed
 
-#define WIRE_COMMAND_SKIP 0xCC
-#define WIRE_COMMAND_SELECT 0x55
-#define WIRE_COMMAND_SEARCH 0xF0
+    #define WIRE_COMMAND_SKIP 0xCC
+    #define WIRE_COMMAND_SELECT 0x55
+    #define WIRE_COMMAND_SEARCH 0xF0
 
-#define DS2482_ERROR_TIMEOUT 0x01
-#define DS2482_ERROR_SHORT 0x02
-#define DS2482_ERROR_CONFIG 0x04
+    #define DS2482_ERROR_TIMEOUT 0x01
+    #define DS2482_ERROR_SHORT 0x02
+    #define DS2482_ERROR_CONFIG 0x04
 
 class OneWireDS2482
 {
@@ -83,7 +83,7 @@ class OneWireDS2482
     OneWire *Sensor(uint8_t iIndex);
     uint8_t DeviceCount();
 
-    //DS2482-800 only
+    // DS2482-800 only
     bool selectChannel(uint8_t channel);
 
     void deviceReset();
@@ -115,7 +115,7 @@ class OneWireDS2482
     uint8_t readByte();
     // DS2484 only
     void adjustPort(uint8_t iData);
-    uint8_t gInstance = 255; //just for debug 0-3
+    uint8_t gInstance = 255; // just for debug 0-3
     uint8_t mI2cAddress = 0;
     void searchLoopCallback();
 
@@ -124,7 +124,7 @@ class OneWireDS2482
     bool ProcessNormalBusUse();
     bool ProcessIButton();
     void checkSensorTypesToProcess();
-    TwoWire &mWire = Wire;
+    TwoWire *mWire = &Wire;
 
     OneWireSearch *mSearchPrio = NULL;
     OneWireSearch *mSearchNormal = NULL;

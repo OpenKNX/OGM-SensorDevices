@@ -19,8 +19,8 @@ class SensorSCD41 : public SensorSCD40
     void sensorLoopInternal() override;
 
   public:
-    SensorSCD41(uint16_t iMeasureTypes, TwoWire &iWire);
-    SensorSCD41(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress);
+    SensorSCD41(uint16_t iMeasureTypes, TwoWire* iWire);
+    SensorSCD41(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress);
     virtual ~SensorSCD41() {}
 
     bool begin() override;

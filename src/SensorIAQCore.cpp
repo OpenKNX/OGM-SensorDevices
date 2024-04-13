@@ -3,10 +3,10 @@
     #include "SensorIAQCore.h"
     #include <Wire.h>
 
-SensorIAQCore::SensorIAQCore(uint16_t iMeasureTypes, TwoWire &iWire)
+SensorIAQCore::SensorIAQCore(uint16_t iMeasureTypes, TwoWire* iWire)
     : Sensor(iMeasureTypes, iWire, IAQCORE_I2C_ADDR){};
 
-SensorIAQCore::SensorIAQCore(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+SensorIAQCore::SensorIAQCore(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress)
     : Sensor(iMeasureTypes, iWire, iAddress){};
 
 uint8_t SensorIAQCore::getSensorClass()
@@ -84,11 +84,11 @@ bool SensorIAQCore::getSensorData()
     memset(mBuffer, 0, sizeof(mBuffer));
     // request sensor data
 
-    pWire.requestFrom(pI2CAddress, IAQCORE_READ_ALL);
-    if (pWire.available() != IAQCORE_READ_ALL)
+    pWire->requestFrom(pI2CAddress, IAQCORE_READ_ALL);
+    if (pWire->available() != IAQCORE_READ_ALL)
         return false;
     for (uint8_t i = 0; i < IAQCORE_READ_ALL; i++)
-        mBuffer[i] = pWire.read();
+        mBuffer[i] = pWire->read();
     uint8_t lStatus = mBuffer[IAQCORE_STATUS_OFFSET];
     if (lStatus & IAQCORE_STATUS_ERROR)
         return false;

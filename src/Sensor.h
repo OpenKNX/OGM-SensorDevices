@@ -88,10 +88,10 @@ class Sensor
 {
   protected:
     // Sensor();
-    Sensor(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress);
+    Sensor(uint16_t iMeasureTypes, TwoWire *iWire, uint8_t iAddress);
     virtual ~Sensor() {}
 
-    TwoWire &pWire = Wire;
+    TwoWire *pWire = &Wire;
 
     uint16_t pMeasureTypes;
     uint8_t pI2CAddress;

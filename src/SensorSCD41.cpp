@@ -3,10 +3,10 @@
     #include "SensorSCD41.h"
     #include <Wire.h>
 
-SensorSCD41::SensorSCD41(uint16_t iMeasureTypes, TwoWire &iWire)
+SensorSCD41::SensorSCD41(uint16_t iMeasureTypes, TwoWire* iWire)
     : SensorSCD40(iMeasureTypes, iWire, SCD40_I2C_ADDR){};
 
-SensorSCD41::SensorSCD41(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+SensorSCD41::SensorSCD41(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress)
     : SensorSCD40(iMeasureTypes, iWire, iAddress){};
 
 uint8_t SensorSCD41::getSensorClass()

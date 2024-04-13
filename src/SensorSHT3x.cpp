@@ -3,10 +3,10 @@
     #include "SensorSHT3x.h"
     #include <Wire.h>
 
-SensorSHT3x::SensorSHT3x(uint16_t iMeasureTypes, TwoWire &iWire)
+SensorSHT3x::SensorSHT3x(uint16_t iMeasureTypes, TwoWire* iWire)
     : Sensor(iMeasureTypes, iWire, SHT3X_ADDR){};
 
-SensorSHT3x::SensorSHT3x(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+SensorSHT3x::SensorSHT3x(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress)
     : Sensor(iMeasureTypes, iWire, iAddress){};
 
 uint8_t SensorSHT3x::getSensorClass()
@@ -120,7 +120,7 @@ void SensorSHT3x::heater(bool iOn)
         writeCommand(SHT3X_HEATER_DISABLE);
 }
 
-uint8_t SensorSHT3x::crc8(const uint8_t *iData, uint8_t iLen)
+uint8_t SensorSHT3x::crc8(const uint8_t* iData, uint8_t iLen)
 {
     const uint8_t cPolynomial(0x31);
     uint8_t lCrc(0xFF);
@@ -141,12 +141,12 @@ bool SensorSHT3x::getTempHum(void)
     // writeCommand(SHT3X_MEAS_HIGHREP);
 
     // delay(50);
-    pWire.requestFrom(pI2CAddress, 6);
-    if (pWire.available() != 6)
+    pWire->requestFrom(pI2CAddress, 6);
+    if (pWire->available() != 6)
         return false;
     for (uint8_t i = 0; i < 6; i++)
     {
-        readbuffer[i] = pWire.read();
+        readbuffer[i] = pWire->read();
     }
     if (readbuffer[2] != crc8(readbuffer, 2) ||
         readbuffer[5] != crc8(readbuffer + 3, 2))
@@ -169,9 +169,9 @@ bool SensorSHT3x::getTempHum(void)
 
 void SensorSHT3x::writeCommand(uint16_t iCmd)
 {
-    pWire.beginTransmission(pI2CAddress);
-    pWire.write(iCmd >> 8);
-    pWire.write(iCmd & 0xFF);
-    pWire.endTransmission();
+    pWire->beginTransmission(pI2CAddress);
+    pWire->write(iCmd >> 8);
+    pWire->write(iCmd & 0xFF);
+    pWire->endTransmission();
 }
 #endif

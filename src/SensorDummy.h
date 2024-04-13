@@ -12,8 +12,8 @@ class SensorDummy : public Sensor
     float measureValue(MeasureType iMeasureType) override;
 
   public:
-    SensorDummy(uint16_t iMeasureTypes, TwoWire &iWire);
-    SensorDummy(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress);
+    SensorDummy(uint16_t iMeasureTypes, TwoWire* iWire);
+    SensorDummy(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress);
     virtual ~SensorDummy() {}
 
     bool begin() override;

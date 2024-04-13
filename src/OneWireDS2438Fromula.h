@@ -1,24 +1,24 @@
 #pragma once
 
 #include "OneWireDS2438.h"
-#ifdef COUNT_1WIRE_CHANNEL
+#ifdef WIREMODULE
 
-#define FmlRaw_TemperatureOnChip 10
-#define FmlRaw_VoltageOfChip 11
-#define FmlRaw_VoltageOfADC1 12
-#define FmlRaw_VoltageOfSens 13
+    #define FmlRaw_TemperatureOnChip 10
+    #define FmlRaw_VoltageOfChip 11
+    #define FmlRaw_VoltageOfADC1 12
+    #define FmlRaw_VoltageOfSens 13
 
-#define FmlNative_TemperatureNTC 15
-#define FmlNative_Humidity 16
-#define FmlNative_Brightness 17
-#define FmlNative_Future 18
+    #define FmlNative_TemperatureNTC 15
+    #define FmlNative_Humidity 16
+    #define FmlNative_Brightness 17
+    #define FmlNative_Future 18
 
-#define FmlUser_Start 50
-#define FmlUser_End 79
+    #define FmlUser_Start 50
+    #define FmlUser_End 79
 
 class OneWireDS2438Fromula
 {
-  friend OneWireDS2438;
+    friend OneWireDS2438;
 
   private:
     OneWireDS2438Fromula(/* args */);

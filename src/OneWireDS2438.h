@@ -1,30 +1,30 @@
 #pragma once
 
-#include <inttypes.h>
 #include "OneWire.h"
-#ifdef COUNT_1WIRE_CHANNEL
-#include "OneWireDS2482.h"
+#include <inttypes.h>
+#ifdef WIREMODULE
+    #include "OneWireDS2482.h"
 
-#define WRITESCRATCH 0x4E
-#define COPYSCRATCH 0x48
-#define READSCRATCH 0xBE
-#define RECALLSCRATCH 0xB8
-#define CONVERTT 0x44
-#define CONVERTV 0xB4
+    #define WRITESCRATCH 0x4E
+    #define COPYSCRATCH 0x48
+    #define READSCRATCH 0xBE
+    #define RECALLSCRATCH 0xB8
+    #define CONVERTT 0x44
+    #define CONVERTV 0xB4
 
-// ADC configurations
-#define CONFIG_VDD 0x09
-#define CONFIG_VAD 0x01
+    // ADC configurations
+    #define CONFIG_VDD 0x09
+    #define CONFIG_VAD 0x01
 
-// Scratchpad locations
-#define STATUS 0
-#define TEMP_LSB 1
-#define TEMP_MSB 2
-#define VOLT_LSB 3
-#define VOLT_MSB 4
-#define CURR_LSB 5
-#define CURR_MSB 6
-#define THRESH 7
+    // Scratchpad locations
+    #define STATUS 0
+    #define TEMP_LSB 1
+    #define TEMP_MSB 2
+    #define VOLT_LSB 3
+    #define VOLT_MSB 4
+    #define CURR_LSB 5
+    #define CURR_MSB 6
+    #define THRESH 7
 
 class OneWireDS2438 : public OneWire
 {
@@ -55,7 +55,7 @@ class OneWireDS2438 : public OneWire
     StateSensorADC mState = Startup;
 
     bool mParasite;
-    
+
     float mTemp = NO_NUM;
     float mVDD = NO_NUM;
     float mVAD = NO_NUM;

@@ -26,16 +26,16 @@ class SensorBME680 : public Sensor, protected Bsec
     bme680_delay_fptr_t mDelayCallback = 0;
     bool mDelayCallbackIsActive = false;
 
-    const uint8_t *mFlashBuffer = nullptr; // Pointer to stored flash content
+    const uint8_t* mFlashBuffer = nullptr; // Pointer to stored flash content
     // new flash handling
-    void sensorReadFlash(const uint8_t *iBuffer, const uint16_t iSize) override;
+    void sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize) override;
     void sensorWriteFlash() override;
     uint16_t sensorFlashSize() override;
 
   public:
-    SensorBME680(uint16_t iMeasureTypes, TwoWire &iWire);
-    SensorBME680(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback);
-    SensorBME680(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback, uint8_t iMagicKeyOffset);
+    SensorBME680(uint16_t iMeasureTypes, TwoWire* iWire);
+    SensorBME680(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback);
+    SensorBME680(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress, bme680_delay_fptr_t iDelayCallback, uint8_t iMagicKeyOffset);
     virtual ~SensorBME680() {}
 
     bool begin() override;

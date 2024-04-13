@@ -4,10 +4,10 @@
     // #include "HardwareDevices.h"
     #include "SensorVEML7700.h"
 
-SensorVEML7700::SensorVEML7700(uint16_t iMeasureTypes, TwoWire &iWire)
+SensorVEML7700::SensorVEML7700(uint16_t iMeasureTypes, TwoWire* iWire)
     : Sensor(iMeasureTypes, iWire, VEML7700_I2C_ADDR){};
 
-SensorVEML7700::SensorVEML7700(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+SensorVEML7700::SensorVEML7700(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress)
     : Sensor(iMeasureTypes, iWire, iAddress){};
 
 uint8_t SensorVEML7700::getSensorClass()
@@ -90,8 +90,8 @@ bool SensorVEML7700::begin()
     bool lResult = Sensor::begin();
     if (lResult)
     {
-        pWire.setClock(400000);
-        lResult = mVeml.begin(&pWire);
+        pWire->setClock(400000);
+        lResult = mVeml.begin(pWire);
     }
     logResult(lResult);
     return lResult;

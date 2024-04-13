@@ -3,10 +3,10 @@
     #include "SensorSCD40.h"
     #include <Wire.h>
 
-SensorSCD40::SensorSCD40(uint16_t iMeasureTypes, TwoWire &iWire)
+SensorSCD40::SensorSCD40(uint16_t iMeasureTypes, TwoWire* iWire)
     : Sensor(iMeasureTypes, iWire, SCD40_I2C_ADDR), SensirionI2CScd4x(){};
 
-SensorSCD40::SensorSCD40(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress)
+SensorSCD40::SensorSCD40(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress)
     : Sensor(iMeasureTypes, iWire, iAddress), SensirionI2CScd4x(){};
 
 uint8_t SensorSCD40::getSensorClass()
@@ -80,7 +80,7 @@ bool SensorSCD40::begin()
 
 bool SensorSCD40::beginInternal()
 {
-    SensirionI2CScd4x::begin(pWire);
+    SensirionI2CScd4x::begin(*pWire);
     bool lResult = false;
     lResult = (stopPeriodicMeasurement() == 0);
     if (lResult)

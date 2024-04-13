@@ -103,8 +103,8 @@ class SensorMR24xxB1 : public Sensor
     void sendDefaultSensorValues();
 
   public:
-    SensorMR24xxB1(uint16_t iMeasureTypes, TwoWire &iWire);
-    SensorMR24xxB1(uint16_t iMeasureTypes, TwoWire &iWire, uint8_t iAddress);
+    SensorMR24xxB1(uint16_t iMeasureTypes, TwoWire *iWire);
+    SensorMR24xxB1(uint16_t iMeasureTypes, TwoWire *iWire, uint8_t iAddress);
     virtual ~SensorMR24xxB1() {}
 
     static bool decodePresenceResult(uint8_t iResult, bool &ePresence, uint8_t &eMove, uint8_t &eFall, uint8_t &eAlarm);

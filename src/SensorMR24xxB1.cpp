@@ -73,10 +73,10 @@ float toFloat(uint8_t *iData)
 }
 
 SensorMR24xxB1::SensorMR24xxB1(uint16_t iMeasureTypes, TwoWire *iWire)
-    : SensorMR24xxB1(iMeasureTypes, Wire, 0){};
+    : SensorMR24xxB1(iMeasureTypes, &Wire, 0){};
 
 SensorMR24xxB1::SensorMR24xxB1(uint16_t iMeasureTypes, TwoWire *iWire, uint8_t iAddress)
-    : Sensor(iMeasureTypes, Wire, iAddress)
+    : Sensor(iMeasureTypes, &Wire, iAddress)
 {
     pMeasureTypes |= Pres | Speed | Sensitivity | Scenario;
 };

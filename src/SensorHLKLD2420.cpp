@@ -6,10 +6,10 @@
         #include <Wire.h>
 
 SensorHLKLD2420::SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire *iWire)
-    : SensorHLKLD2420(iMeasureTypes, Wire, 0){};
+    : SensorHLKLD2420(iMeasureTypes, &Wire, 0){};
 
 SensorHLKLD2420::SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire *iWire, uint8_t iAddress)
-    : Sensor(iMeasureTypes, Wire, iAddress)
+    : Sensor(iMeasureTypes, &Wire, iAddress)
 {
     pMeasureTypes |= Pres | Sensitivity | Distance;
 };

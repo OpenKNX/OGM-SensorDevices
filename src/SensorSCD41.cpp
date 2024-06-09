@@ -69,7 +69,7 @@ void SensorSCD41::sensorLoopInternal()
                 {
                     if (getSensorData())
                         pSensorState = Running;
-                    pSensorStateDelay = millis();
+                    pSensorStateDelay = delayTimerInit();
                 }
             }
             else
@@ -83,7 +83,7 @@ void SensorSCD41::sensorLoopInternal()
                 if (delayCheck(pSensorStateDelay, mMeasureInterval * 1000))
                 {
                     getSensorData();
-                    pSensorStateDelay = millis();
+                    pSensorStateDelay = delayTimerInit();
                 }
             }
             else
@@ -94,7 +94,7 @@ void SensorSCD41::sensorLoopInternal()
                     if (delayCheck(mMeasureDelay, MEASURE_DELAY))
                     {
                         getSensorData();
-                        pSensorStateDelay = millis();
+                        pSensorStateDelay = delayTimerInit();
                         mIsMeasuring = false;
                     }
                 }
@@ -103,7 +103,8 @@ void SensorSCD41::sensorLoopInternal()
                     if (delayCheck(pSensorStateDelay, mMeasureInterval * 1000))
                     {
                         measureSingleShot();
-                        pSensorStateDelay = millis();
+                        pSensorStateDelay = delayTimerInit();
+                        mMeasureDelay = delayTimerInit();
                         mIsMeasuring = true;
                     }
                 }
@@ -111,7 +112,7 @@ void SensorSCD41::sensorLoopInternal()
 
             break;
         default:
-            pSensorStateDelay = millis();
+            pSensorStateDelay = delayTimerInit();
             break;
     }
 }

@@ -330,6 +330,7 @@ bool SensorHLKLD2420::getSensorData()
     switch (mPacketType)
     {
         case ON:
+        {
             /*logTraceP("Content ON:");
             logIndentUp();
             logHexTraceP(mBuffer.data(), mBuffer.size());
@@ -339,20 +340,32 @@ bool SensorHLKLD2420::getSensorData()
             // and 2 bytes at the end
             mBuffer.erase(mBuffer.begin(), mBuffer.begin() + 10);
             mBuffer.erase(mBuffer.end() - 2, mBuffer.end());
-
-            // mBuffer now holds the detection range decimal value as string
-            rangeString = std::string(reinterpret_cast<const char *>(&mBuffer[0]), mBuffer.size());
-            newDetectedRange = stoi(rangeString) / (float)10;
-
-            if (lastDetectedRange != newDetectedRange)
+            // exceptions not possible, we check if string consists of digits
+            bool justDigits = true;
+            for (uint8_t mBufferIndex = 0; mBufferIndex < mBuffer.size(); mBufferIndex++)
+                if (mBuffer[mBufferIndex] < 0x30 || mBuffer[mBufferIndex] > 0x39)
+                {
+                    justDigits = false;
+                    break;
+                }
+            if (justDigits)
             {
-                lastDetectedRange = newDetectedRange;
-                logDebugP("Presence detected, range: %.1f m", lastDetectedRange);
+                // mBuffer now holds the detection range decimal value as string
+                rangeString = std::string(reinterpret_cast<const char *>(&mBuffer[0]), mBuffer.size());
+                newDetectedRange = stoi(rangeString) / (float)10;
+
+                if (lastDetectedRange != newDetectedRange)
+                {
+                    lastDetectedRange = newDetectedRange;
+                    logDebugP("Presence detected, range: %.1f m", lastDetectedRange);
+                }
             }
+            else
+                logDebugP("Presence range contains non-digit-characters: %s", mBuffer);
 
             result = true;
             break;
-
+        }
         case OFF:
             /*logTraceP("Content OFF:");
             logIndentUp();

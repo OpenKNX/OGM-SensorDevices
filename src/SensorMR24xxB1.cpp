@@ -353,7 +353,7 @@ uint8_t SensorMR24xxB1::getI2cSpeed()
 
 void SensorMR24xxB1::getPresenceState(bool iHeartbeat)
 {
-    char *lHeartbeat = "";
+    const char *lHeartbeat = "";
     if (iHeartbeat)
         lHeartbeat = "Heartbeat-";
     if (mBuffer[BUFFER_POS_DATA] == 0x00 && mBuffer[BUFFER_POS_DATA + 1] == 0xFF && mBuffer[BUFFER_POS_DATA + 2] == 0xFF)

@@ -8,7 +8,7 @@
 
 #define BME680_I2C_ADDR (0x76)
 #define BME680_CALIBRATION_DATA_SIZE 454
-#define BME680_SAVE_SIZE 144
+#define BME680_SAVE_SIZE 145
 
 class SensorBME680 : public Sensor, protected Bsec
 {

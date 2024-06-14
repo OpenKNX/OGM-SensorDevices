@@ -97,7 +97,7 @@ void Sensor::sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize)
 // should be overridden, if there is a state to save before power failure
 void Sensor::sensorWriteFlash()
 {
-    openknx.flash.writeByte(1); // Version
+    // openknx.flash.writeByte(1); // Version
 }
 
 // should be overridden, if there is a state to save before power failure

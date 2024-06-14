@@ -12,6 +12,7 @@ class SensorSCD40 : public Sensor, protected SensirionI2CScd4x
     float mTemp = NO_NUM;
     float mHum = NO_NUM;
     float mCo2 = NO_NUM;
+    uint16_t mPressure = 0;
 
   protected:
     uint8_t getSensorClass() override; // returns unique ID for this sensor type
@@ -19,6 +20,7 @@ class SensorSCD40 : public Sensor, protected SensirionI2CScd4x
     float measureValue(MeasureType iMeasureType) override;
     bool beginInternal();
     bool getSensorData();
+    void processPressure();
 
   public:
     SensorSCD40(uint16_t iMeasureTypes, TwoWire* iWire);
@@ -28,7 +30,7 @@ class SensorSCD40 : public Sensor, protected SensirionI2CScd4x
     bool begin() override;
     uint8_t getI2cSpeed() override;
     bool prepareTemperatureOffset(float iTempOffset) override;
-    bool setPressure(float pressure);
+    bool setPressure(uint16_t pressure);
     std::string logPrefix() override;
 };
 #endif

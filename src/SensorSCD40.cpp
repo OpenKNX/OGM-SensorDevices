@@ -1,6 +1,7 @@
 // #include "IncludeManager.h"
 #ifdef SENSORMODULE
     #include "SensorSCD40.h"
+    #include "knx.h"
     #include <Wire.h>
 
 SensorSCD40::SensorSCD40(uint16_t iMeasureTypes, TwoWire* iWire)
@@ -116,6 +117,7 @@ bool SensorSCD40::getSensorData()
                 mHum = lHum * 100.0 / 65536.0;
                 mCo2 = lCo2;
             }
+            processPressure();
         }
     }
     return lResult;
@@ -127,8 +129,23 @@ bool SensorSCD40::prepareTemperatureOffset(float iTempOffset)
     return true;
 }
 
-bool SensorSCD40::setPressure(float pressure)
+// quick hack: make pressure available by KO
+void SensorSCD40::processPressure()
 {
-    return setAmbientPressure(static_cast<uint16_t>(pressure * 100.0 + 0.5));
+    // pressure is in mBar
+    uint16_t lPressure = KoSENS_Pre.value(DPT_Value_Pres);
+    // hack for testing: We take pressure from according KO and try to take this value as pressure compensation
+    if (lPressure > 600 && lPressure < 1060 && (lPressure > mPressure + 1 || lPressure < mPressure - 1))
+    {
+        setPressure(lPressure);
+        mPressure = lPressure;
+        logDebugP("Pressure set to %i", lPressure);
+    }
+}
+
+// pressure is in mBar
+bool SensorSCD40::setPressure(uint16_t pressure)
+{
+    return setAmbientPressure(pressure);
 }
 #endif

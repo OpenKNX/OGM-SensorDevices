@@ -561,6 +561,7 @@ bool SensorHLKLD2420::getSensorData()
 
                 // after reboot enter command mode again to store data
                 sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE);
+                delay(500);
 
                 logTraceP("rawDataRangeAverage:");
                 logIndentUp();
@@ -627,6 +628,7 @@ bool SensorHLKLD2420::getSensorData()
                 param.push_back(0);
 
                 sendCommand(CMD_WRITE_MODULE_CONFIG, param);
+                delay(500);
 
                 logDebugP("triggerThreshold:");
                 logIndentUp();
@@ -646,6 +648,7 @@ bool SensorHLKLD2420::getSensorData()
                     logDebugP("Gate %i:  %.2f", i, triggerThresholdDb[i]);
                 }
                 sendCommand(CMD_WRITE_MODULE_CONFIG, param);
+                delay(500);
                 param.clear();
                 for (int i = 8; i < 16; i++)
                 {
@@ -658,6 +661,7 @@ bool SensorHLKLD2420::getSensorData()
                     logDebugP("Gate %i:  %.2f", i, triggerThresholdDb[i]);
                 }
                 sendCommand(CMD_WRITE_MODULE_CONFIG, param);
+                delay(500);
                 logIndentDown();
 
                 logDebugP("holdThreshold:");
@@ -678,6 +682,7 @@ bool SensorHLKLD2420::getSensorData()
                     logDebugP("Gate %i:  %.2f", i, holdThresholdDb[i]);
                 }
                 sendCommand(CMD_WRITE_MODULE_CONFIG, param);
+                delay(500);
                 param.clear();
                 for (int i = 8; i < 16; i++)
                 {
@@ -690,6 +695,7 @@ bool SensorHLKLD2420::getSensorData()
                     logDebugP("Gate %i:  %.2f", i, holdThresholdDb[i]);
                 }
                 sendCommand(CMD_WRITE_MODULE_CONFIG, param);
+                delay(500);
                 logIndentDown();
 
                 logIndentDown();

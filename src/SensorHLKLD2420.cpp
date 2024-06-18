@@ -1,9 +1,9 @@
 // #include "IncludeManager.h"
 #ifdef PMMODULE
-    #ifdef HF_SERIAL
-        #include "SensorHLKLD2420.h"
-        #include <Arduino.h>
-        #include <Wire.h>
+#ifdef HF_SERIAL
+#include "SensorHLKLD2420.h"
+#include <Arduino.h>
+#include <Wire.h>
 
 SensorHLKLD2420::SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire *iWire)
     : SensorHLKLD2420(iMeasureTypes, &Wire, 0){};
@@ -85,7 +85,7 @@ void SensorHLKLD2420::startupLoop()
                 pSensorStateDelay = millis();
                 mHfSensorStartupState = START_SENSOR_ACTIVE;
 
-                sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE);
+                sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
             }
             break;
         case START_SENSOR_ACTIVE:
@@ -111,7 +111,7 @@ void SensorHLKLD2420::startupLoop()
             else if (delayCheck(pSensorStateDelay, 2000))
             {
                 pSensorStateDelay = millis();
-                sendCommand(CMD_READ_MODULE_CONFIG, PARAM_READ_DISTANCE_TRIGGER);
+                sendCommand(CMD_READ_MODULE_CONFIG, PARAM_READ_DISTANCE_TRIGGER, PARAM_READ_DISTANCE_TRIGGER_LENGTH);
             }
             break;
         case START_READ1_DONE:
@@ -124,7 +124,7 @@ void SensorHLKLD2420::startupLoop()
             else if (delayCheck(pSensorStateDelay, 2000))
             {
                 pSensorStateDelay = millis();
-                sendCommand(CMD_READ_MODULE_CONFIG, PARAM_READ_DELAY_MAINTAIN);
+                sendCommand(CMD_READ_MODULE_CONFIG, PARAM_READ_DELAY_MAINTAIN, PARAM_READ_DELAY_MAINTAIN_LENGTH);
             }
             break;
         case START_READ2_DONE:
@@ -135,7 +135,7 @@ void SensorHLKLD2420::startupLoop()
                 mHfSensorStartupState = START_CALIBRATING;
 
                 resetRawDataRecording();
-                sendCommand(CMD_RAW_DATA_MODE, PARAM_RAW_DATA_MODE);
+                sendCommand(CMD_RAW_DATA_MODE, PARAM_RAW_DATA_MODE, PARAM_RAW_DATA_MODE_LENGTH);
                 sendCommand(CMD_CLOSE_COMMAND_MODE);
             }
             break;
@@ -167,33 +167,35 @@ void SensorHLKLD2420::uartGetPacket()
             {
                 lastDataReceived = millis();
 
-                mBuffer.push_back((byte)rxByte);
-                if (mBuffer.size() == HEADER_FOOTER_SIZE)
+                mBuffer[mBufferIndex] = rxByte;
+                mBufferIndex++;
+
+                if (BUFFER_LENGTH == HEADER_FOOTER_SIZE)
                 {
                     /*logTraceP("Header:");
                     logIndentUp();
-                    logHexTraceP(mBuffer.data(), mBuffer.size());
+                    logHexTraceP(mBuffer, BUFFER_LENGTH);
                     logIndentDown();*/
 
-                    if (mBuffer == HEADER_ON)
+                    if (memcmp(mBuffer, HEADER_ON, HEADER_FOOTER_SIZE) == 0)
                     {
                         mPacketType = ON;
                         mPacketState = GET_PACKET_DATA;
                         break;
                     }
-                    if (mBuffer == HEADER_OFF)
+                    if (memcmp(mBuffer, HEADER_OFF, HEADER_FOOTER_SIZE) == 0)
                     {
                         mPacketType = OFF;
                         mPacketState = GET_PACKET_DATA;
                         break;
                     }
-                    if (mBuffer == HEADER_COMMAND)
+                    if (memcmp(mBuffer, HEADER_COMMAND, HEADER_FOOTER_SIZE) == 0)
                     {
                         mPacketType = COMMAND_RESPONSE;
                         mPacketState = GET_PACKET_DATA;
                         break;
                     }
-                    if (mBuffer == HEADER_RAW_DATA)
+                    if (memcmp(mBuffer, HEADER_RAW_DATA, HEADER_FOOTER_SIZE) == 0)
                     {
                         mPacketType = RAW_DATA;
                         mPacketState = GET_PACKET_DATA;
@@ -203,16 +205,17 @@ void SensorHLKLD2420::uartGetPacket()
 
                 // if the current buffer is the expected size of the header,
                 // but we did not find a valid header yet, we remove the first element
-                if (mBuffer.size() == HEADER_FOOTER_SIZE)
+                if (BUFFER_LENGTH == HEADER_FOOTER_SIZE)
                 {
-                    mBuffer.erase(mBuffer.begin());
+                    memmove(mBuffer, mBuffer + 1, BUFFER_LENGTH - 1);
+                    mBufferIndex -= 1;
                 }
             }
 
             if (delayCheck(lastDataReceived, 100))
             {
                 // no data received for 100 millisec., cancel header sync
-                mBuffer.clear();
+                mBufferIndex = 0;
                 mPacketState = GET_SYNC_STATE;
                 break;
             }
@@ -226,16 +229,18 @@ void SensorHLKLD2420::uartGetPacket()
             {
                 lastDataReceived = millis();
 
-                mBuffer.push_back((byte)rxByte);
-                if (mPacketType == COMMAND_RESPONSE && equal(mBuffer.end() - HEADER_FOOTER_SIZE, mBuffer.end(), FOOTER.begin()) ||
-                    mPacketType == RAW_DATA && equal(mBuffer.end() - HEADER_FOOTER_SIZE, mBuffer.end(), FOOTER_RAW_DATA.begin()))
+                mBuffer[mBufferIndex] = rxByte;
+                mBufferIndex++;
+
+                if (mPacketType == COMMAND_RESPONSE && memcmp(mBuffer + mBufferIndex - HEADER_FOOTER_SIZE, FOOTER, HEADER_FOOTER_SIZE) == 0 ||
+                    mPacketType == RAW_DATA && memcmp(mBuffer + mBufferIndex - HEADER_FOOTER_SIZE, FOOTER_RAW_DATA, HEADER_FOOTER_SIZE) == 0)
                 {
                     mPacketState = PROCESS_PACKET_STATE;
                     break;
                 }
 
-                if ((mPacketType == OFF || mPacketType == ON && mBuffer.size() > 10) &&
-                    mBuffer.end()[-2] == 13 && mBuffer.end()[-1] == 10)
+                if ((mPacketType == OFF || mPacketType == ON && BUFFER_LENGTH > 10) &&
+                    mBuffer[mBufferIndex - 2] == 13 && mBuffer[mBufferIndex - 1] == 10)
                 { // new line
                     mPacketState = PROCESS_PACKET_STATE;
                     break;
@@ -245,7 +250,7 @@ void SensorHLKLD2420::uartGetPacket()
             if (delayCheck(lastDataReceived, 100))
             {
                 // no data received for 100 millisec., cancel get packet data
-                mBuffer.clear();
+                mBufferIndex = 0;
                 mPacketState = GET_SYNC_STATE;
                 break;
             }
@@ -253,7 +258,7 @@ void SensorHLKLD2420::uartGetPacket()
             break;
         case PROCESS_PACKET_STATE:
             getSensorData();
-            mBuffer.clear();
+            mBufferIndex = 0;
             mPacketState = GET_SYNC_STATE;
             break;
     }
@@ -265,26 +270,6 @@ int SensorHLKLD2420::bytesToInt(byte byte0, byte byte1, byte byte2, byte byte3)
                (unsigned char)(byte2) << 16 |
                (unsigned char)(byte1) << 8 |
                (unsigned char)(byte0));
-}
-
-std::vector<byte> SensorHLKLD2420::intToBytes(int intValue)
-{
-    std::vector<byte> bytes;
-
-    bytes.push_back((byte)(intValue & 0xFF));
-    bytes.push_back((byte)((intValue >> 8) & 0xFF));
-    bytes.push_back((byte)((intValue >> 16) & 0xFF));
-    bytes.push_back((byte)((intValue >> 24) & 0xFF));
-    return bytes;
-}
-
-std::vector<byte> SensorHLKLD2420::shortToBytes(short shortValue)
-{
-    std::vector<byte> bytes;
-
-    bytes.push_back((byte)(shortValue & 0xFF));
-    bytes.push_back((byte)((shortValue >> 8) & 0xFF));
-    return bytes;
 }
 
 double SensorHLKLD2420::rawToDb(int rawValue)
@@ -320,7 +305,7 @@ bool SensorHLKLD2420::getSensorData()
     bool success;
     std::string successMessage;
 
-    int payloadSize;
+    uint8_t payloadSize;
 
     int rangeMax[16] = {};
     int dopplerOffset;
@@ -333,17 +318,17 @@ bool SensorHLKLD2420::getSensorData()
         {
             /*logTraceP("Content ON:");
             logIndentUp();
-            logHexTraceP(mBuffer.data(), mBuffer.size());
+            logHexTraceP(mBuffer, BUFFER_LENGTH);
             logIndentDown();*/
 
             // cut 10 bytes at the beginning: 4F 4E 0D 0A 52 61 6E 67 65 20 ("ON  RANGE ")
             // and 2 bytes at the end
-            mBuffer.erase(mBuffer.begin(), mBuffer.begin() + 10);
-            mBuffer.erase(mBuffer.end() - 2, mBuffer.end());
+            memmove(mBuffer, mBuffer + 10, BUFFER_LENGTH - 10);
+            mBufferIndex -= 12;
             // exceptions not possible, we check if string consists of digits
             bool justDigits = true;
-            for (uint8_t mBufferIndex = 0; mBufferIndex < mBuffer.size(); mBufferIndex++)
-                if (mBuffer[mBufferIndex] < 0x30 || mBuffer[mBufferIndex] > 0x39)
+            for (uint8_t i = 0; i < BUFFER_LENGTH; i++)
+                if (mBuffer[i] < 0x30 || mBuffer[i] > 0x39)
                 {
                     justDigits = false;
                     break;
@@ -351,7 +336,7 @@ bool SensorHLKLD2420::getSensorData()
             if (justDigits)
             {
                 // mBuffer now holds the detection range decimal value as string
-                rangeString = std::string(reinterpret_cast<const char *>(&mBuffer[0]), mBuffer.size());
+                rangeString = std::string(reinterpret_cast<const char *>(&mBuffer[0]), BUFFER_LENGTH);
                 newDetectedRange = stoi(rangeString) / (float)10;
 
                 if (lastDetectedRange != newDetectedRange)
@@ -361,7 +346,12 @@ bool SensorHLKLD2420::getSensorData()
                 }
             }
             else
-                logDebugP("Presence range contains non-digit-characters: %s", mBuffer);
+            {
+                logDebugP("Presence range contains non-digit-characters");
+                logIndentUp();
+                logHexTraceP(mBuffer, BUFFER_LENGTH);
+                logIndentDown();
+            }
 
             result = true;
             break;
@@ -369,7 +359,7 @@ bool SensorHLKLD2420::getSensorData()
         case OFF:
             /*logTraceP("Content OFF:");
             logIndentUp();
-            logHexTraceP(mBuffer.data(), mBuffer.size());
+            logHexTraceP(mBuffer, BUFFER_LENGTH);
             logIndentDown();*/
 
             if (lastDetectedRange != -1)
@@ -382,20 +372,20 @@ bool SensorHLKLD2420::getSensorData()
             break;
 
         case COMMAND_RESPONSE:
-            payloadSize = int(mBuffer[4]);
+            payloadSize = mBuffer[4];
 
             // cut 6 bytes (4 header + 2 size) at the beginning and 4 bytes footer at the end
-            mBuffer.erase(mBuffer.begin(), mBuffer.begin() + 6);
-            mBuffer.erase(mBuffer.end() - 4, mBuffer.end());
+            memmove(mBuffer, mBuffer + 6, BUFFER_LENGTH - 6);
+            mBufferIndex -= 10;
 
-            if (mBuffer.size() != payloadSize)
+            if (BUFFER_LENGTH != payloadSize)
             {
-                logDebugP("Invalid command reponse packet size: %d", mBuffer.size());
+                logDebugP("Invalid command reponse packet size: %d", BUFFER_LENGTH);
                 break;
             }
 
             // we expect "01 00 00" after the command code for success
-            success = mBuffer[1] == (byte)1 && mBuffer[2] == (byte)0 && mBuffer[3] == (byte)0;
+            success = mBuffer[1] == 1 && mBuffer[2] == 0 && mBuffer[3] == 0;
             successMessage = success ? "success" : "failed";
 
             switch (mBuffer[0])
@@ -415,10 +405,11 @@ bool SensorHLKLD2420::getSensorData()
                         break;
 
                     // cut 6 bytes at the beginning: 00 01 00 00 06 00
-                    mBuffer.erase(mBuffer.begin(), mBuffer.begin() + 6);
+                    memmove(mBuffer, mBuffer + 6, BUFFER_LENGTH - 6);
+                    mBufferIndex -= 6;
 
                     // mBuffer now holds the version value as string
-                    moduleVersion = std::string(reinterpret_cast<const char *>(&mBuffer[0]), mBuffer.size());
+                    moduleVersion = std::string(reinterpret_cast<const char *>(&mBuffer[0]), BUFFER_LENGTH);
                     logDebugP("Module version: %s", moduleVersion.c_str());
                     result = true;
                     break;
@@ -434,7 +425,8 @@ bool SensorHLKLD2420::getSensorData()
                     // This way, based on the returned amount of data we can recognize which read request was fullfilled.
 
                     // cut 4 bytes at the beginning: 08 01 00 00
-                    mBuffer.erase(mBuffer.begin(), mBuffer.begin() + 4);
+                    memmove(mBuffer, mBuffer + 4, BUFFER_LENGTH - 4);
+                    mBufferIndex -= 4;
 
                     if (payloadSize == 0x4C)
                     {
@@ -508,8 +500,8 @@ bool SensorHLKLD2420::getSensorData()
 
         case RAW_DATA:
             // cut 4 bytes at the beginning and 4 bytes footer at the end
-            mBuffer.erase(mBuffer.begin(), mBuffer.begin() + 4);
-            mBuffer.erase(mBuffer.end() - 4, mBuffer.end());
+            memmove(mBuffer, mBuffer + 4, BUFFER_LENGTH - 4);
+            mBufferIndex -= 8;
 
             for (int i = 0; i < 20; i++)
             {
@@ -553,14 +545,14 @@ bool SensorHLKLD2420::getSensorData()
             if (rawDataRecordingCount >= CALIBRATION_VALUE_COUNT)
             {
                 // enter command mode to stop raw data transfer
-                sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE);
+                sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
 
                 // reboot module to return to normal (not raw data) operation
                 sendCommand(CMD_REBOOT_MODULE);
                 delay(1000);
 
                 // after reboot enter command mode again to store data
-                sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE);
+                sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
                 delay(500);
 
                 logTraceP("rawDataRangeAverage:");
@@ -601,33 +593,32 @@ bool SensorHLKLD2420::getSensorData()
                 logDebugP("Range gate max.: %d", mRangeGateMax);
                 logDebugP("Delay time: %d", mDelayTime);
 
-                std::vector<byte> param;
-                std::vector<byte> bytes;
+                uint8_t param[48];
 
                 // write range gate min./max. and delay time, for each:
                 // first 2 bytes parameter offset, then 4 bytes value
 
-                param.push_back(OFFSET_PARAM_RANGE_GATE_MIN);
-                param.push_back(0);
-                param.push_back(mRangeGateMin);
-                param.push_back(0);
-                param.push_back(0);
-                param.push_back(0);
-                param.push_back(OFFSET_PARAM_RANGE_GATE_MAX);
-                param.push_back(0);
-                param.push_back(mRangeGateMax);
-                param.push_back(0);
-                param.push_back(0);
-                param.push_back(0);
+                param[0] = OFFSET_PARAM_RANGE_GATE_MIN;
+                param[1] = 0;
+                param[2] = mRangeGateMin;
+                param[3] = 0;
+                param[4] = 0;
+                param[5] = 0;
+                param[6] = OFFSET_PARAM_RANGE_GATE_MAX;
+                param[7] = 0;
+                param[8] = mRangeGateMax;
+                param[9] = 0;
+                param[10] = 0;
+                param[11] = 0;
 
-                param.push_back(OFFSET_PARAM_DELAY_TIME);
-                param.push_back(0);
-                bytes = shortToBytes(mDelayTime);
-                param.insert(param.end(), bytes.cbegin(), bytes.cend());
-                param.push_back(0);
-                param.push_back(0);
+                param[12] = OFFSET_PARAM_DELAY_TIME;
+                param[13] = 0;
+                param[14] = (uint8_t)(mDelayTime & 0xFF);
+                param[15] = (uint8_t)((mDelayTime >> 8) & 0xFF);
+                param[16] = 0;
+                param[17] = 0;
 
-                sendCommand(CMD_WRITE_MODULE_CONFIG, param);
+                sendCommand(CMD_WRITE_MODULE_CONFIG, param, 18);
                 delay(500);
 
                 logDebugP("triggerThreshold:");
@@ -636,31 +627,39 @@ bool SensorHLKLD2420::getSensorData()
                 // write back trigger thresholds, for each:
                 // first 2 bytes parameter offset, then 4 bytes value
                 // write in 2 steps as it seems 100 bytes are maximum in one package
-                param.clear();
-                for (int i = 0; i < 8; i++)
+                uint8_t offset;
+                int rawValue;
+                for (uint8_t i = 0; i < 8; i++)
                 {
-                    param.push_back(OFFSET_PARAM_TRIGGERS + (byte)i);
-                    param.push_back(0);
+                    offset = i * 6;
+                    param[offset] = OFFSET_PARAM_TRIGGERS + i;
+                    param[offset + 1] = 0;
 
-                    bytes = intToBytes(dBToRaw(triggerThresholdDb[i]));
-                    param.insert(param.end(), bytes.cbegin(), bytes.cend());
+                    rawValue = dBToRaw(triggerThresholdDb[i]);
+                    param[offset + 2] = (uint8_t)(rawValue & 0xFF);
+                    param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
+                    param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
+                    param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
 
                     logDebugP("Gate %i:  %.2f", i, triggerThresholdDb[i]);
                 }
-                sendCommand(CMD_WRITE_MODULE_CONFIG, param);
+                sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
                 delay(500);
-                param.clear();
                 for (int i = 8; i < 16; i++)
                 {
-                    param.push_back(OFFSET_PARAM_TRIGGERS + (byte)i);
-                    param.push_back(0);
+                    offset = (i - 8) * 6;
+                    param[offset] = OFFSET_PARAM_TRIGGERS + i;
+                    param[offset + 1] = 0;
 
-                    bytes = intToBytes(dBToRaw(triggerThresholdDb[i]));
-                    param.insert(param.end(), bytes.cbegin(), bytes.cend());
+                    rawValue = dBToRaw(triggerThresholdDb[i]);
+                    param[offset + 2] = (uint8_t)(rawValue & 0xFF);
+                    param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
+                    param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
+                    param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
 
                     logDebugP("Gate %i:  %.2f", i, triggerThresholdDb[i]);
                 }
-                sendCommand(CMD_WRITE_MODULE_CONFIG, param);
+                sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
                 delay(500);
                 logIndentDown();
 
@@ -670,31 +669,37 @@ bool SensorHLKLD2420::getSensorData()
                 // write back hold thresholds, for each:
                 // first 2 bytes parameter offset, then 4 bytes value
                 // write in 2 steps as it seems 100 bytes are maximum in one package
-                param.clear();
                 for (int i = 0; i < 8; i++)
                 {
-                    param.push_back(OFFSET_PARAM_HOLDS + (byte)i);
-                    param.push_back(0);
+                    offset = i * 6;
+                    param[offset] = OFFSET_PARAM_HOLDS + i;
+                    param[offset + 1] = 0;
 
-                    bytes = intToBytes(dBToRaw(holdThresholdDb[i]));
-                    param.insert(param.end(), bytes.cbegin(), bytes.cend());
+                    rawValue = dBToRaw(holdThresholdDb[i]);
+                    param[offset + 2] = (uint8_t)(rawValue & 0xFF);
+                    param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
+                    param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
+                    param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
 
                     logDebugP("Gate %i:  %.2f", i, holdThresholdDb[i]);
                 }
-                sendCommand(CMD_WRITE_MODULE_CONFIG, param);
+                sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
                 delay(500);
-                param.clear();
                 for (int i = 8; i < 16; i++)
                 {
-                    param.push_back(OFFSET_PARAM_HOLDS + (byte)i);
-                    param.push_back(0);
+                    offset = (i - 8) * 6;
+                    param[offset] = OFFSET_PARAM_HOLDS + i;
+                    param[offset + 1] = 0;
 
-                    bytes = intToBytes(dBToRaw(holdThresholdDb[i]));
-                    param.insert(param.end(), bytes.cbegin(), bytes.cend());
+                    rawValue = dBToRaw(holdThresholdDb[i]);
+                    param[offset + 2] = (uint8_t)(rawValue & 0xFF);
+                    param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
+                    param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
+                    param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
 
                     logDebugP("Gate %i:  %.2f", i, holdThresholdDb[i]);
                 }
-                sendCommand(CMD_WRITE_MODULE_CONFIG, param);
+                sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
                 delay(500);
                 logIndentDown();
 
@@ -715,27 +720,35 @@ bool SensorHLKLD2420::getSensorData()
     return result;
 }
 
-void SensorHLKLD2420::sendCommand(byte command, std::vector<byte> parameter)
+void SensorHLKLD2420::sendCommand(uint8_t command, const uint8_t parameter[], uint8_t parameterLength)
 {
-    std::vector<byte> cmdData = HEADER_COMMAND;
+    uint8_t payloadSize = 2 + parameterLength;
+    uint8_t totalLength = HEADER_FOOTER_SIZE + 2 + payloadSize + HEADER_FOOTER_SIZE;
+    
+    uint8_t cmdData[totalLength];
+    memcpy(cmdData, HEADER_COMMAND, HEADER_FOOTER_SIZE);
+    uint8_t cmdDataIndex = HEADER_FOOTER_SIZE;
 
-    byte payloadSize = 2 + parameter.size();
-    cmdData.push_back(payloadSize);
-    cmdData.push_back(0x00);
+    cmdData[cmdDataIndex] = payloadSize;
+    cmdData[cmdDataIndex + 1] = 0x00;
+    cmdDataIndex += 2;
 
-    cmdData.push_back(command);
-    cmdData.push_back(0x00);
+    cmdData[cmdDataIndex] = command;
+    cmdData[cmdDataIndex + 1] = 0x00;
+    cmdDataIndex += 2;
 
-    cmdData.insert(cmdData.end(), parameter.cbegin(), parameter.cend());
-    cmdData.insert(cmdData.end(), FOOTER.cbegin(), FOOTER.cend());
+    memcpy(cmdData + cmdDataIndex, parameter, parameterLength);
+    cmdDataIndex += parameterLength;
+
+    memcpy(cmdData + cmdDataIndex, FOOTER, HEADER_FOOTER_SIZE);
 
     if (HF_SERIAL.availableForWrite())
     {
-        HF_SERIAL.write(cmdData.data(), cmdData.size());
+        HF_SERIAL.write(cmdData, totalLength);
 
         logTraceP("Sending to sensor:");
         logIndentUp();
-        logHexTraceP(cmdData.data(), cmdData.size());
+        logHexTraceP(cmdData, totalLength);
         logIndentDown();
     }
     else
@@ -781,5 +794,6 @@ uint8_t SensorHLKLD2420::getI2cSpeed()
 {
     return 10; // n * 100kHz // no I2C, so we support "all" frequencies :-)
 }
-    #endif
+
+#endif
 #endif

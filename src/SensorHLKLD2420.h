@@ -1,58 +1,51 @@
 #pragma once
 // #include "IncludeManager.h"
 #ifdef PMMODULE
-    #ifdef HF_SERIAL
-        #include "Sensor.h"
-        #include <string>
-        #include <vector>
+#ifdef HF_SERIAL
+#include "Sensor.h"
+#include <string>
 
-        #define HEADER_FOOTER_SIZE 4
+#define HEADER_FOOTER_SIZE 4
 
-const std::vector<byte> HEADER_ON = {(byte)0x4F, (byte)0x4E, (byte)0x0D, (byte)0x0A};
-const std::vector<byte> HEADER_OFF = {(byte)0x4F, (byte)0x46, (byte)0x46, (byte)0x0D};
-const std::vector<byte> HEADER_COMMAND = {(byte)0xFD, (byte)0xFC, (byte)0xFB, (byte)0xFA};
-const std::vector<byte> FOOTER = {(byte)0x04, (byte)0x03, (byte)0x02, (byte)0x01};
+#define CMD_OPEN_COMMAND_MODE 0xFF
+#define CMD_CLOSE_COMMAND_MODE 0xFE
+#define CMD_READ_VERSION 0x00
+#define CMD_REBOOT_MODULE 0x68
+#define CMD_READ_MODULE_CONFIG 0x08
+#define CMD_WRITE_MODULE_CONFIG 0x07
+#define CMD_RAW_DATA_MODE 0x12
 
-const std::vector<byte> HEADER_RAW_DATA = {(byte)0xAA, (byte)0xBF, (byte)0x10, (byte)0x14};
-const std::vector<byte> FOOTER_RAW_DATA = {(byte)0xFD, (byte)0xFC, (byte)0xFB, (byte)0xFA};
+#define OFFSET_PARAM_RANGE_GATE_MIN 0x00
+#define OFFSET_PARAM_RANGE_GATE_MAX 0x01
+#define OFFSET_PARAM_DELAY_TIME 0x04
+#define OFFSET_PARAM_TRIGGERS 0x10
+#define OFFSET_PARAM_HOLDS 0x20
 
-        #define CMD_OPEN_COMMAND_MODE 0xFF
-        #define CMD_CLOSE_COMMAND_MODE 0xFE
-        #define CMD_READ_VERSION 0x00
-        #define CMD_REBOOT_MODULE 0x68
-        #define CMD_READ_MODULE_CONFIG 0x08
-        #define CMD_WRITE_MODULE_CONFIG 0x07
-        #define CMD_RAW_DATA_MODE 0x12
+#define PARAM_OPEN_COMMAND_MODE_LENGTH 2
+#define PARAM_READ_DISTANCE_TRIGGER_LENGTH 36
+#define PARAM_READ_DELAY_MAINTAIN_LENGTH 34
+#define PARAM_RAW_DATA_MODE_LENGTH 6
 
-        #define OFFSET_PARAM_RANGE_GATE_MIN 0x00
-        #define OFFSET_PARAM_RANGE_GATE_MAX 0x01
-        #define OFFSET_PARAM_DELAY_TIME 0x04
-        #define OFFSET_PARAM_TRIGGERS 0x10
-        #define OFFSET_PARAM_HOLDS 0x20
+#define CALIBRATION_VALUE_COUNT 100
+#define CALIBRATION_TRIGGER_OFFSET_DB 5 // = min. sensitivity, range 1 - 5
+#define CALIBRATION_HOLD_OFFSET_DB 2.5  // = min. sensitivity, range 1.5 - 2.5
 
-const std::vector<byte> PARAM_OPEN_COMMAND_MODE = {(byte)0x01, (byte)0x00};
-const std::vector<byte> PARAM_READ_DISTANCE_TRIGGER = {(byte)0x00, (byte)0x00, (byte)0x01, (byte)0x00, (byte)0x10, (byte)0x00, (byte)0x11, (byte)0x00, (byte)0x12, (byte)0x00, (byte)0x13, (byte)0x00, (byte)0x14, (byte)0x00, (byte)0x15, (byte)0x00, (byte)0x16, (byte)0x00, (byte)0x17, (byte)0x00, (byte)0x18, (byte)0x00, (byte)0x19, (byte)0x00, (byte)0x1A, (byte)0x00, (byte)0x1B, (byte)0x00, (byte)0x1C, (byte)0x00, (byte)0x1D, (byte)0x00, (byte)0x1E, (byte)0x00, (byte)0x1F, (byte)0x00};
-const std::vector<byte> PARAM_READ_DELAY_MAINTAIN = {(byte)0x04, (byte)0x00, (byte)0x20, (byte)0x00, (byte)0x21, (byte)0x00, (byte)0x22, (byte)0x00, (byte)0x23, (byte)0x00, (byte)0x24, (byte)0x00, (byte)0x25, (byte)0x00, (byte)0x26, (byte)0x00, (byte)0x27, (byte)0x00, (byte)0x28, (byte)0x00, (byte)0x29, (byte)0x00, (byte)0x2A, (byte)0x00, (byte)0x2B, (byte)0x00, (byte)0x2C, (byte)0x00, (byte)0x2D, (byte)0x00, (byte)0x2E, (byte)0x00, (byte)0x2F, (byte)0x00};
-const std::vector<byte> PARAM_RAW_DATA_MODE = {(byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00};
+// these will be deducted from trigger/hold offset based on sensitivity percentage
+// e. g. sensitivity 5 (= 50 %): trigger offset 5-2=3, hold offset 2.5-1=1.5
+// lower offsets = higher sensitivity
+#define SENSITIVITY_TRIGGER_RANGE 4
+#define SENSITIVITY_HOLD_RANGE 2
+#define SENSITIVITY_DEFAULT 5 // in case user setting invalid
 
-        #define CALIBRATION_VALUE_COUNT 100
-        #define CALIBRATION_TRIGGER_OFFSET_DB 5 // = min. sensitivity, range 1 - 5
-        #define CALIBRATION_HOLD_OFFSET_DB 2.5  // = min. sensitivity, range 1.5 - 2.5
+#define START_INIT 0
+#define START_SENSOR_ACTIVE 1
+#define START_VERSION_RECEIVED 2
+#define START_READ1_DONE 3
+#define START_READ2_DONE 4
+#define START_CALIBRATING 5
+#define START_FINISHED 255
 
-        // these will be deducted from trigger/hold offset based on sensitivity percentage
-        // e. g. sensitivity 5 (= 50 %): trigger offset 5-2=3, hold offset 2.5-1=1.5
-        // lower offsets = higher sensitivity
-        #define SENSITIVITY_TRIGGER_RANGE 4
-        #define SENSITIVITY_HOLD_RANGE 2
-        #define SENSITIVITY_DEFAULT 5 // in case user setting invalid
-
-        #define START_INIT 0
-        #define START_SENSOR_ACTIVE 1
-        #define START_VERSION_RECEIVED 2
-        #define START_READ1_DONE 3
-        #define START_READ2_DONE 4
-        #define START_CALIBRATING 5
-        #define START_FINISHED 255
+#define BUFFER_LENGTH mBufferIndex
 
 class SensorHLKLD2420 : public Sensor
 {
@@ -80,7 +73,7 @@ class SensorHLKLD2420 : public Sensor
         RAW_DATA
     };
 
-    std::vector<byte> mBuffer; // message buffer
+    uint8_t mBuffer[1288]; // message buffer
     int mBufferIndex = 0;
     PacketStates mPacketState = GET_SYNC_STATE;
     PacketType mPacketType;
@@ -101,11 +94,22 @@ class SensorHLKLD2420 : public Sensor
     int8_t mDefaultSensitivity = 5;
     uint8_t mHfSensorStartupState = 0;
 
+    uint8_t HEADER_ON[4] = {0x4F, 0x4E, 0x0D, 0x0A};
+    uint8_t HEADER_OFF[4] = {0x4F, 0x46, 0x46, 0x0D};
+    uint8_t HEADER_COMMAND[4] = {0xFD, 0xFC, 0xFB, 0xFA};
+    uint8_t FOOTER[4] = {0x04, 0x03, 0x02, 0x01};
+
+    uint8_t HEADER_RAW_DATA[4] = {0xAA, 0xBF, 0x10, 0x14};
+    uint8_t FOOTER_RAW_DATA[4] = {0xFD, 0xFC, 0xFB, 0xFA};
+
+    uint8_t PARAM_OPEN_COMMAND_MODE[PARAM_OPEN_COMMAND_MODE_LENGTH] = {0x01, 0x00};
+    uint8_t PARAM_READ_DISTANCE_TRIGGER[PARAM_READ_DISTANCE_TRIGGER_LENGTH] = {0x00, 0x00, 0x01, 0x00, 0x10, 0x00, 0x11, 0x00, 0x12, 0x00, 0x13, 0x00, 0x14, 0x00, 0x15, 0x00, 0x16, 0x00, 0x17, 0x00, 0x18, 0x00, 0x19, 0x00, 0x1A, 0x00, 0x1B, 0x00, 0x1C, 0x00, 0x1D, 0x00, 0x1E, 0x00, 0x1F, 0x00};
+    uint8_t PARAM_READ_DELAY_MAINTAIN[PARAM_READ_DELAY_MAINTAIN_LENGTH] = {0x04, 0x00, 0x20, 0x00, 0x21, 0x00, 0x22, 0x00, 0x23, 0x00, 0x24, 0x00, 0x25, 0x00, 0x26, 0x00, 0x27, 0x00, 0x28, 0x00, 0x29, 0x00, 0x2A, 0x00, 0x2B, 0x00, 0x2C, 0x00, 0x2D, 0x00, 0x2E, 0x00, 0x2F, 0x00};
+    uint8_t PARAM_RAW_DATA_MODE[PARAM_RAW_DATA_MODE_LENGTH] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
     void startupLoop();
     void uartGetPacket();
     int bytesToInt(byte byte1, byte byte2, byte byte3, byte byte4);
-    std::vector<byte> intToBytes(int intValue);
-    std::vector<byte> shortToBytes(short shortValue);
     double rawToDb(int rawValue);
     int dBToRaw(double dbValue);
     void resetRawDataRecording();
@@ -134,7 +138,7 @@ class SensorHLKLD2420 : public Sensor
     // void resetSensor();
     void writeSensitivity(int8_t iSensitivity);
     // void readSensitivity();
-    void sendCommand(byte command, std::vector<byte> parameter = {});
+    void sendCommand(uint8_t command, const uint8_t parameter[] = nullptr, uint8_t parameterLength = 0);
     std::string logPrefix() override;
 };
     #endif

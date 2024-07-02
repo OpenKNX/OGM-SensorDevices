@@ -1,4 +1,3 @@
-// #include "IncludeManager.h"
 #ifdef PMMODULE
 #ifdef HF_SERIAL
 #include "SensorHLKLD2420.h"
@@ -34,7 +33,7 @@ void SensorHLKLD2420::writeSensitivity(int8_t iSensitivity)
     mSensitivity = iSensitivity;
 
     // restart calibration with new sensitivity value
-    mHfSensorStartupState = START_READ2_DONE;
+    forceCalibration();
 }
 
 uint8_t SensorHLKLD2420::getSensorClass()
@@ -132,10 +131,20 @@ void SensorHLKLD2420::startupLoop()
             if (delayCheck(pSensorStateDelay, 50))
             {
                 pSensorStateDelay = millis();
-                mHfSensorStartupState = START_CALIBRATING;
 
-                resetRawDataRecording();
-                sendCommand(CMD_RAW_DATA_MODE, PARAM_RAW_DATA_MODE, PARAM_RAW_DATA_MODE_LENGTH);
+                if (calibrationCompleted)
+                {
+                    // skip calibration if valid calibration values have been read from flash
+                    mHfSensorStartupState = START_FINISHED;
+                }
+                else
+                {
+                    mHfSensorStartupState = START_CALIBRATING;
+
+                    resetRawDataRecording();
+                    sendCommand(CMD_RAW_DATA_MODE, PARAM_RAW_DATA_MODE, PARAM_RAW_DATA_MODE_LENGTH);
+                }
+
                 sendCommand(CMD_CLOSE_COMMAND_MODE);
             }
             break;
@@ -151,6 +160,22 @@ void SensorHLKLD2420::startupLoop()
             }
             break;
     }
+}
+
+void SensorHLKLD2420::forceCalibration()
+{
+    // #ToDo: discuss how to get triggered externally
+
+    sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
+    delay(100);
+
+    calibrationCompleted = false;
+    pSensorState = Calibrate;
+    mHfSensorStartupState = START_CALIBRATING;
+
+    resetRawDataRecording();
+    sendCommand(CMD_RAW_DATA_MODE, PARAM_RAW_DATA_MODE, PARAM_RAW_DATA_MODE_LENGTH);
+    sendCommand(CMD_CLOSE_COMMAND_MODE);
 }
 
 void SensorHLKLD2420::uartGetPacket()
@@ -285,9 +310,7 @@ int SensorHLKLD2420::dBToRaw(double dbValue)
 void SensorHLKLD2420::resetRawDataRecording()
 {
     for (int i = 0; i < 16; i++)
-    {
         rawDataRangeAverage[i] = 0;
-    }
 
     rawDataLastRecordingReceived = millis();
     rawDataRecordingCount = 0;
@@ -444,10 +467,11 @@ bool SensorHLKLD2420::getSensorData()
 
                         logDebugP("triggerThreshold:");
                         logIndentUp();
+                        int triggerThresholdTemp;
                         for (int i = 0; i < 16; i++)
                         {
-                            triggerThreshold[i] = bytesToInt(mBuffer[i * 4 + 8], mBuffer[i * 4 + 9], mBuffer[i * 4 + 10], mBuffer[i * 4 + 11]);
-                            logDebugP("Gate %i: %.2f", i, rawToDb(triggerThreshold[i]));
+                            triggerThresholdTemp = bytesToInt(mBuffer[i * 4 + 8], mBuffer[i * 4 + 9], mBuffer[i * 4 + 10], mBuffer[i * 4 + 11]);
+                            logDebugP("Gate %i: %.2f", i, rawToDb(triggerThresholdTemp));
                         }
                         logIndentDown();
 
@@ -466,10 +490,11 @@ bool SensorHLKLD2420::getSensorData()
 
                         logDebugP("holdThreshold:");
                         logIndentUp();
+                        int holdThresholdTemp;
                         for (int i = 0; i < 16; i++)
                         {
-                            holdThreshold[i] = bytesToInt(mBuffer[i * 4 + 4], mBuffer[i * 4 + 5], mBuffer[i * 4 + 6], mBuffer[i * 4 + 7]);
-                            logDebugP("Gate %i: %.2f", i, rawToDb(holdThreshold[i]));
+                            holdThresholdTemp = bytesToInt(mBuffer[i * 4 + 4], mBuffer[i * 4 + 5], mBuffer[i * 4 + 6], mBuffer[i * 4 + 7]);
+                            logDebugP("Gate %i: %.2f", i, rawToDb(holdThresholdTemp));
                         }
                         logIndentDown();
 
@@ -640,6 +665,7 @@ bool SensorHLKLD2420::getSensorData()
                     param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
                     param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
                     param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
+                    triggerThreshold[i] = rawValue;
 
                     logDebugP("Gate %i:  %.2f", i, triggerThresholdDb[i]);
                 }
@@ -656,6 +682,7 @@ bool SensorHLKLD2420::getSensorData()
                     param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
                     param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
                     param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
+                    triggerThreshold[i] = rawValue;
 
                     logDebugP("Gate %i:  %.2f", i, triggerThresholdDb[i]);
                 }
@@ -680,6 +707,7 @@ bool SensorHLKLD2420::getSensorData()
                     param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
                     param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
                     param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
+                    holdThreshold[i] = rawValue;
 
                     logDebugP("Gate %i:  %.2f", i, holdThresholdDb[i]);
                 }
@@ -696,6 +724,7 @@ bool SensorHLKLD2420::getSensorData()
                     param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
                     param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
                     param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
+                    holdThreshold[i] = rawValue;
 
                     logDebugP("Gate %i:  %.2f", i, holdThresholdDb[i]);
                 }
@@ -793,6 +822,63 @@ bool SensorHLKLD2420::begin()
 uint8_t SensorHLKLD2420::getI2cSpeed()
 {
     return 10; // n * 100kHz // no I2C, so we support "all" frequencies :-)
+}
+
+void SensorHLKLD2420::sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize)
+{
+    logDebugP("HLKLD2420: Reading state from Flash\n");
+
+    // #ToDo: flash data when available?
+    // #ToDo: Use OpenKNX flash read functions possible?
+
+    bool lValid = (iBuffer[0] == HLKLD2420_FLASH_VERSION);
+    // read magic word
+    for (uint8_t i = 1; i < 5 && lValid; i++)
+    {
+        lValid = lValid && (iBuffer[i] == sMagicWord[i - 1]);
+    }
+
+    mFlashBuffer = lValid ? iBuffer + 5 : nullptr;
+
+    if (!lValid)
+    {
+        logDebugP("HLKLD2420: No valid data in Flash");
+    }
+
+    for (int i = 0; i < 16; i++)
+        triggerThreshold[i] = openknx.flash.readInt();
+
+    for (int i = 0; i < 16; i++)
+        holdThreshold[i] = openknx.flash.readInt();
+    
+    calibrationCompleted = true;
+
+    logDebugP("HLKLD2420: Calibration data read from flash");
+}
+
+void SensorHLKLD2420::sensorWriteFlash()
+{
+    if (!calibrationCompleted)
+    {
+        logDebugP("HLKLD2420: No data written to flash as calibration not completed");
+        return;
+    }
+
+    openknx.flash.writeByte(HLKLD2420_FLASH_VERSION);
+    openknx.flash.writeInt(HLKLD2420_FLASH_MAGIC_WORD);
+
+    for (int i = 0; i < 16; i++)
+        openknx.flash.writeInt(triggerThreshold[i]);
+
+    for (int i = 0; i < 16; i++)
+        openknx.flash.writeInt(holdThreshold[i]);
+
+    logDebugP("HLKLD2420: Calibration data written to flash");
+}
+
+uint16_t SensorHLKLD2420::sensorFlashSize()
+{
+    return HLKLD2420_FLASH_SIZE;
 }
 
 #endif

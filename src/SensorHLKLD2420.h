@@ -1,5 +1,4 @@
 #pragma once
-// #include "IncludeManager.h"
 #ifdef PMMODULE
 #ifdef HF_SERIAL
 #include "Sensor.h"
@@ -46,6 +45,10 @@
 #define START_FINISHED 255
 
 #define BUFFER_LENGTH mBufferIndex
+
+#define HLKLD2420_FLASH_VERSION 0
+#define HLKLD2420_FLASH_MAGIC_WORD 1234 // #ToDo
+#define HLKLD2420_FLASH_SIZE 133
 
 class SensorHLKLD2420 : public Sensor
 {
@@ -131,6 +134,12 @@ class SensorHLKLD2420 : public Sensor
     SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire* iWire);
     SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress);
     virtual ~SensorHLKLD2420() {}
+
+    void sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize) override;
+    void sensorWriteFlash() override;
+    uint16_t sensorFlashSize() override;
+
+    void forceCalibration();
 
     bool begin() override;
     uint8_t getI2cSpeed() override;

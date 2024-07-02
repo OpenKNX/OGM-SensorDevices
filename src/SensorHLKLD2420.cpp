@@ -576,161 +576,7 @@ bool SensorHLKLD2420::getSensorData()
                 sendCommand(CMD_REBOOT_MODULE);
                 delay(1000);
 
-                // after reboot enter command mode again to store data
-                sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
-                delay(500);
-
-                logTraceP("rawDataRangeAverage:");
-                logIndentUp();
-
-                int8_t lSensitivity = mSensitivity > 0 && mSensitivity <= 10 ? mSensitivity : SENSITIVITY_DEFAULT;
-                double triggerOffsetDb = CALIBRATION_TRIGGER_OFFSET_DB - SENSITIVITY_TRIGGER_RANGE * (lSensitivity / 10.0);
-
-                // convert to dB values and add trigger offset
-                double triggerThresholdDb[16];
-                for (int i = 0; i < 16; i++)
-                {
-                    triggerThresholdDb[i] = rawToDb(rawDataRangeAverage[i]) + triggerOffsetDb;
-                    logTraceP("Gate %i:  %.2f", i, rawToDb(rawDataRangeAverage[i]));
-                }
-
-                logIndentDown();
-
-                double holdOffsetDb = CALIBRATION_HOLD_OFFSET_DB - SENSITIVITY_HOLD_RANGE * (lSensitivity / 10.0);
-
-                // substract hold offset
-                double holdThresholdDb[16];
-                for (int i = 0; i < 16; i++)
-                {
-                    holdThresholdDb[i] = triggerThresholdDb[i] - holdOffsetDb;
-                }
-
-                logDebugP("Sensitivity used:");
-                logIndentUp();
-                logDebugP("User setting: %d", mSensitivity);
-                logDebugP("Calculated trigger offset : %.2f", triggerOffsetDb);
-                logDebugP("Calculated hold offset: %.2f", holdOffsetDb);
-                logIndentDown();
-
-                logDebugP("Write config to sensor:");
-                logIndentUp();
-                logDebugP("Range gate min.: %d", mRangeGateMin);
-                logDebugP("Range gate max.: %d", mRangeGateMax);
-                logDebugP("Delay time: %d", mDelayTime);
-
-                uint8_t param[48];
-
-                // write range gate min./max. and delay time, for each:
-                // first 2 bytes parameter offset, then 4 bytes value
-
-                param[0] = OFFSET_PARAM_RANGE_GATE_MIN;
-                param[1] = 0;
-                param[2] = mRangeGateMin;
-                param[3] = 0;
-                param[4] = 0;
-                param[5] = 0;
-                param[6] = OFFSET_PARAM_RANGE_GATE_MAX;
-                param[7] = 0;
-                param[8] = mRangeGateMax;
-                param[9] = 0;
-                param[10] = 0;
-                param[11] = 0;
-
-                param[12] = OFFSET_PARAM_DELAY_TIME;
-                param[13] = 0;
-                param[14] = (uint8_t)(mDelayTime & 0xFF);
-                param[15] = (uint8_t)((mDelayTime >> 8) & 0xFF);
-                param[16] = 0;
-                param[17] = 0;
-
-                sendCommand(CMD_WRITE_MODULE_CONFIG, param, 18);
-                delay(500);
-
-                logDebugP("triggerThreshold:");
-                logIndentUp();
-
-                // write back trigger thresholds, for each:
-                // first 2 bytes parameter offset, then 4 bytes value
-                // write in 2 steps as it seems 100 bytes are maximum in one package
-                uint8_t offset;
-                int rawValue;
-                for (uint8_t i = 0; i < 8; i++)
-                {
-                    offset = i * 6;
-                    param[offset] = OFFSET_PARAM_TRIGGERS + i;
-                    param[offset + 1] = 0;
-
-                    rawValue = dBToRaw(triggerThresholdDb[i]);
-                    param[offset + 2] = (uint8_t)(rawValue & 0xFF);
-                    param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
-                    param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
-                    param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
-                    triggerThreshold[i] = rawValue;
-
-                    logDebugP("Gate %i:  %.2f", i, triggerThresholdDb[i]);
-                }
-                sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
-                delay(500);
-                for (int i = 8; i < 16; i++)
-                {
-                    offset = (i - 8) * 6;
-                    param[offset] = OFFSET_PARAM_TRIGGERS + i;
-                    param[offset + 1] = 0;
-
-                    rawValue = dBToRaw(triggerThresholdDb[i]);
-                    param[offset + 2] = (uint8_t)(rawValue & 0xFF);
-                    param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
-                    param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
-                    param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
-                    triggerThreshold[i] = rawValue;
-
-                    logDebugP("Gate %i:  %.2f", i, triggerThresholdDb[i]);
-                }
-                sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
-                delay(500);
-                logIndentDown();
-
-                logDebugP("holdThreshold:");
-                logIndentUp();
-
-                // write back hold thresholds, for each:
-                // first 2 bytes parameter offset, then 4 bytes value
-                // write in 2 steps as it seems 100 bytes are maximum in one package
-                for (int i = 0; i < 8; i++)
-                {
-                    offset = i * 6;
-                    param[offset] = OFFSET_PARAM_HOLDS + i;
-                    param[offset + 1] = 0;
-
-                    rawValue = dBToRaw(holdThresholdDb[i]);
-                    param[offset + 2] = (uint8_t)(rawValue & 0xFF);
-                    param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
-                    param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
-                    param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
-                    holdThreshold[i] = rawValue;
-
-                    logDebugP("Gate %i:  %.2f", i, holdThresholdDb[i]);
-                }
-                sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
-                delay(500);
-                for (int i = 8; i < 16; i++)
-                {
-                    offset = (i - 8) * 6;
-                    param[offset] = OFFSET_PARAM_HOLDS + i;
-                    param[offset + 1] = 0;
-
-                    rawValue = dBToRaw(holdThresholdDb[i]);
-                    param[offset + 2] = (uint8_t)(rawValue & 0xFF);
-                    param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
-                    param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
-                    param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
-                    holdThreshold[i] = rawValue;
-
-                    logDebugP("Gate %i:  %.2f", i, holdThresholdDb[i]);
-                }
-                sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
-                delay(500);
-                logIndentDown();
+                saveCalibrationData();
 
                 logIndentDown();
 
@@ -747,6 +593,169 @@ bool SensorHLKLD2420::getSensorData()
     }
 
     return result;
+}
+
+void SensorHLKLD2420::saveCalibrationData()
+{
+    logDebugP("Saving calibration data");
+    logIndentUp();
+
+    sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
+    delay(500);
+
+    logTraceP("rawDataRangeAverage:");
+    logIndentUp();
+
+    int8_t lSensitivity = mSensitivity > 0 && mSensitivity <= 10 ? mSensitivity : SENSITIVITY_DEFAULT;
+    double triggerOffsetDb = CALIBRATION_TRIGGER_OFFSET_DB - SENSITIVITY_TRIGGER_RANGE * (lSensitivity / 10.0);
+
+    // convert to dB values and add trigger offset
+    double triggerThresholdDb[16];
+    for (int i = 0; i < 16; i++)
+    {
+        triggerThresholdDb[i] = rawToDb(rawDataRangeAverage[i]) + triggerOffsetDb;
+        logTraceP("Gate %i:  %.2f", i, rawToDb(rawDataRangeAverage[i]));
+    }
+
+    logIndentDown();
+
+    double holdOffsetDb = CALIBRATION_HOLD_OFFSET_DB - SENSITIVITY_HOLD_RANGE * (lSensitivity / 10.0);
+
+    // substract hold offset
+    double holdThresholdDb[16];
+    for (int i = 0; i < 16; i++)
+    {
+        holdThresholdDb[i] = triggerThresholdDb[i] - holdOffsetDb;
+    }
+
+    logDebugP("Sensitivity used:");
+    logIndentUp();
+    logDebugP("User setting: %d", mSensitivity);
+    logDebugP("Calculated trigger offset : %.2f", triggerOffsetDb);
+    logDebugP("Calculated hold offset: %.2f", holdOffsetDb);
+    logIndentDown();
+
+    logDebugP("Write config to sensor:");
+    logIndentUp();
+    logDebugP("Range gate min.: %d", mRangeGateMin);
+    logDebugP("Range gate max.: %d", mRangeGateMax);
+    logDebugP("Delay time: %d", mDelayTime);
+
+    uint8_t param[48];
+
+    // write range gate min./max. and delay time, for each:
+    // first 2 bytes parameter offset, then 4 bytes value
+
+    param[0] = OFFSET_PARAM_RANGE_GATE_MIN;
+    param[1] = 0;
+    param[2] = mRangeGateMin;
+    param[3] = 0;
+    param[4] = 0;
+    param[5] = 0;
+    param[6] = OFFSET_PARAM_RANGE_GATE_MAX;
+    param[7] = 0;
+    param[8] = mRangeGateMax;
+    param[9] = 0;
+    param[10] = 0;
+    param[11] = 0;
+
+    param[12] = OFFSET_PARAM_DELAY_TIME;
+    param[13] = 0;
+    param[14] = (uint8_t)(mDelayTime & 0xFF);
+    param[15] = (uint8_t)((mDelayTime >> 8) & 0xFF);
+    param[16] = 0;
+    param[17] = 0;
+
+    sendCommand(CMD_WRITE_MODULE_CONFIG, param, 18);
+    delay(500);
+
+    logDebugP("triggerThreshold:");
+    logIndentUp();
+
+    // write back trigger thresholds, for each:
+    // first 2 bytes parameter offset, then 4 bytes value
+    // write in 2 steps as it seems 100 bytes are maximum in one package
+    uint8_t offset;
+    int rawValue;
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        offset = i * 6;
+        param[offset] = OFFSET_PARAM_TRIGGERS + i;
+        param[offset + 1] = 0;
+
+        rawValue = dBToRaw(triggerThresholdDb[i]);
+        param[offset + 2] = (uint8_t)(rawValue & 0xFF);
+        param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
+        param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
+        param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
+        triggerThreshold[i] = rawValue;
+
+        logDebugP("Gate %i:  %.2f", i, triggerThresholdDb[i]);
+    }
+    sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
+    delay(500);
+    for (int i = 8; i < 16; i++)
+    {
+        offset = (i - 8) * 6;
+        param[offset] = OFFSET_PARAM_TRIGGERS + i;
+        param[offset + 1] = 0;
+
+        rawValue = dBToRaw(triggerThresholdDb[i]);
+        param[offset + 2] = (uint8_t)(rawValue & 0xFF);
+        param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
+        param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
+        param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
+        triggerThreshold[i] = rawValue;
+
+        logDebugP("Gate %i:  %.2f", i, triggerThresholdDb[i]);
+    }
+    sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
+    delay(500);
+    logIndentDown();
+
+    logDebugP("holdThreshold:");
+    logIndentUp();
+
+    // write back hold thresholds, for each:
+    // first 2 bytes parameter offset, then 4 bytes value
+    // write in 2 steps as it seems 100 bytes are maximum in one package
+    for (int i = 0; i < 8; i++)
+    {
+        offset = i * 6;
+        param[offset] = OFFSET_PARAM_HOLDS + i;
+        param[offset + 1] = 0;
+
+        rawValue = dBToRaw(holdThresholdDb[i]);
+        param[offset + 2] = (uint8_t)(rawValue & 0xFF);
+        param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
+        param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
+        param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
+        holdThreshold[i] = rawValue;
+
+        logDebugP("Gate %i:  %.2f", i, holdThresholdDb[i]);
+    }
+    sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
+    delay(500);
+    for (int i = 8; i < 16; i++)
+    {
+        offset = (i - 8) * 6;
+        param[offset] = OFFSET_PARAM_HOLDS + i;
+        param[offset + 1] = 0;
+
+        rawValue = dBToRaw(holdThresholdDb[i]);
+        param[offset + 2] = (uint8_t)(rawValue & 0xFF);
+        param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
+        param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
+        param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
+        holdThreshold[i] = rawValue;
+
+        logDebugP("Gate %i:  %.2f", i, holdThresholdDb[i]);
+    }
+    sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
+    delay(500);
+    logIndentDown();
+
+    logIndentDown();
 }
 
 void SensorHLKLD2420::sendCommand(uint8_t command, const uint8_t parameter[], uint8_t parameterLength)
@@ -846,10 +855,7 @@ void SensorHLKLD2420::sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSi
     }
 
     for (int i = 0; i < 16; i++)
-        triggerThreshold[i] = openknx.flash.readInt();
-
-    for (int i = 0; i < 16; i++)
-        holdThreshold[i] = openknx.flash.readInt();
+        rawDataRangeAverage[i] = openknx.flash.readDouble();
     
     calibrationCompleted = true;
 
@@ -868,10 +874,7 @@ void SensorHLKLD2420::sensorWriteFlash()
     openknx.flash.writeInt(HLKLD2420_FLASH_MAGIC_WORD);
 
     for (int i = 0; i < 16; i++)
-        openknx.flash.writeInt(triggerThreshold[i]);
-
-    for (int i = 0; i < 16; i++)
-        openknx.flash.writeInt(holdThreshold[i]);
+        openknx.flash.writeDouble(rawDataRangeAverage[i]);
 
     logDebugP("HLKLD2420: Calibration data written to flash");
 }

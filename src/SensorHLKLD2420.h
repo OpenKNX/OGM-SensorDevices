@@ -116,6 +116,7 @@ class SensorHLKLD2420 : public Sensor
     double rawToDb(int rawValue);
     int dBToRaw(double dbValue);
     void resetRawDataRecording();
+    void saveCalibrationData();
     bool getSensorData();
 
   protected:

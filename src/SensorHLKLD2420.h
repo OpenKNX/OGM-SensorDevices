@@ -116,7 +116,7 @@ class SensorHLKLD2420 : public Sensor
     double rawToDb(int rawValue);
     int dBToRaw(double dbValue);
     void resetRawDataRecording();
-    void saveCalibrationData();
+    void sendCalibrationData();
     bool getSensorData();
 
   protected:
@@ -151,5 +151,5 @@ class SensorHLKLD2420 : public Sensor
     void sendCommand(uint8_t command, const uint8_t parameter[] = nullptr, uint8_t parameterLength = 0);
     std::string logPrefix() override;
 };
-    #endif
+#endif
 #endif

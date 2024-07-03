@@ -136,6 +136,8 @@ void SensorHLKLD2420::startupLoop()
                 {
                     // skip calibration if valid calibration values have been read from flash
                     mHfSensorStartupState = START_FINISHED;
+
+                    sendCalibrationData();
                 }
                 else
                 {
@@ -576,7 +578,10 @@ bool SensorHLKLD2420::getSensorData()
                 sendCommand(CMD_REBOOT_MODULE);
                 delay(1000);
 
-                saveCalibrationData();
+                sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
+                delay(500);
+
+                sendCalibrationData();
 
                 logIndentDown();
 
@@ -595,13 +600,10 @@ bool SensorHLKLD2420::getSensorData()
     return result;
 }
 
-void SensorHLKLD2420::saveCalibrationData()
+void SensorHLKLD2420::sendCalibrationData()
 {
     logDebugP("Saving calibration data");
     logIndentUp();
-
-    sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
-    delay(500);
 
     logTraceP("rawDataRangeAverage:");
     logIndentUp();
@@ -833,25 +835,26 @@ uint8_t SensorHLKLD2420::getI2cSpeed()
     return 10; // n * 100kHz // no I2C, so we support "all" frequencies :-)
 }
 
-void SensorHLKLD2420::sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize)
+void SensorHLKLD2420::sensorReadFlash(const uint8_t *buffer, const uint16_t size)
 {
-    logDebugP("HLKLD2420: Reading state from Flash\n");
+    if (size == 0)
+        return;
 
-    // #ToDo: flash data when available?
-    // #ToDo: Use OpenKNX flash read functions possible?
+    logDebugP("Reading state from Flash");
+    logIndentUp();
 
-    bool lValid = (iBuffer[0] == HLKLD2420_FLASH_VERSION);
-    // read magic word
-    for (uint8_t i = 1; i < 5 && lValid; i++)
+    uint8_t version = openknx.flash.readByte();
+    if (version != HLKLD2420_FLASH_VERSION)
     {
-        lValid = lValid && (iBuffer[i] == sMagicWord[i - 1]);
+        logDebugP("Invalid flash version %u", version);
+        return;
     }
 
-    mFlashBuffer = lValid ? iBuffer + 5 : nullptr;
-
-    if (!lValid)
+    uint32_t magicWord = openknx.flash.readInt();
+    if (magicWord != HLKLD2420_FLASH_MAGIC_WORD)
     {
-        logDebugP("HLKLD2420: No valid data in Flash");
+        logDebugP("Flash content invalid");
+        return;
     }
 
     for (int i = 0; i < 16; i++)
@@ -859,14 +862,15 @@ void SensorHLKLD2420::sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSi
     
     calibrationCompleted = true;
 
-    logDebugP("HLKLD2420: Calibration data read from flash");
+    logDebugP("Calibration data read from flash");
+    logIndentDown();
 }
 
 void SensorHLKLD2420::sensorWriteFlash()
 {
     if (!calibrationCompleted)
     {
-        logDebugP("HLKLD2420: No data written to flash as calibration not completed");
+        logDebugP("No data written to flash as calibration not completed");
         return;
     }
 
@@ -876,7 +880,7 @@ void SensorHLKLD2420::sensorWriteFlash()
     for (int i = 0; i < 16; i++)
         openknx.flash.writeDouble(rawDataRangeAverage[i]);
 
-    logDebugP("HLKLD2420: Calibration data written to flash");
+    logDebugP("Calibration data written to flash");
 }
 
 uint16_t SensorHLKLD2420::sensorFlashSize()

@@ -311,7 +311,7 @@ int SensorHLKLD2420::dBToRaw(double dbValue)
 
 void SensorHLKLD2420::resetRawDataRecording()
 {
-    for (int i = 0; i < 16; i++)
+    for (uint8_t i = 0; i < 16; i++)
         rawDataRangeAverage[i] = 0;
 
     rawDataLastRecordingReceived = millis();
@@ -470,7 +470,7 @@ bool SensorHLKLD2420::getSensorData()
                         logDebugP("triggerThreshold:");
                         logIndentUp();
                         int triggerThresholdTemp;
-                        for (int i = 0; i < 16; i++)
+                        for (uint8_t i = 0; i < 16; i++)
                         {
                             triggerThresholdTemp = bytesToInt(mBuffer[i * 4 + 8], mBuffer[i * 4 + 9], mBuffer[i * 4 + 10], mBuffer[i * 4 + 11]);
                             logDebugP("Gate %i: %.2f", i, rawToDb(triggerThresholdTemp));
@@ -493,7 +493,7 @@ bool SensorHLKLD2420::getSensorData()
                         logDebugP("holdThreshold:");
                         logIndentUp();
                         int holdThresholdTemp;
-                        for (int i = 0; i < 16; i++)
+                        for (uint8_t i = 0; i < 16; i++)
                         {
                             holdThresholdTemp = bytesToInt(mBuffer[i * 4 + 4], mBuffer[i * 4 + 5], mBuffer[i * 4 + 6], mBuffer[i * 4 + 7]);
                             logDebugP("Gate %i: %.2f", i, rawToDb(holdThresholdTemp));
@@ -530,11 +530,11 @@ bool SensorHLKLD2420::getSensorData()
             memmove(mBuffer, mBuffer + 4, BUFFER_LENGTH - 4);
             mBufferIndex -= 8;
 
-            for (int i = 0; i < 20; i++)
+            for (uint8_t i = 0; i < 20; i++)
             {
                 dopplerOffset = i * 64;
 
-                for (int j = 0; j < 16; j++)
+                for (uint8_t j = 0; j < 16; j++)
                 {
                     rangeOffset = dopplerOffset + j * 4;
                     rangeValue = bytesToInt(mBuffer[rangeOffset], mBuffer[rangeOffset + 1], mBuffer[rangeOffset + 2], mBuffer[rangeOffset + 3]);
@@ -544,7 +544,7 @@ bool SensorHLKLD2420::getSensorData()
 
             logTraceP("Range values received (%d):", rawDataRecordingCount);
             logIndentUp();
-            for (int i = 0; i < 16; i++)
+            for (uint8_t i = 0; i < 16; i++)
             {
                 logTraceP("Gate %i: %.2f", i, rawToDb(rangeMax[i]));
             }
@@ -558,7 +558,7 @@ bool SensorHLKLD2420::getSensorData()
             }
             else if (rawDataRecordingCount < CALIBRATION_VALUE_COUNT)
             {
-                for (int i = 0; i < 16; i++)
+                for (uint8_t i = 0; i < 16; i++)
                 {
                     // calculate rolling average
                     rawDataRangeAverage[i] -= rawDataRangeAverage[i] / CALIBRATION_VALUE_COUNT;
@@ -613,7 +613,7 @@ void SensorHLKLD2420::sendCalibrationData()
 
     // convert to dB values and add trigger offset
     double triggerThresholdDb[16];
-    for (int i = 0; i < 16; i++)
+    for (uint8_t i = 0; i < 16; i++)
     {
         triggerThresholdDb[i] = rawToDb(rawDataRangeAverage[i]) + triggerOffsetDb;
         logTraceP("Gate %i:  %.2f", i, rawToDb(rawDataRangeAverage[i]));
@@ -625,7 +625,7 @@ void SensorHLKLD2420::sendCalibrationData()
 
     // substract hold offset
     double holdThresholdDb[16];
-    for (int i = 0; i < 16; i++)
+    for (uint8_t i = 0; i < 16; i++)
     {
         holdThresholdDb[i] = triggerThresholdDb[i] - holdOffsetDb;
     }
@@ -696,7 +696,7 @@ void SensorHLKLD2420::sendCalibrationData()
     }
     sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
     delay(500);
-    for (int i = 8; i < 16; i++)
+    for (uint8_t i = 8; i < 16; i++)
     {
         offset = (i - 8) * 6;
         param[offset] = OFFSET_PARAM_TRIGGERS + i;
@@ -721,7 +721,7 @@ void SensorHLKLD2420::sendCalibrationData()
     // write back hold thresholds, for each:
     // first 2 bytes parameter offset, then 4 bytes value
     // write in 2 steps as it seems 100 bytes are maximum in one package
-    for (int i = 0; i < 8; i++)
+    for (uint8_t i = 0; i < 8; i++)
     {
         offset = i * 6;
         param[offset] = OFFSET_PARAM_HOLDS + i;
@@ -738,7 +738,7 @@ void SensorHLKLD2420::sendCalibrationData()
     }
     sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
     delay(500);
-    for (int i = 8; i < 16; i++)
+    for (uint8_t i = 8; i < 16; i++)
     {
         offset = (i - 8) * 6;
         param[offset] = OFFSET_PARAM_HOLDS + i;
@@ -857,7 +857,7 @@ void SensorHLKLD2420::sensorReadFlash(const uint8_t *buffer, const uint16_t size
         return;
     }
 
-    for (int i = 0; i < 16; i++)
+    for (uint8_t i = 0; i < 16; i++)
         rawDataRangeAverage[i] = openknx.flash.readDouble();
     
     calibrationCompleted = true;
@@ -877,7 +877,7 @@ void SensorHLKLD2420::sensorWriteFlash()
     openknx.flash.writeByte(HLKLD2420_FLASH_VERSION);
     openknx.flash.writeInt(HLKLD2420_FLASH_MAGIC_WORD);
 
-    for (int i = 0; i < 16; i++)
+    for (uint8_t i = 0; i < 16; i++)
         openknx.flash.writeDouble(rawDataRangeAverage[i]);
 
     logDebugP("Calibration data written to flash");

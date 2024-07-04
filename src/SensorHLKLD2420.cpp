@@ -32,8 +32,7 @@ void SensorHLKLD2420::writeSensitivity(int8_t iSensitivity)
 {
     mSensitivity = iSensitivity;
 
-    // restart calibration with new sensitivity value
-    forceCalibration();
+    sendCalibrationData();
 }
 
 uint8_t SensorHLKLD2420::getSensorClass()

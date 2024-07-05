@@ -561,7 +561,7 @@ bool SensorHLKLD2420::getSensorData()
                 {
                     // calculate rolling average
                     rawDataRangeAverage[i] -= rawDataRangeAverage[i] / CALIBRATION_VALUE_COUNT;
-                    rawDataRangeAverage[i] += (double)rangeMax[i] / CALIBRATION_VALUE_COUNT;
+                    rawDataRangeAverage[i] += (float)rangeMax[i] / CALIBRATION_VALUE_COUNT;
                 }
                 rawDataRecordingCount++;
 
@@ -839,7 +839,7 @@ void SensorHLKLD2420::sensorReadFlash(const uint8_t *buffer, const uint16_t size
     if (size == 0)
         return;
 
-    logDebugP("Reading state from Flash");
+    logDebugP("Reading state from flash");
     logIndentUp();
 
     uint8_t version = openknx.flash.readByte();
@@ -857,7 +857,7 @@ void SensorHLKLD2420::sensorReadFlash(const uint8_t *buffer, const uint16_t size
     }
 
     for (uint8_t i = 0; i < 16; i++)
-        rawDataRangeAverage[i] = openknx.flash.readDouble();
+        rawDataRangeAverage[i] = openknx.flash.readFloat();
     
     calibrationCompleted = true;
 
@@ -877,7 +877,7 @@ void SensorHLKLD2420::sensorWriteFlash()
     openknx.flash.writeInt(HLKLD2420_FLASH_MAGIC_WORD);
 
     for (uint8_t i = 0; i < 16; i++)
-        openknx.flash.writeDouble(rawDataRangeAverage[i]);
+        openknx.flash.writeFloat(rawDataRangeAverage[i]);
 
     logDebugP("Calibration data written to flash");
 }

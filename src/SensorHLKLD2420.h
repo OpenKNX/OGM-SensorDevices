@@ -47,8 +47,8 @@
 #define BUFFER_LENGTH mBufferIndex
 
 #define HLKLD2420_FLASH_VERSION 0
-#define HLKLD2420_FLASH_MAGIC_WORD 1234 // #ToDo
-#define HLKLD2420_FLASH_SIZE 133
+#define HLKLD2420_FLASH_MAGIC_WORD 2274541778
+#define HLKLD2420_FLASH_SIZE 69
 
 class SensorHLKLD2420 : public Sensor
 {
@@ -91,7 +91,7 @@ class SensorHLKLD2420 : public Sensor
     bool calibrationCompleted = false;
 
     uint32_t rawDataLastRecordingReceived = 0;
-    double rawDataRangeAverage[16];
+    float rawDataRangeAverage[16];
     int rawDataRecordingCount = 0;
 
     int8_t mDefaultSensitivity = 5;

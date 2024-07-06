@@ -278,7 +278,7 @@ bool SensorBME680::prepareTemperatureOffset(float iTemp)
 void SensorBME680::sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize)
 {
     bool lValid = (iBuffer[0] == 1); // check version first
-    logDebugP("BME680: Reading state from Flash\n");
+    logDebugP("Reading state from Flash");
     // read magic word
     for (uint8_t i = 1; i < 5 && lValid; i++)
     {
@@ -288,10 +288,17 @@ void SensorBME680::sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize)
 
     mFlashBuffer = lValid ? iBuffer + 5 : nullptr;
 
+    logIndentUp();
     if (!lValid)
+        logDebugP("No valid data in Flash");
+    else
     {
-        logDebugP("BME680: No valid data in Flash\n");
+        logDebugP("Calibration data read from flash");
+        openknx.flash.read(sensorFlashSize() - 1);
+        // for (uint8_t i = 1; i < sensorFlashSize(); i++)
+        //     openknx.flash.readByte();
     }
+    logIndentDown();
 }
 
 void SensorBME680::sensorWriteFlash()

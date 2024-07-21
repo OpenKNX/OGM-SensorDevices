@@ -84,10 +84,10 @@ class SensorHLKLD2420 : public Sensor
     int minDistance = NO_NUM;
     int maxDistance = NO_NUM;
     int delayTime = NO_NUM;
-    int triggerThreshold[16];
-    int holdThreshold[16];
-    double triggerOffsetDb;
-    double holdOffsetDb;
+    float triggerThresholdDb[16];
+    float holdThresholdDb[16];
+    float triggerOffsetDb;
+    float holdOffsetDb;
     bool calibrationCompleted = false;
 
     uint32_t rawDataLastRecordingReceived = 0;

@@ -91,6 +91,7 @@ class SensorHLKLD2420 : public Sensor
     float triggerOffsetDb;
     float holdOffsetDb;
     bool calibrationCompleted = false;
+    bool useFactoryDefaultThresholds = false;
 
     uint32_t rawDataLastRecordingReceived = 0;
     int rawDataRecordingCount = 0;

@@ -586,8 +586,6 @@ bool SensorHLKLD2420::getSensorData()
                 sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
                 delay(500);
 
-                sendCalibrationData();
-
                 logIndentDown();
 
                 logDebugP("Sensor calibration finished");
@@ -595,6 +593,9 @@ bool SensorHLKLD2420::getSensorData()
 
                 // persist new calibration data in flash
                 openknx.flash.save(true);
+
+                useFactoryDefaultThresholds = false;
+                sendCalibrationData();
             }
 
             result = true;
@@ -613,42 +614,82 @@ void SensorHLKLD2420::sendCalibrationData()
     logDebugP("Saving calibration data");
     logIndentUp();
 
-    logTraceP("rawDataRangeAverage:");
-    logIndentUp();
-
-    int8_t lSensitivity = mSensitivity > 0 && mSensitivity <= 10 ? mSensitivity : SENSITIVITY_DEFAULT;
-    triggerOffsetDb = CALIBRATION_TRIGGER_OFFSET_DB - SENSITIVITY_TRIGGER_RANGE * (lSensitivity / (float)10);
-
-    // convert to dB values and add trigger offset
-    for (uint8_t i = 0; i < 16; i++)
+    if (useFactoryDefaultThresholds)
     {
-        triggerThresholdDb[i] = rawDataRangeAverageDb[i] + triggerOffsetDb;
-        logTraceP("Gate %i:  %.2f", i, rawDataRangeAverageDb[i]);
+        triggerThresholdDb[0] = 47.78;
+        triggerThresholdDb[1] = 44.77;
+        triggerThresholdDb[2] = 34.77;
+        triggerThresholdDb[3] = 33.01;
+        triggerThresholdDb[4] = 26.99;
+        triggerThresholdDb[5] = 26.02;
+        triggerThresholdDb[6] = 26.02;
+        triggerThresholdDb[7] = 24.77;
+        triggerThresholdDb[8] = 24.77;
+        triggerThresholdDb[9] = 24.77;
+        triggerThresholdDb[10] = 24.77;
+        triggerThresholdDb[11] = 23.98;
+        triggerThresholdDb[12] = 23.98;
+        triggerThresholdDb[13] = 23.01;
+        triggerThresholdDb[14] = 23.01;
+        triggerThresholdDb[15] = 23.01;
+
+        holdThresholdDb[0] = 46.02;
+        holdThresholdDb[1] = 43.01;
+        holdThresholdDb[2] = 26.02;
+        holdThresholdDb[3] = 24.77;
+        holdThresholdDb[4] = 24.77;
+        holdThresholdDb[5] = 23.01;
+        holdThresholdDb[6] = 23.01;
+        holdThresholdDb[7] = 21.76;
+        holdThresholdDb[8] = 21.76;
+        holdThresholdDb[9] = 20.00;
+        holdThresholdDb[10] = 20.00;
+        holdThresholdDb[11] = 20.00;
+        holdThresholdDb[12] = 20.00;
+        holdThresholdDb[13] = 20.00;
+        holdThresholdDb[14] = 20.00;
+        holdThresholdDb[15] = 20.00;
     }
+    else
+    {
+        logTraceP("rawDataRangeAverage:");
+        logIndentUp();
 
-    logIndentDown();
+        int8_t lSensitivity = mSensitivity > 0 && mSensitivity <= 10 ? mSensitivity : SENSITIVITY_DEFAULT;
+        triggerOffsetDb = CALIBRATION_TRIGGER_OFFSET_DB - SENSITIVITY_TRIGGER_RANGE * (lSensitivity / (float)10);
 
-    // calculate hold offset based on trigger offset with standard 1.5,
-    // but less if trigger offset is closer to energy average value
-    holdOffsetDb = min(triggerOffsetDb / 2 + 0.25, 1.5);
-    if (triggerOffsetDb - holdOffsetDb < 0.5)
-        holdOffsetDb = 0.5;
+        // convert to dB values and add trigger offset
+        for (uint8_t i = 0; i < 16; i++)
+        {
+            triggerThresholdDb[i] = rawDataRangeAverageDb[i] + triggerOffsetDb;
+            logTraceP("Gate %i:  %.2f", i, rawDataRangeAverageDb[i]);
+        }
 
-    // substract hold offset
-    for (uint8_t i = 0; i < 16; i++)
-        holdThresholdDb[i] = triggerThresholdDb[i] - holdOffsetDb;
+        logIndentDown();
 
-    logDebugP("Sensitivity used:");
-    logIndentUp();
-    logDebugP("User sensitivity setting: %d", mSensitivity);
-    logDebugP("Calculated trigger offset: %.2f", triggerOffsetDb);
-    logDebugP("Calculated hold offset: %.2f", holdOffsetDb);
-    logIndentDown();
+        // calculate hold offset based on trigger offset with standard 1.5,
+        // but less if trigger offset is closer to energy average value
+        holdOffsetDb = min(triggerOffsetDb / 2 + 0.25, 1.5);
+        if (triggerOffsetDb - holdOffsetDb < 0.5)
+            holdOffsetDb = 0.5;
+
+        // substract hold offset
+        for (uint8_t i = 0; i < 16; i++)
+            holdThresholdDb[i] = triggerThresholdDb[i] - holdOffsetDb;
+
+        logDebugP("Sensitivity used:");
+        logIndentUp();
+        logDebugP("User sensitivity setting: %d", mSensitivity);
+        logDebugP("Calculated trigger offset: %.2f", triggerOffsetDb);
+        logDebugP("Calculated hold offset: %.2f", holdOffsetDb);
+        logIndentDown();
+    }
 
     bool storedCurrent =
         (storedDistanceMin == mRangeGateMin) &&
         (storedDistanceMax == mRangeGateMax) &&
         (storedDelayTime == mDelayTime);
+
     if (storedCurrent) {
         for (uint8_t i = 0; i < 16; i++)
         {
@@ -934,8 +975,9 @@ void SensorHLKLD2420::showHelp()
     openknx.console.printHelpLine("hlk cr read", "Print all 16 calibration raw data averages in dB");
     openknx.console.printHelpLine("hlk cNNr read", "Print calibration raw data average in dB at index NN (00-15)");
     openknx.console.printHelpLine("hlk cNNr 00.00", "Set calibration raw data average in dB at index NN (00-15)");
-    openknx.console.printHelpLine("hlk cal run", "Force new sensor calibration run and send data to sensor");
-    openknx.console.printHelpLine("hlk cal send", "Only send stored calibration data to sensor (e. g. changed by ""hlk cNNr"")");
+    openknx.console.printHelpLine("hlk cal run", "Start new sensor calibration run and send data to sensor");
+    openknx.console.printHelpLine("hlk cal send", "Send stored calibration data to sensor (e. g. changed by ""hlk cNNr"")");
+    openknx.console.printHelpLine("hlk cal def", "Send factory default calibration data to sensor");
 }
 
 bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
@@ -997,6 +1039,12 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
     }
     else if (iCmd.length() == 12 && iCmd.substr(4, 10) == "cal send")
     {
+        sendCalibrationData();
+        lResult = true;
+    }
+    else if (iCmd.length() == 11 && iCmd.substr(4, 9) == "cal def")
+    {
+        useFactoryDefaultThresholds = true;
         sendCalibrationData();
         lResult = true;
     }

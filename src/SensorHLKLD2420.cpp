@@ -899,11 +899,13 @@ void SensorHLKLD2420::showHelp()
     openknx.console.printHelpLine("hlk delay", "Print delay time defined by ETS app");
     openknx.console.printHelpLine("hlk ct read", "Print all 16 calibration trigger thresholds in dB");
     openknx.console.printHelpLine("hlk cNNt read", "Print calibration trigger threshold in dB at index NN (00-15)");
-    //openknx.console.printHelpLine("hlk cNNt 00.00", "Set calibration hold threshold in dB at index NN (00-15)");
     openknx.console.printHelpLine("hlk ch read", "Print all 16 calibration hold thresholds in dB");
     openknx.console.printHelpLine("hlk cNNh read", "Print calibration hold threshold in dB at index NN (00-15)");
-    //openknx.console.printHelpLine("hlk cNNh 00.00", "Set calibration hold threshold in dB at index NN (00-15)");
-    openknx.console.printHelpLine("hlk calibrate", "Force new sensor calibration run");
+    openknx.console.printHelpLine("hlk cr read", "Print all 16 calibration raw data averages in dB");
+    openknx.console.printHelpLine("hlk cNNr read", "Print calibration raw data average in dB at index NN (00-15)");
+    openknx.console.printHelpLine("hlk cNNr 00.00", "Set calibration raw data average in dB at index NN (00-15)");
+    openknx.console.printHelpLine("hlk cal run", "Force new sensor calibration run and send data to scanner");
+    openknx.console.printHelpLine("hlk cal send", "Only send stored calibration data to scanner (e. g. changed by ""hlk cNNr"")");
 }
 
 bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
@@ -958,9 +960,14 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
             openknx.console.writeDiagenoseKo("HLK delay %u", mDelayTime);
         lResult = true;
     }
-    else if (iCmd.length() == 13 && iCmd.substr(4, 9) == "calibrate")
+    else if (iCmd.length() == 11 && iCmd.substr(4, 9) == "cal run")
     {
         forceCalibration();
+        lResult = true;
+    }
+    else if (iCmd.length() == 12 && iCmd.substr(4, 10) == "cal send")
+    {
+        sendCalibrationData();
         lResult = true;
     }
     else if (iCmd.length() == 11)
@@ -973,7 +980,7 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
                 logInfoP("triggerThreshold, gate %u: %.2f", i, rawToDb(triggerThreshold[i]));
                 if (iDebugKo)
                 {
-                    openknx.console.writeDiagenoseKo("HLK t%02ut %.2f", i, rawToDb(triggerThreshold[i]));
+                    openknx.console.writeDiagenoseKo("HLK c%02ut %.2f", i, rawToDb(triggerThreshold[i]));
                     if (i < 15)
                         openknx.console.writeDiagenoseKo("");
                 }
@@ -988,7 +995,22 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
                 logInfoP("holdThreshold, gate %u: %.2f", i, rawToDb(holdThreshold[i]));
                 if (iDebugKo)
                 {
-                    openknx.console.writeDiagenoseKo("HLK t%02uh %.2f", i, rawToDb(holdThreshold[i]));
+                    openknx.console.writeDiagenoseKo("HLK c%02uh %.2f", i, rawToDb(holdThreshold[i]));
+                    if (i < 15)
+                        openknx.console.writeDiagenoseKo("");
+                }
+            }
+            lResult = true;
+        }
+        else if (iCmd.substr(4, 7) == "cr read")
+        {
+            // calibration raw data averages: read all
+            for (uint8_t i = 0; i < 16; i++)
+            {
+                logInfoP("rawDataRangeAverage, gate %u: %.2f", i, rawToDb(rawDataRangeAverage[i]));
+                if (iDebugKo)
+                {
+                    openknx.console.writeDiagenoseKo("HLK c%02ur %.2f", i, rawToDb(rawDataRangeAverage[i]));
                     if (i < 15)
                         openknx.console.writeDiagenoseKo("");
                 }
@@ -998,7 +1020,7 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
     }
     else if (iCmd.length() == 13 && iCmd.substr(4, 1) == "c")
     {
-        // read or set single calibration data value
+        // read single calibration data value
         uint8_t valueIndex = stoi(iCmd.substr(5, 2));
 
         if (iCmd.substr(7, 1) == "t")
@@ -1009,7 +1031,7 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
                 // read value
                 logInfoP("triggerThreshold, gate %u: %.2f", valueIndex, rawToDb(triggerThreshold[valueIndex]));
                 if (iDebugKo)
-                    openknx.console.writeDiagenoseKo("HLK t%02ut %.2f", valueIndex, rawToDb(triggerThreshold[valueIndex]));
+                    openknx.console.writeDiagenoseKo("HLK c%02ut %.2f", valueIndex, rawToDb(triggerThreshold[valueIndex]));
                 lResult = true;
             }
         }
@@ -1021,12 +1043,35 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
                 // read value
                 logInfoP("holdThreshold, gate %u: %.2f", valueIndex, rawToDb(holdThreshold[valueIndex]));
                 if (iDebugKo)
-                    openknx.console.writeDiagenoseKo("HLK t%02uh %.2f", valueIndex, rawToDb(holdThreshold[valueIndex]));
+                    openknx.console.writeDiagenoseKo("HLK c%02uh %.2f", valueIndex, rawToDb(holdThreshold[valueIndex]));
+                lResult = true;
+            }
+        }
+        else if (iCmd.substr(7, 1) == "r")
+        {
+            // hold thresholds
+            if (iCmd.substr(9, 4) == "read")
+            {
+                // read value
+                logInfoP("rawDataRangeAverage, gate %u: %.2f", valueIndex, rawToDb(rawDataRangeAverage[valueIndex]));
+                if (iDebugKo)
+                    openknx.console.writeDiagenoseKo("HLK c%02ur %.2f", valueIndex, rawToDb(rawDataRangeAverage[valueIndex]));
                 lResult = true;
             }
         }
     }
+    else if (iCmd.length() == 14 && iCmd.substr(4, 1) == "c")
+    {
+        // set single calibration data value
+        uint8_t valueIndex = stoi(iCmd.substr(5, 2));
 
+        if (iCmd.substr(7, 1) == "r")
+        {
+            double valueDb = stod(iCmd.substr(9, 5));
+            rawDataRangeAverage[valueIndex] = dBToRaw(valueDb);
+            lResult = true;
+        }
+    }
     return lResult;
 }
 

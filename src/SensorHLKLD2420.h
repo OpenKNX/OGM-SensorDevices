@@ -78,12 +78,14 @@ class SensorHLKLD2420 : public Sensor
     int mBufferIndex = 0;
     PacketStates mPacketState = GET_SYNC_STATE;
     PacketType mPacketType;
+    float lastDetectedRange = NO_NUM;
 
     std::string moduleVersion;
-    float lastDetectedRange = NO_NUM;
-    int minDistance = NO_NUM;
-    int maxDistance = NO_NUM;
-    int delayTime = NO_NUM;
+    int storedDistanceMin = NO_NUM;
+    int storedDistanceMax = NO_NUM;
+    int storedDelayTime = NO_NUM;
+    int storedTriggerThreshold[16];
+    int storedHoldThreshold[16];
     float triggerThresholdDb[16];
     float holdThresholdDb[16];
     float triggerOffsetDb;
@@ -113,8 +115,9 @@ class SensorHLKLD2420 : public Sensor
     void startupLoop();
     void uartGetPacket();
     int bytesToInt(byte byte1, byte byte2, byte byte3, byte byte4);
-    double rawToDb(int rawValue);
-    int dBToRaw(double dbValue);
+    float rawToDb(int rawValue);
+    int dBToRaw(float dbValue);
+    void restartStartupLoop();
     void resetRawDataRecording();
     void sendCalibrationData();
     bool getSensorData();

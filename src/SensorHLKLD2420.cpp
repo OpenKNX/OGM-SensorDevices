@@ -102,7 +102,7 @@ void SensorHLKLD2420::startupLoop()
             break;
         case START_VERSION_RECEIVED:
             // We got version, we wait for read 1 done
-            if (minDistance > NO_NUM)
+            if (storedDistanceMin > NO_NUM)
             {
                 pSensorStateDelay = millis();
                 mHfSensorStartupState = START_READ1_DONE;
@@ -115,7 +115,7 @@ void SensorHLKLD2420::startupLoop()
             break;
         case START_READ1_DONE:
             // Read 1 is done, we wait for read 2 done
-            if (delayTime > NO_NUM)
+            if (storedDelayTime > NO_NUM)
             {
                 pSensorStateDelay = millis();
                 mHfSensorStartupState = START_READ2_DONE;
@@ -166,8 +166,6 @@ void SensorHLKLD2420::startupLoop()
 
 void SensorHLKLD2420::forceCalibration()
 {
-    // #ToDo: discuss how to get triggered externally
-
     sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
     delay(100);
 
@@ -299,14 +297,24 @@ int SensorHLKLD2420::bytesToInt(byte byte0, byte byte1, byte byte2, byte byte3)
                (unsigned char)(byte0));
 }
 
-double SensorHLKLD2420::rawToDb(int rawValue)
+float SensorHLKLD2420::rawToDb(int rawValue)
 {
-    return 10 * log10(rawValue);
+    return float(10 * log10(rawValue));
 }
 
-int SensorHLKLD2420::dBToRaw(double dbValue)
+int SensorHLKLD2420::dBToRaw(float dbValue)
 {
     return int(pow(10, dbValue / 10));
+}
+
+void SensorHLKLD2420::restartStartupLoop()
+{
+    moduleVersion = "";
+    storedDistanceMin = NO_NUM;
+    storedDistanceMax = NO_NUM;
+    storedDelayTime = NO_NUM;
+    pSensorState = Calibrate;
+    mHfSensorStartupState = START_INIT;
 }
 
 void SensorHLKLD2420::resetRawDataRecording()
@@ -461,19 +469,18 @@ bool SensorHLKLD2420::getSensorData()
                         logDebugP("Read config part 1 from sensor:");
                         logIndentUp();
 
-                        minDistance = bytesToInt(mBuffer[0], mBuffer[1], mBuffer[2], mBuffer[3]);
-                        logDebugP("minDistance: %d", minDistance);
+                        storedDistanceMin = bytesToInt(mBuffer[0], mBuffer[1], mBuffer[2], mBuffer[3]);
+                        logDebugP("minDistance: %d", storedDistanceMin);
 
-                        maxDistance = bytesToInt(mBuffer[4], mBuffer[5], mBuffer[6], mBuffer[7]);
-                        logDebugP("maxDistance: %d", maxDistance);
+                        storedDistanceMax = bytesToInt(mBuffer[4], mBuffer[5], mBuffer[6], mBuffer[7]);
+                        logDebugP("maxDistance: %d", storedDistanceMax);
 
                         logDebugP("triggerThreshold:");
                         logIndentUp();
-                        int triggerThresholdTemp;
                         for (uint8_t i = 0; i < 16; i++)
                         {
-                            triggerThresholdTemp = bytesToInt(mBuffer[i * 4 + 8], mBuffer[i * 4 + 9], mBuffer[i * 4 + 10], mBuffer[i * 4 + 11]);
-                            logDebugP("Gate %i: %.2f", i, rawToDb(triggerThresholdTemp));
+                            storedTriggerThreshold[i] = bytesToInt(mBuffer[i * 4 + 8], mBuffer[i * 4 + 9], mBuffer[i * 4 + 10], mBuffer[i * 4 + 11]);
+                            logDebugP("Gate %i: %.2f", i, rawToDb(storedTriggerThreshold[i]));
                         }
                         logIndentDown();
 
@@ -487,16 +494,15 @@ bool SensorHLKLD2420::getSensorData()
                         logDebugP("Read config part 2 from sensor:");
                         logIndentUp();
 
-                        delayTime = bytesToInt(mBuffer[0], mBuffer[1], mBuffer[2], mBuffer[3]);
-                        logDebugP("delayTime: %d", delayTime);
+                        storedDelayTime = bytesToInt(mBuffer[0], mBuffer[1], mBuffer[2], mBuffer[3]);
+                        logDebugP("delayTime: %d", storedDelayTime);
 
                         logDebugP("holdThreshold:");
                         logIndentUp();
-                        int holdThresholdTemp;
                         for (uint8_t i = 0; i < 16; i++)
                         {
-                            holdThresholdTemp = bytesToInt(mBuffer[i * 4 + 4], mBuffer[i * 4 + 5], mBuffer[i * 4 + 6], mBuffer[i * 4 + 7]);
-                            logDebugP("Gate %i: %.2f", i, rawToDb(holdThresholdTemp));
+                            storedHoldThreshold[i] = bytesToInt(mBuffer[i * 4 + 4], mBuffer[i * 4 + 5], mBuffer[i * 4 + 6], mBuffer[i * 4 + 7]);
+                            logDebugP("Gate %i: %.2f", i, rawToDb(storedHoldThreshold[i]));
                         }
                         logIndentDown();
 
@@ -639,6 +645,28 @@ void SensorHLKLD2420::sendCalibrationData()
     logDebugP("Calculated hold offset: %.2f", holdOffsetDb);
     logIndentDown();
 
+    bool storedCurrent =
+        (storedDistanceMin == mRangeGateMin) &&
+        (storedDistanceMax == mRangeGateMax) &&
+        (storedDelayTime == mDelayTime);
+    if (storedCurrent) {
+        for (uint8_t i = 0; i < 16; i++)
+        {
+            if ((storedTriggerThreshold[i] != dBToRaw(triggerThresholdDb[i])) ||
+                (storedHoldThreshold[i] != dBToRaw(holdThresholdDb[i])))
+            {
+                storedCurrent = false;
+                break;
+            }
+        }
+
+        if (storedCurrent)
+        {
+            logDebugP("Skip writing config to sensor as data is current");
+            return;
+        }
+    }
+
     logDebugP("Write config to sensor:");
     logIndentUp();
     logDebugP("Range gate min.: %d", mRangeGateMin);
@@ -755,7 +783,11 @@ void SensorHLKLD2420::sendCalibrationData()
     delay(500);
     logIndentDown();
 
+    logDebugP("Writing config to sensor finished");
     logIndentDown();
+
+    // re-start startup loop to readback values from sensor
+    restartStartupLoop();
 }
 
 void SensorHLKLD2420::sendCommand(uint8_t command, const uint8_t parameter[], uint8_t parameterLength)
@@ -888,7 +920,7 @@ uint16_t SensorHLKLD2420::sensorFlashSize()
 
 void SensorHLKLD2420::showHelp()
 {
-    openknx.console.printHelpLine("hlk ver", "Print firmware version of HLK-LD2420 scanner");
+    openknx.console.printHelpLine("hlk ver", "Print firmware version of HLK-LD2420 sensor");
     openknx.console.printHelpLine("hlk sens", "Print sensitivity defined by ETS app");
     openknx.console.printHelpLine("hlk offt", "Print calculated trigger offset based on sensitivity");
     openknx.console.printHelpLine("hlk offh", "Print calculated hold offset based on sensitivity");
@@ -902,8 +934,8 @@ void SensorHLKLD2420::showHelp()
     openknx.console.printHelpLine("hlk cr read", "Print all 16 calibration raw data averages in dB");
     openknx.console.printHelpLine("hlk cNNr read", "Print calibration raw data average in dB at index NN (00-15)");
     openknx.console.printHelpLine("hlk cNNr 00.00", "Set calibration raw data average in dB at index NN (00-15)");
-    openknx.console.printHelpLine("hlk cal run", "Force new sensor calibration run and send data to scanner");
-    openknx.console.printHelpLine("hlk cal send", "Only send stored calibration data to scanner (e. g. changed by ""hlk cNNr"")");
+    openknx.console.printHelpLine("hlk cal run", "Force new sensor calibration run and send data to sensor");
+    openknx.console.printHelpLine("hlk cal send", "Only send stored calibration data to sensor (e. g. changed by ""hlk cNNr"")");
 }
 
 bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)

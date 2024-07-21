@@ -26,14 +26,12 @@
 #define PARAM_RAW_DATA_MODE_LENGTH 6
 
 #define CALIBRATION_VALUE_COUNT 100
-#define CALIBRATION_TRIGGER_OFFSET_DB 5 // = min. sensitivity, range 0.5 - 5
-#define CALIBRATION_HOLD_OFFSET_DB 2.5  // = min. sensitivity, range 0.5 - 2.5
+#define CALIBRATION_TRIGGER_OFFSET_DB 6 // = min. sensitivity, 1 - 5 (with trigger range below 5)
 
-// these will be deducted from trigger/hold offset based on sensitivity percentage
-// e. g. sensitivity 5 (= 50 %): trigger offset 5-2.25=2.75, hold offset 2.5-1=1.5
+// these will be deducted from trigger offset based on sensitivity percentage
+// e. g. sensitivity 5 (= 50 %): trigger offset 6-2.5=3.5
 // lower offsets = higher sensitivity
-#define SENSITIVITY_TRIGGER_RANGE 4.5
-#define SENSITIVITY_HOLD_RANGE 2
+#define SENSITIVITY_TRIGGER_RANGE 5
 #define SENSITIVITY_DEFAULT 5 // in case user setting invalid
 
 #define START_INIT 0
@@ -93,8 +91,8 @@ class SensorHLKLD2420 : public Sensor
     bool calibrationCompleted = false;
 
     uint32_t rawDataLastRecordingReceived = 0;
-    float rawDataRangeAverage[16];
     int rawDataRecordingCount = 0;
+    float rawDataRangeAverageDb[16];
 
     int8_t mDefaultSensitivity = 5;
     uint8_t mHfSensorStartupState = 0;

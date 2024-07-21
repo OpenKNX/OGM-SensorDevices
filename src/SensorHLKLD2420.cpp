@@ -312,7 +312,7 @@ int SensorHLKLD2420::dBToRaw(double dbValue)
 void SensorHLKLD2420::resetRawDataRecording()
 {
     for (uint8_t i = 0; i < 16; i++)
-        rawDataRangeAverage[i] = 0;
+        rawDataRangeAverageDb[i] = 0;
 
     rawDataLastRecordingReceived = millis();
     rawDataRecordingCount = 0;
@@ -559,11 +559,7 @@ bool SensorHLKLD2420::getSensorData()
             else if (rawDataRecordingCount < CALIBRATION_VALUE_COUNT)
             {
                 for (uint8_t i = 0; i < 16; i++)
-                {
-                    // calculate rolling average
-                    rawDataRangeAverage[i] -= rawDataRangeAverage[i] / CALIBRATION_VALUE_COUNT;
-                    rawDataRangeAverage[i] += (float)rangeMax[i] / CALIBRATION_VALUE_COUNT;
-                }
+                    rawDataRangeAverageDb[i] += rawToDb(rangeMax[i]);
                 rawDataRecordingCount++;
 
                 rawDataLastRecordingReceived = millis();
@@ -571,6 +567,9 @@ bool SensorHLKLD2420::getSensorData()
 
             if (rawDataRecordingCount >= CALIBRATION_VALUE_COUNT)
             {
+                for (uint8_t i = 0; i < 16; i++)
+                    rawDataRangeAverageDb[i] /= (float)rawDataRecordingCount;
+
                 // enter command mode to stop raw data transfer
                 sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
 
@@ -587,6 +586,9 @@ bool SensorHLKLD2420::getSensorData()
 
                 logDebugP("Sensor calibration finished");
                 calibrationCompleted = true;
+
+                // persist new calibration data in flash
+                openknx.flash.save(true);
             }
 
             result = true;
@@ -615,25 +617,27 @@ void SensorHLKLD2420::sendCalibrationData()
     double triggerThresholdDb[16];
     for (uint8_t i = 0; i < 16; i++)
     {
-        triggerThresholdDb[i] = rawToDb(rawDataRangeAverage[i]) + triggerOffsetDb;
-        logTraceP("Gate %i:  %.2f", i, rawToDb(rawDataRangeAverage[i]));
+        triggerThresholdDb[i] = rawDataRangeAverageDb[i] + triggerOffsetDb;
+        logTraceP("Gate %i:  %.2f", i, rawDataRangeAverageDb[i]);
     }
 
     logIndentDown();
 
-    holdOffsetDb = CALIBRATION_HOLD_OFFSET_DB - SENSITIVITY_HOLD_RANGE * (lSensitivity / 10.0);
+    // calculate hold offset based on trigger offset with standard 1.5,
+    // but less if trigger offset is closer to energy average value
+    holdOffsetDb = min(triggerOffsetDb / 2 + 0.25, 1.5);
+    if (triggerOffsetDb - holdOffsetDb < 0.5)
+        holdOffsetDb = 0.5;
 
     // substract hold offset
     double holdThresholdDb[16];
     for (uint8_t i = 0; i < 16; i++)
-    {
         holdThresholdDb[i] = triggerThresholdDb[i] - holdOffsetDb;
-    }
 
     logDebugP("Sensitivity used:");
     logIndentUp();
-    logDebugP("User setting: %d", mSensitivity);
-    logDebugP("Calculated trigger offset : %.2f", triggerOffsetDb);
+    logDebugP("User sensitivity setting: %d", mSensitivity);
+    logDebugP("Calculated trigger offset: %.2f", triggerOffsetDb);
     logDebugP("Calculated hold offset: %.2f", holdOffsetDb);
     logIndentDown();
 
@@ -858,7 +862,7 @@ void SensorHLKLD2420::sensorReadFlash(const uint8_t *buffer, const uint16_t size
     }
 
     for (uint8_t i = 0; i < 16; i++)
-        rawDataRangeAverage[i] = openknx.flash.readFloat();
+        rawDataRangeAverageDb[i] = openknx.flash.readFloat();
     
     calibrationCompleted = true;
 
@@ -878,7 +882,7 @@ void SensorHLKLD2420::sensorWriteFlash()
     openknx.flash.writeInt(HLKLD2420_FLASH_MAGIC_WORD);
 
     for (uint8_t i = 0; i < 16; i++)
-        openknx.flash.writeFloat(rawDataRangeAverage[i]);
+        openknx.flash.writeFloat(rawDataRangeAverageDb[i]);
 
     logDebugP("Calibration data written to flash");
 }
@@ -977,7 +981,7 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
             // calibration trigger thresholds: read all
             for (uint8_t i = 0; i < 16; i++)
             {
-                logInfoP("triggerThreshold, gate %u: %.2f", i, rawToDb(triggerThreshold[i]));
+                logInfoP("triggerThresholdDb, gate %u: %.2f", i, rawToDb(triggerThreshold[i]));
                 if (iDebugKo)
                 {
                     openknx.console.writeDiagenoseKo("HLK c%02ut %.2f", i, rawToDb(triggerThreshold[i]));
@@ -992,7 +996,7 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
             // calibration hold thresholds: read all
             for (uint8_t i = 0; i < 16; i++)
             {
-                logInfoP("holdThreshold, gate %u: %.2f", i, rawToDb(holdThreshold[i]));
+                logInfoP("holdThresholdDb, gate %u: %.2f", i, rawToDb(holdThreshold[i]));
                 if (iDebugKo)
                 {
                     openknx.console.writeDiagenoseKo("HLK c%02uh %.2f", i, rawToDb(holdThreshold[i]));
@@ -1007,10 +1011,10 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
             // calibration raw data averages: read all
             for (uint8_t i = 0; i < 16; i++)
             {
-                logInfoP("rawDataRangeAverage, gate %u: %.2f", i, rawToDb(rawDataRangeAverage[i]));
+                logInfoP("rawDataRangeAverageDb, gate %u: %.2f", i, rawDataRangeAverageDb[i]);
                 if (iDebugKo)
                 {
-                    openknx.console.writeDiagenoseKo("HLK c%02ur %.2f", i, rawToDb(rawDataRangeAverage[i]));
+                    openknx.console.writeDiagenoseKo("HLK c%02ur %.2f", i, rawDataRangeAverageDb[i]);
                     if (i < 15)
                         openknx.console.writeDiagenoseKo("");
                 }
@@ -1029,7 +1033,7 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
             if (iCmd.substr(9, 4) == "read")
             {
                 // read value
-                logInfoP("triggerThreshold, gate %u: %.2f", valueIndex, rawToDb(triggerThreshold[valueIndex]));
+                logInfoP("triggerThresholdDb, gate %u: %.2f", valueIndex, rawToDb(triggerThreshold[valueIndex]));
                 if (iDebugKo)
                     openknx.console.writeDiagenoseKo("HLK c%02ut %.2f", valueIndex, rawToDb(triggerThreshold[valueIndex]));
                 lResult = true;
@@ -1041,7 +1045,7 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
             if (iCmd.substr(9, 4) == "read")
             {
                 // read value
-                logInfoP("holdThreshold, gate %u: %.2f", valueIndex, rawToDb(holdThreshold[valueIndex]));
+                logInfoP("holdThresholdDb, gate %u: %.2f", valueIndex, rawToDb(holdThreshold[valueIndex]));
                 if (iDebugKo)
                     openknx.console.writeDiagenoseKo("HLK c%02uh %.2f", valueIndex, rawToDb(holdThreshold[valueIndex]));
                 lResult = true;
@@ -1053,9 +1057,9 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
             if (iCmd.substr(9, 4) == "read")
             {
                 // read value
-                logInfoP("rawDataRangeAverage, gate %u: %.2f", valueIndex, rawToDb(rawDataRangeAverage[valueIndex]));
+                logInfoP("rawDataRangeAverageDb, gate %u: %.2f", valueIndex, rawDataRangeAverageDb[valueIndex]);
                 if (iDebugKo)
-                    openknx.console.writeDiagenoseKo("HLK c%02ur %.2f", valueIndex, rawToDb(rawDataRangeAverage[valueIndex]));
+                    openknx.console.writeDiagenoseKo("HLK c%02ur %.2f", valueIndex, rawDataRangeAverageDb[valueIndex]);
                 lResult = true;
             }
         }
@@ -1067,8 +1071,7 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
 
         if (iCmd.substr(7, 1) == "r")
         {
-            double valueDb = stod(iCmd.substr(9, 5));
-            rawDataRangeAverage[valueIndex] = dBToRaw(valueDb);
+            rawDataRangeAverageDb[valueIndex] = stod(iCmd.substr(9, 5));
             lResult = true;
         }
     }

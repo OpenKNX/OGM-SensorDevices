@@ -983,7 +983,47 @@ void SensorHLKLD2420::showHelp()
 bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
 {
     bool lResult = false;
-    if (iCmd.length() == 7 && iCmd.substr(4, 3) == "ver")
+    if (iCmd.length() == 5 && iCmd.substr(4, 1) == "h")
+    {
+        // Command help
+        if (iDebugKo)
+        {
+            openknx.console.writeDiagenoseKo("-> ver");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> sens");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> offt");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> offh");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> rmin");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> rmax");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> delay");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> ct read");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> cNNt read");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> ch read");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> cNNh read");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> cr read");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> cNNr read");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> cNNr 00.00");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> cal run");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> cal send");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> cal def");
+        }
+    }
+    else if (iCmd.length() == 7 && iCmd.substr(4, 3) == "ver")
     {
         logInfoP("Module version: %s", moduleVersion.c_str());
         if (iDebugKo)

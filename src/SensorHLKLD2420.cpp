@@ -974,7 +974,8 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
                 if (iDebugKo)
                 {
                     openknx.console.writeDiagenoseKo("HLK t%02ut %.2f", i, rawToDb(triggerThreshold[i]));
-                    openknx.console.writeDiagenoseKo("");
+                    if (i < 15)
+                        openknx.console.writeDiagenoseKo("");
                 }
             }
             lResult = true;
@@ -988,7 +989,8 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
                 if (iDebugKo)
                 {
                     openknx.console.writeDiagenoseKo("HLK t%02uh %.2f", i, rawToDb(holdThreshold[i]));
-                    openknx.console.writeDiagenoseKo("");
+                    if (i < 15)
+                        openknx.console.writeDiagenoseKo("");
                 }
             }
             lResult = true;
@@ -1007,10 +1009,7 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
                 // read value
                 logInfoP("triggerThreshold, gate %u: %.2f", valueIndex, rawToDb(triggerThreshold[valueIndex]));
                 if (iDebugKo)
-                {
                     openknx.console.writeDiagenoseKo("HLK t%02ut %.2f", valueIndex, rawToDb(triggerThreshold[valueIndex]));
-                    openknx.console.writeDiagenoseKo("");
-                }
                 lResult = true;
             }
         }
@@ -1022,10 +1021,7 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
                 // read value
                 logInfoP("holdThreshold, gate %u: %.2f", valueIndex, rawToDb(holdThreshold[valueIndex]));
                 if (iDebugKo)
-                {
                     openknx.console.writeDiagenoseKo("HLK t%02uh %.2f", valueIndex, rawToDb(holdThreshold[valueIndex]));
-                    openknx.console.writeDiagenoseKo("");
-                }
                 lResult = true;
             }
         }

@@ -26,13 +26,13 @@
 #define PARAM_RAW_DATA_MODE_LENGTH 6
 
 #define CALIBRATION_VALUE_COUNT 100
-#define CALIBRATION_TRIGGER_OFFSET_DB 5 // = min. sensitivity, range 1 - 5
-#define CALIBRATION_HOLD_OFFSET_DB 2.5  // = min. sensitivity, range 1.5 - 2.5
+#define CALIBRATION_TRIGGER_OFFSET_DB 5 // = min. sensitivity, range 0.5 - 5
+#define CALIBRATION_HOLD_OFFSET_DB 2.5  // = min. sensitivity, range 0.5 - 2.5
 
 // these will be deducted from trigger/hold offset based on sensitivity percentage
-// e. g. sensitivity 5 (= 50 %): trigger offset 5-2=3, hold offset 2.5-1=1.5
+// e. g. sensitivity 5 (= 50 %): trigger offset 5-2.25=2.75, hold offset 2.5-1=1.5
 // lower offsets = higher sensitivity
-#define SENSITIVITY_TRIGGER_RANGE 4
+#define SENSITIVITY_TRIGGER_RANGE 4.5
 #define SENSITIVITY_HOLD_RANGE 2
 #define SENSITIVITY_DEFAULT 5 // in case user setting invalid
 
@@ -88,6 +88,8 @@ class SensorHLKLD2420 : public Sensor
     int delayTime = NO_NUM;
     int triggerThreshold[16];
     int holdThreshold[16];
+    double triggerOffsetDb;
+    double holdOffsetDb;
     bool calibrationCompleted = false;
 
     uint32_t rawDataLastRecordingReceived = 0;
@@ -149,6 +151,8 @@ class SensorHLKLD2420 : public Sensor
     void writeSensitivity(int8_t iSensitivity);
     // void readSensitivity();
     void sendCommand(uint8_t command, const uint8_t parameter[] = nullptr, uint8_t parameterLength = 0);
+    void showHelp();
+    bool processCommand(const std::string iCmd, bool iDebugKo);
     std::string logPrefix() override;
 };
 #endif

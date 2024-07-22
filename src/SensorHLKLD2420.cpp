@@ -656,7 +656,7 @@ void SensorHLKLD2420::sendCalibrationData()
         logIndentUp();
 
         int8_t lSensitivity = mSensitivity > 0 && mSensitivity <= 10 ? mSensitivity : SENSITIVITY_DEFAULT;
-        triggerOffsetDb = CALIBRATION_TRIGGER_OFFSET_DB - SENSITIVITY_TRIGGER_RANGE * (lSensitivity / (float)10);
+        triggerOffsetDb = CALIBRATION_TRIGGER_OFFSET_DB - SENSITIVITY_TRIGGER_RANGE * pow(lSensitivity / (float)10, 2);
 
         // convert to dB values and add trigger offset
         for (uint8_t i = 0; i < 16; i++)
@@ -667,11 +667,7 @@ void SensorHLKLD2420::sendCalibrationData()
 
         logIndentDown();
 
-        // calculate hold offset based on trigger offset with standard 1.5,
-        // but less if trigger offset is closer to energy average value
-        holdOffsetDb = min(triggerOffsetDb / 2 + 0.25, 1.5);
-        if (triggerOffsetDb - holdOffsetDb < 0.5)
-            holdOffsetDb = 0.5;
+        holdOffsetDb = min(triggerOffsetDb / 2 + 0.25, 3.5);
 
         // substract hold offset
         for (uint8_t i = 0; i < 16; i++)

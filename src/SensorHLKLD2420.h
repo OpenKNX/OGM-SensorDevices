@@ -26,12 +26,11 @@
 #define PARAM_RAW_DATA_MODE_LENGTH 6
 
 #define CALIBRATION_VALUE_COUNT 100
-#define CALIBRATION_TRIGGER_OFFSET_DB 6 // = min. sensitivity, 1 - 5 (with trigger range below 5)
+#define CALIBRATION_TRIGGER_OFFSET_DB 10
 
 // these will be deducted from trigger offset based on sensitivity percentage
-// e. g. sensitivity 5 (= 50 %): trigger offset 6-2.5=3.5
 // lower offsets = higher sensitivity
-#define SENSITIVITY_TRIGGER_RANGE 5
+#define SENSITIVITY_TRIGGER_RANGE 8
 #define SENSITIVITY_DEFAULT 5 // in case user setting invalid
 
 #define START_INIT 0

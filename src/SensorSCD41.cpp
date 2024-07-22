@@ -102,7 +102,7 @@ void SensorSCD41::sensorLoopInternal()
                 {
                     if (delayCheck(pSensorStateDelay, mMeasureInterval * 1000))
                     {
-                        measureSingleShot();
+                        measureSingleShot(false);
                         pSensorStateDelay = delayTimerInit();
                         mMeasureDelay = delayTimerInit();
                         mIsMeasuring = true;

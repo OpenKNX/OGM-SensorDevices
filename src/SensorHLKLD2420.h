@@ -89,6 +89,8 @@ class SensorHLKLD2420 : public Sensor
     float holdThresholdDb[16];
     float triggerOffsetDb;
     float holdOffsetDb;
+    float customeTriggerOffsetDb[16] = {};
+    float customHoldOffsetDb[16] = {};
     bool calibrationCompleted = false;
     bool useFactoryDefaultThresholds = false;
 
@@ -120,6 +122,7 @@ class SensorHLKLD2420 : public Sensor
     void restartStartupLoop();
     void resetRawDataRecording();
     void sendCalibrationData();
+    bool useCustomOffsets();
     bool getSensorData();
 
   protected:

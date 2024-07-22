@@ -370,7 +370,7 @@ bool SensorHLKLD2420::getSensorData()
             {
                 // mBuffer now holds the detection range decimal value as string
                 rangeString = std::string(reinterpret_cast<const char *>(&mBuffer[0]), BUFFER_LENGTH);
-                newDetectedRange = stoi(rangeString) / (float)10;
+                newDetectedRange = stoi(rangeString) / (float)100;
 
                 if (lastDetectedRange != newDetectedRange)
                 {

@@ -143,6 +143,8 @@ void SensorHLKLD2420::startupLoop()
                 {
                     mHfSensorStartupState = START_CALIBRATING;
 
+                    openknx.console.writeDiagenoseKo("HLK cal start");
+
                     resetRawDataRecording();
                     sendCommand(CMD_RAW_DATA_MODE, PARAM_RAW_DATA_MODE, PARAM_RAW_DATA_MODE_LENGTH);
                 }
@@ -172,6 +174,8 @@ void SensorHLKLD2420::forceCalibration()
     calibrationCompleted = false;
     pSensorState = Calibrate;
     mHfSensorStartupState = START_CALIBRATING;
+
+    openknx.console.writeDiagenoseKo("HLK cal start");
 
     resetRawDataRecording();
     sendCommand(CMD_RAW_DATA_MODE, PARAM_RAW_DATA_MODE, PARAM_RAW_DATA_MODE_LENGTH);
@@ -588,6 +592,7 @@ bool SensorHLKLD2420::getSensorData()
 
                 logIndentDown();
 
+                openknx.console.writeDiagenoseKo("HLK cal done");
                 logDebugP("Sensor calibration finished");
                 calibrationCompleted = true;
 
@@ -832,6 +837,7 @@ void SensorHLKLD2420::sendCalibrationData()
     delay(500);
     logIndentDown();
 
+    openknx.console.writeDiagenoseKo("HLK cal send");
     logDebugP("Writing config to sensor finished");
     logIndentDown();
 

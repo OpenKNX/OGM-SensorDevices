@@ -325,13 +325,22 @@ void SensorHLKLD2420::rebootSensorSoft()
 
 void SensorHLKLD2420::rebootSensorHard()
 {
-    digitalWrite(HF_POWER_PIN, LOW);
+    switchPower(false);
     delay(1000);
 
-    digitalWrite(HF_POWER_PIN, HIGH);
-    delay(1000);
+    switchPower(true);
+}
 
-    restartStartupLoop();
+void SensorHLKLD2420::switchPower(bool on)
+{
+    logDebugP("Switch power on: %u", on);
+    digitalWrite(HF_POWER_PIN, on ? HIGH : LOW);
+
+    if (on)
+    {
+        delay(1000);
+        restartStartupLoop();
+    }
 }
 
 void SensorHLKLD2420::restartStartupLoop()

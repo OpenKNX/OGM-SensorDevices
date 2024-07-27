@@ -160,6 +160,7 @@ class SensorHLKLD2420 : public Sensor
     void showHelp();
     bool processCommand(const std::string iCmd, bool iDebugKo);
     std::string logPrefix() override;
+    void switchPower(bool on);
 };
 #endif
 #endif

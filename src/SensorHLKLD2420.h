@@ -96,7 +96,10 @@ class SensorHLKLD2420 : public Sensor
 
     uint32_t rawDataLastRecordingReceived = 0;
     int rawDataRecordingCount = 0;
-    float rawDataRangeAverageDb[16];
+    float rawDataRangeAverageTempDb[16];
+    float rawDataRangeAverageDb[16] = {};
+    float rawDataRangeDifferencesDb[16] = {};
+    bool calibrationTestRunOnly = false;
 
     int8_t mDefaultSensitivity = 5;
     uint8_t mHfSensorStartupState = 0;

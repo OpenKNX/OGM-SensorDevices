@@ -79,7 +79,7 @@ class SensorHLKLD2420 : public Sensor
     PacketType mPacketType;
     float lastDetectedRange = NO_NUM;
 
-    std::string moduleVersion;
+    std::string moduleVersion = "";
     int storedDistanceMin = NO_NUM;
     int storedDistanceMax = NO_NUM;
     int storedDelayTime = NO_NUM;

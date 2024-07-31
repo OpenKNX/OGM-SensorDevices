@@ -169,9 +169,9 @@ void SensorHLKLD2420::forceCalibration()
     sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
     delay(100);
 
-    calibrationCompleted = false;
     pSensorState = Calibrate;
     mHfSensorStartupState = START_CALIBRATING;
+    pSensorStateDelay = millis();
 
     resetRawDataRecording();
     sendCommand(CMD_RAW_DATA_MODE, PARAM_RAW_DATA_MODE, PARAM_RAW_DATA_MODE_LENGTH);
@@ -356,6 +356,7 @@ void SensorHLKLD2420::resetRawDataRecording()
 
     rawDataLastRecordingReceived = millis();
     rawDataRecordingCount = 0;
+    calibrationCompleted = false;
 
     if (calibrationTestRunOnly)
     {
@@ -613,7 +614,8 @@ bool SensorHLKLD2420::getSensorData()
                 rawDataLastRecordingReceived = millis();
             }
 
-            if (rawDataRecordingCount == CALIBRATION_VALUE_COUNT)
+            if (!calibrationCompleted &&
+                rawDataRecordingCount == CALIBRATION_VALUE_COUNT)
             {
                 logIndentDown();
 
@@ -629,6 +631,7 @@ bool SensorHLKLD2420::getSensorData()
                     openknx.console.writeDiagenoseKo("HLK calt done");
                     logDebugP("Sensor calibrarion test finished, data not stored");
                     calibrationTestRunOnly = false;
+                    calibrationCompleted = true;
                     
                     for (uint8_t i = 0; i < 16; i++)
                         rawDataRangeDifferencesDb[i] = (rawDataRangeAverageTempDb[i] / (float)rawDataRecordingCount) - rawDataRangeAverageDb[i];
@@ -643,6 +646,7 @@ bool SensorHLKLD2420::getSensorData()
 
                     openknx.console.writeDiagenoseKo("HLK cal done");
                     logDebugP("Sensor calibration finished");
+                    calibrationCompleted = true;
 
                     // persist new calibration data in flash
                     openknx.flash.save(true);
@@ -650,9 +654,6 @@ bool SensorHLKLD2420::getSensorData()
                     useFactoryDefaultThresholds = false;
                     sendCalibrationData();
                 }
-
-                calibrationCompleted = true;
-                rawDataRecordingCount = 0;
             }
 
             result = true;

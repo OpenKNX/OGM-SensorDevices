@@ -652,6 +652,8 @@ bool SensorHLKLD2420::getSensorData()
                         rawDataRangeAverageDb[i] = rawDataRangeAverageTempDb[i] / (float)rawDataRecordingCount;
 
                     openknx.console.writeDiagenoseKo("HLK cal done");
+                    // will be followed by "HLK cal send"
+                    openknx.console.writeDiagenoseKo("");
                     logDebugP("Sensor calibration finished");
                     calibrationCompleted = true;
                     calibrationOnOffTimer = delayTimerInit();
@@ -1095,7 +1097,9 @@ void SensorHLKLD2420::showHelp()
     openknx.console.printHelpLine("hlk oNNh read", "Print hold offset in dB in dB at index NN (00-15)");
     openknx.console.printHelpLine("hlk oNNh 00.00", "Set hold offset in dB at index NN (00-15)");
     openknx.console.printHelpLine("hlk o reset", "Reset custom trigger and hold offsets");
-    openknx.console.printHelpLine("hlk cal send", "Send stored calibration data to sensor (e. g. changed by ""hlk cNNr"")");
+    openknx.console.printHelpLine("hlk cal send", "Send stored calibration data to sensor (e. g. changed by "
+                                                  "hlk cNNr"
+                                                  ")");
     openknx.console.printHelpLine("hlk cal run", "Start new sensor calibration run and send data to sensor");
     openknx.console.printHelpLine("hlk calt run", "Start new sensor calibration test run (no data send to sensor)");
     openknx.console.printHelpLine("hlk cal def", "Send factory default calibration data to sensor");

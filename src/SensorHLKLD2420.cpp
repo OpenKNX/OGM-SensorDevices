@@ -1,12 +1,12 @@
 #ifdef PMMODULE
-#ifdef HF_SERIAL
-#include "SensorHLKLD2420.h"
-#include <Arduino.h>
-#include <Wire.h>
-#include <OpenKNX.h>
+    #ifdef HF_SERIAL
+        #include "SensorHLKLD2420.h"
+        #include <Arduino.h>
+        #include <OpenKNX.h>
+        #include <Wire.h>
 
 SensorHLKLD2420::SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire *iWire)
-    : SensorHLKLD2420(iMeasureTypes, &Wire, 0){};
+    : SensorHLKLD2420(iMeasureTypes, &Wire, 0) {};
 
 SensorHLKLD2420::SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire *iWire, uint8_t iAddress)
     : Sensor(iMeasureTypes, &Wire, iAddress)
@@ -25,7 +25,7 @@ void SensorHLKLD2420::defaultSensorParameters(uint8_t iSensitivity, uint16_t iDe
     mDelayTime = iDelayTime;
     mRangeGateMin = iRangeGateMin;
 
-    if (mRangeGateMax > mRangeGateMin)
+    if (iRangeGateMax > iRangeGateMin)
         mRangeGateMax = iRangeGateMax;
 }
 
@@ -325,6 +325,7 @@ void SensorHLKLD2420::rebootSensorHard()
     delay(1000);
 
     switchPower(true);
+    openknx.console.writeDiagenoseKo("HLK reb hard");
 }
 
 void SensorHLKLD2420::switchPower(bool on)
@@ -386,6 +387,11 @@ bool SensorHLKLD2420::getSensorData()
     int dopplerOffset;
     int rangeOffset;
     int rangeValue;
+
+    if (calibrationOnOffTimer == 0 || delayCheck(calibrationOnOffTimer, 15000))
+        calibrationOnOffTimer = 0;
+    else
+        return result;
 
     switch (mPacketType)
     {
@@ -632,7 +638,8 @@ bool SensorHLKLD2420::getSensorData()
                     logDebugP("Sensor calibrarion test finished, data not stored");
                     calibrationTestRunOnly = false;
                     calibrationCompleted = true;
-                    
+                    calibrationOnOffTimer = delayTimerInit();
+
                     for (uint8_t i = 0; i < 16; i++)
                         rawDataRangeDifferencesDb[i] = (rawDataRangeAverageTempDb[i] / (float)rawDataRecordingCount) - rawDataRangeAverageDb[i];
                 }
@@ -647,6 +654,7 @@ bool SensorHLKLD2420::getSensorData()
                     openknx.console.writeDiagenoseKo("HLK cal done");
                     logDebugP("Sensor calibration finished");
                     calibrationCompleted = true;
+                    calibrationOnOffTimer = delayTimerInit();
 
                     // persist new calibration data in flash
                     openknx.flash.save(true);
@@ -734,7 +742,7 @@ void SensorHLKLD2420::sendCalibrationData()
                 triggerThresholdDb[i] = rawDataRangeAverageDb[i] + triggerOffsetDb;
         }
 
-        holdOffsetDb = 3 * (1 / log10(lSensitivity + 1)) - 1;
+        holdOffsetDb = 3 * (1 / log10(lSensitivity + 1)) - 1.5;
 
         // calculate hold thresholds
         for (uint8_t i = 0; i < 16; i++)
@@ -902,7 +910,11 @@ void SensorHLKLD2420::sendCalibrationData()
         delay(500);
         logIndentDown();
 
+        if (!storedCurrentDistanceTime)
+            openknx.console.writeDiagenoseKo("");
         openknx.console.writeDiagenoseKo("HLK cal send");
+        openknx.console.writeDiagenoseKo("");
+        rebootSensorHard();
     }
 
     logDebugP("Writing config to sensor finished");
@@ -915,6 +927,7 @@ void SensorHLKLD2420::sendCalibrationData()
     {
         // re-start startup loop to readback values from sensor
         restartStartupLoop();
+        calibrationOnOffTimer = delayTimerInit();
     }
 }
 
@@ -925,7 +938,7 @@ bool SensorHLKLD2420::useCustomOffsets()
         if (customeTriggerOffsetDb[i] != 0 || customHoldOffsetDb[i] != 0)
             return true;
     }
-    
+
     return false;
 }
 
@@ -933,7 +946,7 @@ void SensorHLKLD2420::sendCommand(uint8_t command, const uint8_t parameter[], ui
 {
     uint8_t payloadSize = 2 + parameterLength;
     uint8_t totalLength = HEADER_FOOTER_SIZE + 2 + payloadSize + HEADER_FOOTER_SIZE;
-    
+
     uint8_t cmdData[totalLength];
     memcpy(cmdData, HEADER_COMMAND, HEADER_FOOTER_SIZE);
     uint8_t cmdDataIndex = HEADER_FOOTER_SIZE;
@@ -1028,7 +1041,7 @@ void SensorHLKLD2420::sensorReadFlash(const uint8_t *buffer, const uint16_t size
 
     for (uint8_t i = 0; i < 16; i++)
         rawDataRangeAverageDb[i] = openknx.flash.readFloat();
-    
+
     calibrationCompleted = true;
 
     logDebugP("Calibration data read from flash");
@@ -1197,6 +1210,12 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
         calibrationTestRunOnly = true;
         forceCalibration();
         lResult = true;
+    }
+    else if (iCmd.length() >= 8 && iCmd.substr(4, 4) == "calt")
+    {
+        // other calt commands (typos) might be interpreted
+        // as cNNt commands (with fatal error), so we prevent them
+        lResult = false;
     }
     else if (iCmd.length() == 11 && iCmd.substr(4, 9) == "cal run")
     {
@@ -1496,5 +1515,5 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
     return lResult;
 }
 
-#endif
+    #endif
 #endif

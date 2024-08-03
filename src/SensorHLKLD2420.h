@@ -1,51 +1,51 @@
 #pragma once
 #ifdef PMMODULE
-#ifdef HF_SERIAL
-#include "Sensor.h"
-#include <string>
+    #ifdef HF_SERIAL
+        #include "Sensor.h"
+        #include <string>
 
-#define HEADER_FOOTER_SIZE 4
+        #define HEADER_FOOTER_SIZE 4
 
-#define CMD_OPEN_COMMAND_MODE 0xFF
-#define CMD_CLOSE_COMMAND_MODE 0xFE
-#define CMD_READ_VERSION 0x00
-#define CMD_REBOOT_MODULE 0x68
-#define CMD_READ_MODULE_CONFIG 0x08
-#define CMD_WRITE_MODULE_CONFIG 0x07
-#define CMD_RAW_DATA_MODE 0x12
+        #define CMD_OPEN_COMMAND_MODE 0xFF
+        #define CMD_CLOSE_COMMAND_MODE 0xFE
+        #define CMD_READ_VERSION 0x00
+        #define CMD_REBOOT_MODULE 0x68
+        #define CMD_READ_MODULE_CONFIG 0x08
+        #define CMD_WRITE_MODULE_CONFIG 0x07
+        #define CMD_RAW_DATA_MODE 0x12
 
-#define OFFSET_PARAM_RANGE_GATE_MIN 0x00
-#define OFFSET_PARAM_RANGE_GATE_MAX 0x01
-#define OFFSET_PARAM_DELAY_TIME 0x04
-#define OFFSET_PARAM_TRIGGERS 0x10
-#define OFFSET_PARAM_HOLDS 0x20
+        #define OFFSET_PARAM_RANGE_GATE_MIN 0x00
+        #define OFFSET_PARAM_RANGE_GATE_MAX 0x01
+        #define OFFSET_PARAM_DELAY_TIME 0x04
+        #define OFFSET_PARAM_TRIGGERS 0x10
+        #define OFFSET_PARAM_HOLDS 0x20
 
-#define PARAM_OPEN_COMMAND_MODE_LENGTH 2
-#define PARAM_READ_DISTANCE_TRIGGER_LENGTH 36
-#define PARAM_READ_DELAY_MAINTAIN_LENGTH 34
-#define PARAM_RAW_DATA_MODE_LENGTH 6
+        #define PARAM_OPEN_COMMAND_MODE_LENGTH 2
+        #define PARAM_READ_DISTANCE_TRIGGER_LENGTH 36
+        #define PARAM_READ_DELAY_MAINTAIN_LENGTH 34
+        #define PARAM_RAW_DATA_MODE_LENGTH 6
 
-#define CALIBRATION_VALUE_COUNT 100
-#define CALIBRATION_TRIGGER_OFFSET_DB 10
+        #define CALIBRATION_VALUE_COUNT 100
+        #define CALIBRATION_TRIGGER_OFFSET_DB 10
 
-// these will be deducted from trigger offset based on sensitivity percentage
-// lower offsets = higher sensitivity
-#define SENSITIVITY_TRIGGER_RANGE 8
-#define SENSITIVITY_DEFAULT 5 // in case user setting invalid
+        // these will be deducted from trigger offset based on sensitivity percentage
+        // lower offsets = higher sensitivity
+        #define SENSITIVITY_TRIGGER_RANGE 8
+        #define SENSITIVITY_DEFAULT 5 // in case user setting invalid
 
-#define START_INIT 0
-#define START_SENSOR_ACTIVE 1
-#define START_VERSION_RECEIVED 2
-#define START_READ1_DONE 3
-#define START_READ2_DONE 4
-#define START_CALIBRATING 5
-#define START_FINISHED 255
+        #define START_INIT 0
+        #define START_SENSOR_ACTIVE 1
+        #define START_VERSION_RECEIVED 2
+        #define START_READ1_DONE 3
+        #define START_READ2_DONE 4
+        #define START_CALIBRATING 5
+        #define START_FINISHED 255
 
-#define BUFFER_LENGTH mBufferIndex
+        #define BUFFER_LENGTH mBufferIndex
 
-#define HLKLD2420_FLASH_VERSION 0
-#define HLKLD2420_FLASH_MAGIC_WORD 2274541778
-#define HLKLD2420_FLASH_SIZE 69
+        #define HLKLD2420_FLASH_VERSION 0
+        #define HLKLD2420_FLASH_MAGIC_WORD 2274541778
+        #define HLKLD2420_FLASH_SIZE 69
 
 class SensorHLKLD2420 : public Sensor
 {
@@ -93,6 +93,8 @@ class SensorHLKLD2420 : public Sensor
     float customHoldOffsetDb[16] = {};
     bool calibrationCompleted = false;
     bool useFactoryDefaultThresholds = false;
+    // initially suppress ON/OFF signals form HF-Sensor
+    uint32_t calibrationOnOffTimer = 1;
 
     uint32_t rawDataLastRecordingReceived = 0;
     int rawDataRecordingCount = 0;
@@ -165,5 +167,5 @@ class SensorHLKLD2420 : public Sensor
     std::string logPrefix() override;
     void switchPower(bool on);
 };
-#endif
+    #endif
 #endif

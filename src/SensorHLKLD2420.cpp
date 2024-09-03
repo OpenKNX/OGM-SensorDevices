@@ -304,6 +304,9 @@ float SensorHLKLD2420::rawToDb(int rawValue)
 
 int SensorHLKLD2420::dBToRaw(float dbValue)
 {
+    if (dbValue > maxDbValue)
+        dbValue = maxDbValue;
+
     return int(pow(10, dbValue / 10));
 }
 

@@ -1074,35 +1074,33 @@ uint16_t SensorHLKLD2420::sensorFlashSize()
 
 void SensorHLKLD2420::showHelp()
 {
-    openknx.console.printHelpLine("hlk ver", "Print firmware version of HLK-LD2420 sensor");
-    openknx.console.printHelpLine("hlk sens", "Print sensitivity defined by ETS app");
-    openknx.console.printHelpLine("hlk rmin", "Print min. range defined by ETS app");
-    openknx.console.printHelpLine("hlk rmax", "Print max. range defined by ETS app");
-    openknx.console.printHelpLine("hlk delay", "Print delay time defined by ETS app");
-    openknx.console.printHelpLine("hlk ct read", "Print all 16 calibration trigger thresholds in dB");
-    openknx.console.printHelpLine("hlk cNNt read", "Print calibration trigger threshold in dB at index NN (00-15)");
-    openknx.console.printHelpLine("hlk ch read", "Print all 16 calibration hold thresholds in dB");
-    openknx.console.printHelpLine("hlk cNNh read", "Print calibration hold threshold in dB at index NN (00-15)");
-    openknx.console.printHelpLine("hlk cr read", "Print all 16 calibration raw data averages in dB");
-    openknx.console.printHelpLine("hlk cNNr read", "Print calibration raw data average in dB at index NN (00-15)");
-    openknx.console.printHelpLine("hlk cNNr 00.00", "Set calibration raw data average in dB at index NN (00-15)");
-    openknx.console.printHelpLine("hlk cd read", "Print all 16 calibration raw data average differences from last test run in dB");
-    openknx.console.printHelpLine("hlk cNNd read", "Print calibration raw data average difference from last test run in dB at index NN (00-15)");
-    openknx.console.printHelpLine("hlk ot read", "Print calculated trigger offset in dB based on sensitivity or all custom trigger offsets");
+    openknx.console.printHelpLine("hlk ver", "Print firmware version of HLK-LD2420 sensor.");
+    openknx.console.printHelpLine("hlk sens", "Print sensitivity defined by ETS app.");
+    openknx.console.printHelpLine("hlk rmin", "Print min. range defined by ETS app.");
+    openknx.console.printHelpLine("hlk rmax", "Print max. range defined by ETS app.");
+    openknx.console.printHelpLine("hlk delay", "Print delay time defined by ETS app.");
+    openknx.console.printHelpLine("hlk ct read", "Print all 16 calibration trigger thresholds in dB.");
+    openknx.console.printHelpLine("hlk cNNt read", "Print calibration trigger threshold in dB at index NN (00-15).");
+    openknx.console.printHelpLine("hlk ch read", "Print all 16 calibration hold thresholds in dB.");
+    openknx.console.printHelpLine("hlk cNNh read", "Print calibration hold threshold in dB at index NN (00-15).");
+    openknx.console.printHelpLine("hlk cr read", "Print all 16 calibration raw data averages in dB.");
+    openknx.console.printHelpLine("hlk cNNr read", "Print calibration raw data average in dB at index NN (00-15).");
+    openknx.console.printHelpLine("hlk cNNr 00.00", "Set calibration raw data average in dB at index NN (00-15).");
+    openknx.console.printHelpLine("hlk cd read", "Print all 16 calibration raw data average differences from last test run in dB.");
+    openknx.console.printHelpLine("hlk cNNd read", "Print calibration raw data average difference from last test run in dB at index NN (00-15).");
+    openknx.console.printHelpLine("hlk ot read", "Print calculated trigger offset in dB based on sensitivity or all custom trigger offsets.");
     openknx.console.printHelpLine("hlk ot 00.00", "Set trigger offset in dB for all 16 indices.");
-    openknx.console.printHelpLine("hlk oNNt read", "Print trigger offset in dB at index NN (00-15)");
-    openknx.console.printHelpLine("hlk oNNt 00.00", "Set trigger offset in dB at index NN (00-15)");
-    openknx.console.printHelpLine("hlk oh read", "Print calculated hold offset based in dB on sensitivity or all custom hold offsets");
+    openknx.console.printHelpLine("hlk oNNt read", "Print trigger offset in dB at index NN (00-15).");
+    openknx.console.printHelpLine("hlk oNNt 00.00", "Set trigger offset in dB at index NN (00-15).");
+    openknx.console.printHelpLine("hlk oh read", "Print calculated hold offset based in dB on sensitivity or all custom hold offsets.");
     openknx.console.printHelpLine("hlk oh 00.00", "Set hold offset in dB for all 16 indices.");
-    openknx.console.printHelpLine("hlk oNNh read", "Print hold offset in dB in dB at index NN (00-15)");
-    openknx.console.printHelpLine("hlk oNNh 00.00", "Set hold offset in dB at index NN (00-15)");
-    openknx.console.printHelpLine("hlk o reset", "Reset custom trigger and hold offsets");
-    openknx.console.printHelpLine("hlk cal send", "Send stored calibration data to sensor (e. g. changed by "
-                                                  "hlk cNNr"
-                                                  ")");
-    openknx.console.printHelpLine("hlk cal run", "Start new sensor calibration run and send data to sensor");
-    openknx.console.printHelpLine("hlk calt run", "Start new sensor calibration test run (no data send to sensor)");
-    openknx.console.printHelpLine("hlk cal def", "Send factory default calibration data to sensor");
+    openknx.console.printHelpLine("hlk oNNh read", "Print hold offset in dB in dB at index NN (00-15).");
+    openknx.console.printHelpLine("hlk oNNh 00.00", "Set hold offset in dB at index NN (00-15).");
+    openknx.console.printHelpLine("hlk o reset", "Reset custom trigger and hold offsets.");
+    openknx.console.printHelpLine("hlk cal send", "Send stored calibration data to sensor (e. g. changed by hlk cNNr).");
+    openknx.console.printHelpLine("hlk cal run", "Start new sensor calibration run and send data to sensor.");
+    openknx.console.printHelpLine("hlk calt run", "Start new sensor calibration test run (no data send to sensor).");
+    openknx.console.printHelpLine("hlk cal def", "Send factory default calibration data to sensor.");
     openknx.console.printHelpLine("hlk reb soft", "Reboot sensor via software.");
     openknx.console.printHelpLine("hlk reb hard", "Reboot sensor via hardware (cut power).");
 }

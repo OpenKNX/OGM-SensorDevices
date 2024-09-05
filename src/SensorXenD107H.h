@@ -10,8 +10,12 @@
         #define CMD_CLOSE_COMMAND_MODE 0xFE
         #define CMD_READ_VERSION 0x00
         #define CMD_REBOOT_MODULE 0x68
-        #define CMD_READ_MODULE_CONFIG 0x08
-        #define CMD_WRITE_MODULE_CONFIG 0x07
+        #define CMD_READ_GENERAL_CONFIG 0x71
+        #define CMD_WRITE_GENERAL_CONFIG 0x70
+        #define CMD_READ_MOVING_TARGET_CONFIG 0x73
+        #define CMD_WRITE_MOVING_TARGET_CONFIG 0x72
+        #define CMD_READ_MOTIONLESS_TARGET_CONFIG 0x75
+        #define CMD_WRITE_MOTIONLESS_TARGET_CONFIG 0x74
         #define CMD_RAW_DATA_MODE 0x12
 
         #define OFFSET_PARAM_RANGE_GATE_MIN 0x00
@@ -21,8 +25,9 @@
         #define OFFSET_PARAM_HOLDS 0x20
 
         #define PARAM_OPEN_COMMAND_MODE_LENGTH 2
-        #define PARAM_READ_DISTANCE_TRIGGER_LENGTH 36
-        #define PARAM_READ_DELAY_MAINTAIN_LENGTH 34
+        #define PARAM_READ_GENERAL_CONFIG_LENGTH 10
+        #define PARAM_READ_MOVING_TARGET_CONFIG_LENGTH 24
+        #define PARAM_READ_MOTIONLESS_TARGET_CONFIG_LENGTH 20
         #define PARAM_RAW_DATA_MODE_LENGTH 6
 
         #define CALIBRATION_VALUE_COUNT 100
@@ -38,16 +43,17 @@
         #define START_VERSION_RECEIVED 2
         #define START_READ1_DONE 3
         #define START_READ2_DONE 4
+        #define START_READ3_DONE 5
         #define START_CALIBRATING 10
         #define START_FINISHED 255
 
         #define BUFFER_LENGTH mBufferIndex
 
-        #define HLKLD2420_FLASH_VERSION 0
-        #define HLKLD2420_FLASH_MAGIC_WORD 2274541778
-        #define HLKLD2420_FLASH_SIZE 69
+        #define XEND107H_FLASH_VERSION 0
+        #define XEND107H_FLASH_MAGIC_WORD 2274541778
+        #define XEND107H_FLASH_SIZE 69
 
-class SensorHLKLD2420 : public Sensor
+class SensorXenD107H : public Sensor
 {
   private:
     //! uartGetPacket state machine states.
@@ -63,10 +69,8 @@ class SensorHLKLD2420 : public Sensor
 
     enum PacketType
     {
-        //! Presence detection on
-        ON = 0,
-        //! Presence detection off
-        OFF,
+        //! Presence detection data
+        DATA = 0,
         //! Command packet
         COMMAND_RESPONSE,
         //! Raw data packet
@@ -79,7 +83,9 @@ class SensorHLKLD2420 : public Sensor
     PacketType mPacketType;
     float lastDetectedRange = NO_NUM;
 
-    std::string moduleVersion = "";
+    short moduleVersionMajor = NO_NUM;
+    short moduleVersionMinor = NO_NUM;
+    short moduleVersionRevision = NO_NUM;
     int storedDistanceMin = NO_NUM;
     int storedDistanceMax = NO_NUM;
     int storedDelayTime = NO_NUM;
@@ -106,17 +112,18 @@ class SensorHLKLD2420 : public Sensor
     int8_t mDefaultSensitivity = 5;
     uint8_t mHfSensorStartupState = 0;
 
-    uint8_t HEADER_ON[4] = {0x4F, 0x4E, 0x0D, 0x0A};
-    uint8_t HEADER_OFF[4] = {0x4F, 0x46, 0x46, 0x0D};
+    uint8_t HEADER[4] = {0xF4, 0xF3, 0xF2, 0xF1};
+    uint8_t FOOTER[4] = {0xF8, 0xF7, 0xF6, 0xF5};
     uint8_t HEADER_COMMAND[4] = {0xFD, 0xFC, 0xFB, 0xFA};
-    uint8_t FOOTER[4] = {0x04, 0x03, 0x02, 0x01};
+    uint8_t FOOTER_COMMAND[4] = {0x04, 0x03, 0x02, 0x01};
 
     uint8_t HEADER_RAW_DATA[4] = {0xAA, 0xBF, 0x10, 0x14};
     uint8_t FOOTER_RAW_DATA[4] = {0xFD, 0xFC, 0xFB, 0xFA};
 
     uint8_t PARAM_OPEN_COMMAND_MODE[PARAM_OPEN_COMMAND_MODE_LENGTH] = {0x01, 0x00};
-    uint8_t PARAM_READ_DISTANCE_TRIGGER[PARAM_READ_DISTANCE_TRIGGER_LENGTH] = {0x00, 0x00, 0x01, 0x00, 0x10, 0x00, 0x11, 0x00, 0x12, 0x00, 0x13, 0x00, 0x14, 0x00, 0x15, 0x00, 0x16, 0x00, 0x17, 0x00, 0x18, 0x00, 0x19, 0x00, 0x1A, 0x00, 0x1B, 0x00, 0x1C, 0x00, 0x1D, 0x00, 0x1E, 0x00, 0x1F, 0x00};
-    uint8_t PARAM_READ_DELAY_MAINTAIN[PARAM_READ_DELAY_MAINTAIN_LENGTH] = {0x04, 0x00, 0x20, 0x00, 0x21, 0x00, 0x22, 0x00, 0x23, 0x00, 0x24, 0x00, 0x25, 0x00, 0x26, 0x00, 0x27, 0x00, 0x28, 0x00, 0x29, 0x00, 0x2A, 0x00, 0x2B, 0x00, 0x2C, 0x00, 0x2D, 0x00, 0x2E, 0x00, 0x2F, 0x00};
+    uint8_t PARAM_READ_GENERAL_CONFIG[PARAM_READ_GENERAL_CONFIG_LENGTH] = {0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00};
+    uint8_t PARAM_READ_MOVING_TARGET_CONFIG[PARAM_READ_MOVING_TARGET_CONFIG_LENGTH] = {0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00, 0x05, 0x00, 0x06, 0x00, 0x07, 0x00, 0x08, 0x00, 0x09, 0x00, 0x0A, 0x00, 0x0B, 0x00};
+    uint8_t PARAM_READ_MOTIONLESS_TARGET_CONFIG[PARAM_READ_MOTIONLESS_TARGET_CONFIG_LENGTH] = {0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00, 0x05, 0x00, 0x06, 0x00, 0x07, 0x00, 0x08, 0x00, 0x09, 0x00};
     uint8_t PARAM_RAW_DATA_MODE[PARAM_RAW_DATA_MODE_LENGTH] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     float maxDbValue = log10(pow(2, 31) - 1) * 10;
@@ -126,6 +133,7 @@ class SensorHLKLD2420 : public Sensor
     void startupLoop();
     void uartGetPacket();
     int bytesToInt(byte byte1, byte byte2, byte byte3, byte byte4);
+    short bytesToShort(byte byte0, byte byte1)
     float rawToDb(int rawValue);
     int dBToRaw(float dbValue);
     void restartStartupLoop();
@@ -147,9 +155,9 @@ class SensorHLKLD2420 : public Sensor
     float measureValue(MeasureType iMeasureType) override;
 
   public:
-    SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire* iWire);
-    SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress);
-    virtual ~SensorHLKLD2420() {}
+    SensorXenD107H(uint16_t iMeasureTypes, TwoWire* iWire);
+    SensorXenD107H(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress);
+    virtual ~SensorXenD107H() {}
 
     void sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize) override;
     void sensorWriteFlash() override;

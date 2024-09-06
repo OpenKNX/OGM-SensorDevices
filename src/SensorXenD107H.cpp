@@ -79,7 +79,7 @@ void SensorXenD107H::startupLoop()
     switch (mHfSensorStartupState)
     {
         case START_INIT:
-            if (lastDetectedRange > NO_NUM)
+            if (isNum(lastDetectedRange))
             {
                 pSensorStateDelay = millis();
                 mHfSensorStartupState = START_SENSOR_ACTIVE;
@@ -89,7 +89,7 @@ void SensorXenD107H::startupLoop()
             break;
         case START_SENSOR_ACTIVE:
             // Communication is established, we wait for version info from Sensor
-            if (!moduleVersion.empty())
+            if (moduleVersionMajor > 0)
             {
                 pSensorStateDelay = millis();
                 mHfSensorStartupState = START_VERSION_RECEIVED;
@@ -102,7 +102,7 @@ void SensorXenD107H::startupLoop()
             break;
         case START_VERSION_RECEIVED:
             // We got version, we wait for read 1 done
-            if (storedDistanceMin > NO_NUM)
+            if (isNum(storedDistanceMin))
             {
                 pSensorStateDelay = millis();
                 mHfSensorStartupState = START_READ1_DONE;
@@ -115,7 +115,7 @@ void SensorXenD107H::startupLoop()
             break;
         case START_READ1_DONE:
             // Read 1 is done, we wait for read 2 done
-            if (storedDelayTime > NO_NUM)
+            if (isNum(storedDelayTime))
             {
                 pSensorStateDelay = millis();
                 mHfSensorStartupState = START_READ2_DONE;
@@ -128,7 +128,7 @@ void SensorXenD107H::startupLoop()
             break;
         case START_READ2_DONE:
             // Read 2 is done, we wait for read 2 done
-            if (storedDelayTime > NO_NUM)
+            if (isNum(storedDelayTime))
             {
                 pSensorStateDelay = millis();
                 mHfSensorStartupState = START_READ2_DONE;
@@ -212,6 +212,22 @@ void SensorXenD107H::uartGetPacket()
                 mBuffer[mBufferIndex] = rxByte;
                 mBufferIndex++;
 
+                mBufferTemp[mBufferTempIndex] = rxByte;
+                mBufferTempIndex++;
+
+                if (mBufferTempIndex > 63) {
+                    logHexTraceP(mBufferTemp, 64);
+                    mBufferTempIndex = 0;
+                    logTraceP("Still available:%u", HF_SERIAL.available());
+                }
+
+                /*if (HF_SERIAL.available() > 100)
+                {
+                    logTraceP("a:%u", HF_SERIAL.available());
+                    uint8_t mBufferTemp[1000];
+                    HF_SERIAL.readBytes(mBufferTemp, 1000);
+                }*/
+
                 if (BUFFER_LENGTH == HEADER_FOOTER_SIZE)
                 {
                     /*logTraceP("Header:");
@@ -221,18 +237,21 @@ void SensorXenD107H::uartGetPacket()
 
                     if (memcmp(mBuffer, HEADER, HEADER_FOOTER_SIZE) == 0)
                     {
+                        logTraceP("Header:DATA");
                         mPacketType = DATA;
                         mPacketState = GET_PACKET_DATA;
                         break;
                     }
                     if (memcmp(mBuffer, HEADER_COMMAND, HEADER_FOOTER_SIZE) == 0)
                     {
+                        logTraceP("Header:COMMAND_RESPONSE");
                         mPacketType = COMMAND_RESPONSE;
                         mPacketState = GET_PACKET_DATA;
                         break;
                     }
                     if (memcmp(mBuffer, HEADER_RAW_DATA, HEADER_FOOTER_SIZE) == 0)
                     {
+                        logTraceP("Header:RAW_DATA");
                         mPacketType = RAW_DATA;
                         mPacketState = GET_PACKET_DATA;
                         break;
@@ -272,6 +291,12 @@ void SensorXenD107H::uartGetPacket()
                     mPacketType == COMMAND_RESPONSE && memcmp(mBuffer + mBufferIndex - HEADER_FOOTER_SIZE, FOOTER_COMMAND, HEADER_FOOTER_SIZE) == 0 ||
                     mPacketType == RAW_DATA && memcmp(mBuffer + mBufferIndex - HEADER_FOOTER_SIZE, FOOTER_RAW_DATA, HEADER_FOOTER_SIZE) == 0)
                 {
+
+                    logTraceP("GPD:");
+                    logIndentUp();
+                    logHexTraceP(mBuffer, BUFFER_LENGTH);
+                    logIndentDown();
+
                     mPacketState = PROCESS_PACKET_STATE;
                     break;
                 }
@@ -345,7 +370,14 @@ void SensorXenD107H::rebootSensorHard()
 void SensorXenD107H::switchPower(bool on)
 {
     logDebugP("Switch power on: %u", on);
+#ifdef HF_POWER_BCU
+    TpUartDataLinkLayer* ddl = knx.bau().getDataLinkLayer();
+    ddl->powerControl(false|true);
+#else
+#ifdef HF_POWER_PIN
     digitalWrite(HF_POWER_PIN, on ? HIGH : LOW);
+#endif
+#endif
 
     if (on)
     {
@@ -356,9 +388,9 @@ void SensorXenD107H::switchPower(bool on)
 
 void SensorXenD107H::restartStartupLoop()
 {
-    moduleVersionMajor = NO_NUM;
-    moduleVersionMinor = NO_NUM;
-    moduleVersionRevision = NO_NUM;
+    moduleVersionMajor = 0;
+    moduleVersionMinor = 0;
+    moduleVersionRevision = 0;
     storedDistanceMin = NO_NUM;
     storedDistanceMax = NO_NUM;
     storedDelayTime = NO_NUM;
@@ -404,10 +436,10 @@ bool SensorXenD107H::getSensorData()
     int rangeOffset;
     int rangeValue;
 
-    if (calibrationOnOffTimer == 0 || delayCheck(calibrationOnOffTimer, 15000))
-        calibrationOnOffTimer = 0;
-    else
-        return result;
+    // if (calibrationOnOffTimer == 0 || delayCheck(calibrationOnOffTimer, 15000))
+    //     calibrationOnOffTimer = 0;
+    // else
+    //     return result;
 
     switch (mPacketType)
     {
@@ -425,9 +457,7 @@ bool SensorXenD107H::getSensorData()
             if (targetDetected)
             {
                 newDetectedRange = bytesToShort(mBuffer[1], mBuffer[2]) / (float)10;
-
-                short targetSpeed = bytesToShort(mBuffer[3], mBuffer[4]);
-                short targetSpeed = bytesToShort(mBuffer[3], mBuffer[4]);
+                lastDetectedSpeed = bytesToShort(mBuffer[3], mBuffer[4]);
 
                 if (lastDetectedRange != newDetectedRange)
                 {
@@ -486,9 +516,9 @@ bool SensorXenD107H::getSensorData()
                     mBufferIndex -= 2;
 
                     // mBuffer now holds the 3x2 bytes version information
-                    moduleVersionMajor = bytesToShort(mBuffer[0], mBuffer[1]);
-                    moduleVersionMinor = bytesToShort(mBuffer[2], mBuffer[3]);
-                    moduleVersionRevision = bytesToShort(mBuffer[4], mBuffer[5]);
+                    moduleVersionMajor = bytesToInt(mBuffer[0], mBuffer[1], mBuffer[2], mBuffer[3]);
+                    moduleVersionMinor = bytesToInt(mBuffer[4], mBuffer[5], mBuffer[6], mBuffer[7]);
+                    moduleVersionRevision = bytesToInt(mBuffer[8], mBuffer[9], mBuffer[10], mBuffer[11]);
                     logDebugP("Module version: %u.%u.%u", moduleVersionMajor, moduleVersionMinor, moduleVersionRevision);
                     result = true;
                     break;
@@ -837,7 +867,7 @@ void SensorXenD107H::sendCalibrationData()
         param[16] = 0;
         param[17] = 0;
 
-        sendCommand(CMD_WRITE_MODULE_CONFIG, param, 18);
+        //###sendCommand(CMD_WRITE_MODULE_CONFIG, param, 18);
         delay(500);
 
         openknx.console.writeDiagenoseKo("HLK par send");
@@ -869,7 +899,7 @@ void SensorXenD107H::sendCalibrationData()
 
             logDebugP("Gate %i:  %.2f", i, triggerThresholdDb[i]);
         }
-        sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
+        //###sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
         delay(500);
         for (uint8_t i = 8; i < 16; i++)
         {
@@ -885,7 +915,7 @@ void SensorXenD107H::sendCalibrationData()
 
             logDebugP("Gate %i:  %.2f", i, triggerThresholdDb[i]);
         }
-        sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
+        //###sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
         delay(500);
         logIndentDown();
 
@@ -909,7 +939,7 @@ void SensorXenD107H::sendCalibrationData()
 
             logDebugP("Gate %i:  %.2f", i, holdThresholdDb[i]);
         }
-        sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
+        //###sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
         delay(500);
         for (uint8_t i = 8; i < 16; i++)
         {
@@ -925,7 +955,7 @@ void SensorXenD107H::sendCalibrationData()
 
             logDebugP("Gate %i:  %.2f", i, holdThresholdDb[i]);
         }
-        sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
+        //###sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
         delay(500);
         logIndentDown();
 
@@ -981,7 +1011,7 @@ void SensorXenD107H::sendCommand(uint8_t command, const uint8_t parameter[], uin
     memcpy(cmdData + cmdDataIndex, parameter, parameterLength);
     cmdDataIndex += parameterLength;
 
-    memcpy(cmdData + cmdDataIndex, FOOTER, HEADER_FOOTER_SIZE);
+    memcpy(cmdData + cmdDataIndex, FOOTER_COMMAND, HEADER_FOOTER_SIZE);
 
     if (HF_SERIAL.availableForWrite())
     {
@@ -1193,9 +1223,9 @@ bool SensorXenD107H::processCommand(const std::string iCmd, bool iDebugKo)
     }
     else if (iCmd.length() == 7 && iCmd.substr(4, 3) == "ver")
     {
-        logInfoP("Module version: %s", moduleVersion.c_str());
+        logDebugP("Module version: %u.%u.%u", moduleVersionMajor, moduleVersionMinor, moduleVersionRevision);
         if (iDebugKo)
-            openknx.console.writeDiagenoseKo("HLK ver %s", moduleVersion.c_str());
+            openknx.console.writeDiagenoseKo("HLK ver %u.%u.%u", moduleVersionMajor, moduleVersionMinor, moduleVersionRevision);
         lResult = true;
     }
     else if (iCmd.length() == 8 && iCmd.substr(4, 4) == "sens")

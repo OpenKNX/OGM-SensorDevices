@@ -79,7 +79,7 @@ void SensorHLKLD2420::startupLoop()
     switch (mHfSensorStartupState)
     {
         case START_INIT:
-            if (lastDetectedRange > NO_NUM)
+            if (isNum(lastDetectedRange))
             {
                 pSensorStateDelay = millis();
                 mHfSensorStartupState = START_SENSOR_ACTIVE;
@@ -102,7 +102,7 @@ void SensorHLKLD2420::startupLoop()
             break;
         case START_VERSION_RECEIVED:
             // We got version, we wait for read 1 done
-            if (storedDistanceMin > NO_NUM)
+            if (isNum(storedDistanceMin))
             {
                 pSensorStateDelay = millis();
                 mHfSensorStartupState = START_READ1_DONE;
@@ -115,7 +115,7 @@ void SensorHLKLD2420::startupLoop()
             break;
         case START_READ1_DONE:
             // Read 1 is done, we wait for read 2 done
-            if (storedDelayTime > NO_NUM)
+            if (isNum(storedDelayTime))
             {
                 pSensorStateDelay = millis();
                 mHfSensorStartupState = START_READ2_DONE;

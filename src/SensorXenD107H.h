@@ -77,15 +77,25 @@ class SensorXenD107H : public Sensor
         RAW_DATA
     };
 
+    uint8_t mBufferTemp[1024];
+    int mBufferTempIndex = 0;
+
     uint8_t mBuffer[1288]; // message buffer
     int mBufferIndex = 0;
     PacketStates mPacketState = GET_SYNC_STATE;
     PacketType mPacketType;
     float lastDetectedRange = NO_NUM;
+    float lastDetectedSpeed = NO_NUM;
 
-    short moduleVersionMajor = NO_NUM;
-    short moduleVersionMinor = NO_NUM;
-    short moduleVersionRevision = NO_NUM;
+    int moduleVersionMajor = 0;
+    int moduleVersionMinor = 0;
+    int moduleVersionRevision = 0;
+
+    int storedMovingTargetRangeMax = NO_NUM;
+    int storedMotionlessTargetRangeMax = NO_NUM;
+    bool storedAiPoweredDetection = false;
+    bool storedDataTransfer = false;
+
     int storedDistanceMin = NO_NUM;
     int storedDistanceMax = NO_NUM;
     int storedDelayTime = NO_NUM;
@@ -133,7 +143,7 @@ class SensorXenD107H : public Sensor
     void startupLoop();
     void uartGetPacket();
     int bytesToInt(byte byte1, byte byte2, byte byte3, byte byte4);
-    short bytesToShort(byte byte0, byte byte1)
+    short bytesToShort(byte byte0, byte byte1);
     float rawToDb(int rawValue);
     int dBToRaw(float dbValue);
     void restartStartupLoop();

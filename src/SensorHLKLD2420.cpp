@@ -166,6 +166,8 @@ void SensorHLKLD2420::startupLoop()
 
 void SensorHLKLD2420::forceCalibration()
 {
+    logDebugP("Force sensor calibration");
+
     sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
     delay(100);
 
@@ -356,7 +358,10 @@ void SensorHLKLD2420::restartStartupLoop()
 void SensorHLKLD2420::resetRawDataRecording()
 {
     for (uint8_t i = 0; i < 16; i++)
-        rawDataRangeAverageTempDb[i] = 0;
+    {
+        rawDataRangeTempSumDb[i] = 0;
+        rawDataRangeMaxDb[i] = 0;
+    }
 
     rawDataLastRecordingReceived = millis();
     rawDataRecordingCount = 0;
@@ -391,10 +396,10 @@ bool SensorHLKLD2420::getSensorData()
     int rangeOffset;
     int rangeValue;
 
-    if (calibrationOnOffTimer == 0 || delayCheck(calibrationOnOffTimer, 15000))
-        calibrationOnOffTimer = 0;
-    else
-        return result;
+    // if (calibrationOnOffTimer == 0 || delayCheck(calibrationOnOffTimer, 15000))
+    //     calibrationOnOffTimer = 0;
+    // else
+    //     return result;
 
     switch (mPacketType)
     {
@@ -616,8 +621,14 @@ bool SensorHLKLD2420::getSensorData()
             }
             else if (rawDataRecordingCount < CALIBRATION_VALUE_COUNT)
             {
+                float tempDb;
                 for (uint8_t i = 0; i < 16; i++)
-                    rawDataRangeAverageTempDb[i] += rawToDb(rangeMax[i]);
+                {
+                    tempDb = rawToDb(rangeMax[i]);
+                    rawDataRangeTempSumDb[i] += tempDb;
+                    rawDataRangeTempSquareSumDb[i] += pow(tempDb, 2);
+                    rawDataRangeMaxDb[i] = max(rawDataRangeMaxDb[i] , tempDb);
+                }
                 rawDataRecordingCount++;
 
                 rawDataLastRecordingReceived = millis();
@@ -644,7 +655,7 @@ bool SensorHLKLD2420::getSensorData()
                     calibrationOnOffTimer = delayTimerInit();
 
                     for (uint8_t i = 0; i < 16; i++)
-                        rawDataRangeDifferencesDb[i] = (rawDataRangeAverageTempDb[i] / (float)rawDataRecordingCount) - rawDataRangeAverageDb[i];
+                        rawDataRangeDifferencesDb[i] = (rawDataRangeTempSumDb[i] / (float)rawDataRecordingCount) - rawDataRangeAverageDb[i];
                 }
                 else
                 {
@@ -652,7 +663,11 @@ bool SensorHLKLD2420::getSensorData()
                     delay(500);
 
                     for (uint8_t i = 0; i < 16; i++)
-                        rawDataRangeAverageDb[i] = rawDataRangeAverageTempDb[i] / (float)rawDataRecordingCount;
+                    {
+                        rawDataRangeAverageDb[i] = rawDataRangeTempSumDb[i] / (float)rawDataRecordingCount;
+                        rawDataRangeDeviationDb[i] = sqrtf((rawDataRangeTempSquareSumDb[i] - (pow(rawDataRangeTempSumDb[i], 2), rawDataRecordingCount)) / (rawDataRecordingCount - 1));
+                        rawDataRangeVarianceDb[i] = rawDataRangeTempSquareSumDb[i] - (pow(rawDataRangeTempSumDb[i], 2), rawDataRecordingCount);
+                    }
 
                     openknx.console.writeDiagenoseKo("HLK cal done");
                     // will be followed by "HLK cal send"
@@ -1091,6 +1106,12 @@ void SensorHLKLD2420::showHelp()
     openknx.console.printHelpLine("hlk cNNr 00.00", "Set calibration raw data average in dB at index NN (00-15).");
     openknx.console.printHelpLine("hlk cd read", "Print all 16 calibration raw data average differences from last test run in dB.");
     openknx.console.printHelpLine("hlk cNNd read", "Print calibration raw data average difference from last test run in dB at index NN (00-15).");
+    openknx.console.printHelpLine("hlk cs read", "Print all 16 calibration raw data standard deviations in dB.");
+    openknx.console.printHelpLine("hlk cNNs read", "Print calibration raw data standard deviation in dB at index NN (00-15).");
+    openknx.console.printHelpLine("hlk cv read", "Print all 16 calibration raw data variances in dB.");
+    openknx.console.printHelpLine("hlk cNNv read", "Print calibration raw data variance in dB at index NN (00-15).");
+    openknx.console.printHelpLine("hlk cm read", "Print all 16 calibration raw data maximums in dB.");
+    openknx.console.printHelpLine("hlk cNNm read", "Print calibration raw data maximum in dB at index NN (00-15).");
     openknx.console.printHelpLine("hlk ot read", "Print calculated trigger offset in dB based on sensitivity or all custom trigger offsets.");
     openknx.console.printHelpLine("hlk ot 00.00", "Set trigger offset in dB for all 16 indices.");
     openknx.console.printHelpLine("hlk oNNt read", "Print trigger offset in dB at index NN (00-15).");
@@ -1143,6 +1164,18 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
             openknx.console.writeDiagenoseKo("-> cd read");
             openknx.console.writeDiagenoseKo("");
             openknx.console.writeDiagenoseKo("-> cNNd read");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> cs read");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> cNNs read");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> cv read");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> cNNv read");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> cm read");
+            openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagenoseKo("-> cNNm read");
             openknx.console.writeDiagenoseKo("");
             openknx.console.writeDiagenoseKo("-> ot read");
             openknx.console.writeDiagenoseKo("");
@@ -1314,6 +1347,51 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
                 }
                 if (iDebugKo && i < 15)
                     openknx.console.writeDiagenoseKo("");
+            }
+            lResult = true;
+        }
+        else if (iCmd.substr(4, 7) == "cs read")
+        {
+            // calibration raw data standard deviation: read all
+            for (uint8_t i = 0; i < 16; i++)
+            {
+                logInfoP("rawDataRangeDeviationDb, gate %u: %.2f", i, rawDataRangeDeviationDb[i]);
+                if (iDebugKo)
+                {
+                    openknx.console.writeDiagenoseKo("HLK c%02us %.2f", i, rawDataRangeDeviationDb[i]);
+                    if (i < 15)
+                        openknx.console.writeDiagenoseKo("");
+                }
+            }
+            lResult = true;
+        }
+        else if (iCmd.substr(4, 7) == "cv read")
+        {
+            // calibration raw data variance: read all
+            for (uint8_t i = 0; i < 16; i++)
+            {
+                logInfoP("rawDataRangeVarianceDb, gate %u: %.2f", i, rawDataRangeVarianceDb[i]);
+                if (iDebugKo)
+                {
+                    openknx.console.writeDiagenoseKo("HLK c%02uv %.2f", i, rawDataRangeVarianceDb[i]);
+                    if (i < 15)
+                        openknx.console.writeDiagenoseKo("");
+                }
+            }
+            lResult = true;
+        }
+        else if (iCmd.substr(4, 7) == "cm read")
+        {
+            // calibration raw data max: read all
+            for (uint8_t i = 0; i < 16; i++)
+            {
+                logInfoP("rawDataRangeMaxDb, gate %u: %.2f", i, rawDataRangeMaxDb[i]);
+                if (iDebugKo)
+                {
+                    openknx.console.writeDiagenoseKo("HLK c%02um %.2f", i, rawDataRangeMaxDb[i]);
+                    if (i < 15)
+                        openknx.console.writeDiagenoseKo("");
+                }
             }
             lResult = true;
         }

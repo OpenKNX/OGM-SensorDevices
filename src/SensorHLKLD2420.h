@@ -98,9 +98,13 @@ class SensorHLKLD2420 : public Sensor
 
     uint32_t rawDataLastRecordingReceived = 0;
     int rawDataRecordingCount = 0;
-    float rawDataRangeAverageTempDb[16];
+    float rawDataRangeTempSumDb[16];
+    double rawDataRangeTempSquareSumDb[16];
     float rawDataRangeAverageDb[16] = {};
     float rawDataRangeDifferencesDb[16] = {};
+    float rawDataRangeDeviationDb[16] = {};
+    float rawDataRangeVarianceDb[16] = {};
+    float rawDataRangeMaxDb[16] = {};
     bool calibrationTestRunOnly = false;
 
     int8_t mDefaultSensitivity = 5;

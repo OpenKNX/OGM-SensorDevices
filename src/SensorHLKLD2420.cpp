@@ -665,8 +665,8 @@ bool SensorHLKLD2420::getSensorData()
                     for (uint8_t i = 0; i < 16; i++)
                     {
                         rawDataRangeAverageDb[i] = rawDataRangeTempSumDb[i] / (float)rawDataRecordingCount;
-                        rawDataRangeDeviationDb[i] = sqrtf((rawDataRangeTempSquareSumDb[i] - (pow(rawDataRangeTempSumDb[i], 2), rawDataRecordingCount)) / (rawDataRecordingCount - 1));
-                        rawDataRangeVarianceDb[i] = rawDataRangeTempSquareSumDb[i] - (pow(rawDataRangeTempSumDb[i], 2), rawDataRecordingCount);
+                        rawDataRangeDeviationDb[i] = sqrtf((rawDataRangeTempSquareSumDb[i] - (pow(rawDataRangeTempSumDb[i], 2) / rawDataRecordingCount)) / (rawDataRecordingCount - 1));
+                        rawDataRangeVarianceDb[i] = rawDataRangeTempSquareSumDb[i] - (pow(rawDataRangeTempSumDb[i], 2) / rawDataRecordingCount);
                     }
 
                     openknx.console.writeDiagenoseKo("HLK cal done");

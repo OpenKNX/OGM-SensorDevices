@@ -103,7 +103,6 @@ class SensorHLKLD2420 : public Sensor
     float rawDataRangeAverageDb[16] = {};
     float rawDataRangeDifferencesDb[16] = {};
     float rawDataRangeDeviationDb[16] = {};
-    float rawDataRangeVarianceDb[16] = {};
     float rawDataRangeMaxDb[16] = {};
     bool calibrationTestRunOnly = false;
 

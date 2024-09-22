@@ -1516,6 +1516,30 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
                 lResult = true;
             }
         }
+        else if (iCmd.substr(7, 1) == "s")
+        {
+            // calibration raw data standard deviation
+            if (iCmd.substr(9, 4) == "read")
+            {
+                // read value
+                logInfoP("rawDataRangeDeviationDb, gate %u: %.2f", valueIndex, rawDataRangeDeviationDb[valueIndex]);
+                if (iDebugKo)
+                    openknx.console.writeDiagenoseKo("HLK c%02ur %.2f", valueIndex, rawDataRangeDeviationDb[valueIndex]);
+                lResult = true;
+            }
+        }
+        else if (iCmd.substr(7, 1) == "m")
+        {
+            // calibration raw data max
+            if (iCmd.substr(9, 4) == "read")
+            {
+                // read value
+                logInfoP("rawDataRangeMaxDb, gate %u: %.2f", valueIndex, rawDataRangeMaxDb[valueIndex]);
+                if (iDebugKo)
+                    openknx.console.writeDiagenoseKo("HLK c%02ur %.2f", valueIndex, rawDataRangeMaxDb[valueIndex]);
+                lResult = true;
+            }
+        }
     }
     else if (iCmd.length() == 13 && iCmd.substr(4, 1) == "o")
     {

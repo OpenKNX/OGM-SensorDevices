@@ -360,6 +360,7 @@ void SensorHLKLD2420::resetRawDataRecording()
     for (uint8_t i = 0; i < 16; i++)
     {
         rawDataRangeTempSumDb[i] = 0;
+        rawDataRangeTempSquareSumDb[i] = 0;
         rawDataRangeMaxDb[i] = 0;
     }
 

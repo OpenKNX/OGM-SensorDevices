@@ -361,7 +361,7 @@ void SensorHLKLD2420::resetRawDataRecording()
     {
         rawDataRangeTempSumDb[i] = 0;
         rawDataRangeTempSquareSumDb[i] = 0;
-        rawDataRangeMaxDb[i] = 0;
+        rawDataRangeTempMaxDb[i] = 0;
     }
 
     rawDataLastRecordingReceived = millis();
@@ -628,7 +628,7 @@ bool SensorHLKLD2420::getSensorData()
                     tempDb = rawToDb(rangeMax[i]);
                     rawDataRangeTempSumDb[i] += tempDb;
                     rawDataRangeTempSquareSumDb[i] += pow(tempDb, 2);
-                    rawDataRangeMaxDb[i] = max(rawDataRangeMaxDb[i], tempDb);
+                    rawDataRangeTempMaxDb[i] = max(rawDataRangeTempMaxDb[i], tempDb);
                 }
                 rawDataRecordingCount++;
 
@@ -657,8 +657,10 @@ bool SensorHLKLD2420::getSensorData()
 
                     for (uint8_t i = 0; i < 16; i++)
                     {
-                        rawDataRangeDifferencesDb[i] = (rawDataRangeTempSumDb[i] / (float)rawDataRecordingCount) - rawDataRangeAverageDb[i];
-                        rawDataRangeDeviationDb[i] = sqrtf((rawDataRangeTempSquareSumDb[i] - (pow(rawDataRangeTempSumDb[i], 2) / rawDataRecordingCount)) / (rawDataRecordingCount - 1));
+                        rawDataRangeTestAverageDb[i] = rawDataRangeTempSumDb[i] / (float)rawDataRecordingCount;
+                        rawDataRangeTestDifferencesDb[i] = (rawDataRangeTempSumDb[i] / (float)rawDataRecordingCount) - rawDataRangeAverageDb[i];
+                        rawDataRangeTestDeviationDb[i] = sqrtf((rawDataRangeTempSquareSumDb[i] - (pow(rawDataRangeTempSumDb[i], 2) / rawDataRecordingCount)) / (rawDataRecordingCount - 1));
+                        rawDataRangeTestMaxDb[i] = rawDataRangeTempMaxDb[i];
                     }
                 }
                 else
@@ -670,6 +672,7 @@ bool SensorHLKLD2420::getSensorData()
                     {
                         rawDataRangeAverageDb[i] = rawDataRangeTempSumDb[i] / (float)rawDataRecordingCount;
                         rawDataRangeDeviationDb[i] = sqrtf((rawDataRangeTempSquareSumDb[i] - (pow(rawDataRangeTempSumDb[i], 2) / rawDataRecordingCount)) / (rawDataRecordingCount - 1));
+                        rawDataRangeMaxDb[i] = rawDataRangeTempMaxDb[i];
                     }
 
                     openknx.console.writeDiagenoseKo("HLK cal done");
@@ -1049,7 +1052,7 @@ void SensorHLKLD2420::sensorReadFlash(const uint8_t *buffer, const uint16_t size
     logIndentUp();
 
     uint8_t version = openknx.flash.readByte();
-    if (version != HLKLD2420_FLASH_VERSION)
+    if (version > HLKLD2420_FLASH_VERSION)
     {
         logDebugP("Invalid flash version %u", version);
         return;
@@ -1062,8 +1065,24 @@ void SensorHLKLD2420::sensorReadFlash(const uint8_t *buffer, const uint16_t size
         return;
     }
 
-    for (uint8_t i = 0; i < 16; i++)
-        rawDataRangeAverageDb[i] = openknx.flash.readFloat();
+    if (version == 0)
+    {
+        for (uint8_t i = 0; i < 16; i++)
+            rawDataRangeAverageDb[i] = openknx.flash.readFloat();
+    }
+    else if (version == 1)
+    {
+        for (uint8_t i = 0; i < 16; i++)
+            triggerThresholdDb[i] = openknx.flash.readFloat();
+        for (uint8_t i = 0; i < 16; i++)
+            holdThresholdDb[i] = openknx.flash.readFloat();
+        for (uint8_t i = 0; i < 16; i++)
+            rawDataRangeAverageDb[i] = openknx.flash.readFloat();
+        for (uint8_t i = 0; i < 16; i++)
+            rawDataRangeDeviationDb[i] = openknx.flash.readFloat();
+        for (uint8_t i = 0; i < 16; i++)
+            rawDataRangeMaxDb[i] = openknx.flash.readFloat();
+    }
 
     calibrationCompleted = true;
 
@@ -1083,7 +1102,15 @@ void SensorHLKLD2420::sensorWriteFlash()
     openknx.flash.writeInt(HLKLD2420_FLASH_MAGIC_WORD);
 
     for (uint8_t i = 0; i < 16; i++)
+        openknx.flash.writeFloat(triggerThresholdDb[i]);
+    for (uint8_t i = 0; i < 16; i++)
+        openknx.flash.writeFloat(holdThresholdDb[i]);
+    for (uint8_t i = 0; i < 16; i++)
         openknx.flash.writeFloat(rawDataRangeAverageDb[i]);
+    for (uint8_t i = 0; i < 16; i++)
+        openknx.flash.writeFloat(rawDataRangeDeviationDb[i]);
+    for (uint8_t i = 0; i < 16; i++)
+        openknx.flash.writeFloat(rawDataRangeMaxDb[i]);
 
     logDebugP("Calibration data written to flash");
 }
@@ -1330,17 +1357,17 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
             // calibration raw data average differences: read all
             for (uint8_t i = 0; i < 16; i++)
             {
-                if (rawDataRangeDifferencesDb[i] < 0)
+                if (rawDataRangeTestDifferencesDb[i] < 0)
                 {
-                    logInfoP("rawDataRangeDifferencesDb, gate %u:%.2f", i, rawDataRangeDifferencesDb[i]);
+                    logInfoP("rawDataRangeTestDifferencesDb, gate %u:%.2f", i, rawDataRangeTestDifferencesDb[i]);
                     if (iDebugKo)
-                        openknx.console.writeDiagenoseKo("HLK c%02ud%.2f", i, rawDataRangeDifferencesDb[i]);
+                        openknx.console.writeDiagenoseKo("HLK c%02ud%.2f", i, rawDataRangeTestDifferencesDb[i]);
                 }
                 else
                 {
-                    logInfoP("rawDataRangeDifferencesDb, gate %u: %.2f", i, rawDataRangeDifferencesDb[i]);
+                    logInfoP("rawDataRangeTestDifferencesDb, gate %u: %.2f", i, rawDataRangeTestDifferencesDb[i]);
                     if (iDebugKo)
-                        openknx.console.writeDiagenoseKo("HLK c%02ud %.2f", i, rawDataRangeDifferencesDb[i]);
+                        openknx.console.writeDiagenoseKo("HLK c%02ud %.2f", i, rawDataRangeTestDifferencesDb[i]);
                 }
                 if (iDebugKo && i < 15)
                     openknx.console.writeDiagenoseKo("");
@@ -1504,17 +1531,17 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
             if (iCmd.substr(9, 4) == "read")
             {
                 // read value
-                if (rawDataRangeDifferencesDb[valueIndex] < 0)
+                if (rawDataRangeTestDifferencesDb[valueIndex] < 0)
                 {
-                    logInfoP("rawDataRangeDifferencesDb, gate %u:%.2f", valueIndex, rawDataRangeDifferencesDb[valueIndex]);
+                    logInfoP("rawDataRangeTestDifferencesDb, gate %u:%.2f", valueIndex, rawDataRangeTestDifferencesDb[valueIndex]);
                     if (iDebugKo)
-                        openknx.console.writeDiagenoseKo("HLK c%02ud%.2f", valueIndex, rawDataRangeDifferencesDb[valueIndex]);
+                        openknx.console.writeDiagenoseKo("HLK c%02ud%.2f", valueIndex, rawDataRangeTestDifferencesDb[valueIndex]);
                 }
                 else
                 {
-                    logInfoP("rawDataRangeDifferencesDb, gate %u: %.2f", valueIndex, rawDataRangeDifferencesDb[valueIndex]);
+                    logInfoP("rawDataRangeTestDifferencesDb, gate %u: %.2f", valueIndex, rawDataRangeTestDifferencesDb[valueIndex]);
                     if (iDebugKo)
-                        openknx.console.writeDiagenoseKo("HLK c%02ud %.2f", valueIndex, rawDataRangeDifferencesDb[valueIndex]);
+                        openknx.console.writeDiagenoseKo("HLK c%02ud %.2f", valueIndex, rawDataRangeTestDifferencesDb[valueIndex]);
                 }
                 lResult = true;
             }
@@ -1636,13 +1663,13 @@ bool SensorHLKLD2420::getCalibrationData(uint8_t *iData, uint8_t *eResultData, u
             lDataArray = rawDataRangeMaxDb;
             break;
         case 4: // cur raw
-            lDataArray = rawDataRangeAverageDb;
+            lDataArray = rawDataRangeTestAverageDb;
             break;
         case 5: // cur std
-            lDataArray = rawDataRangeDeviationDb;
+            lDataArray = rawDataRangeTestDeviationDb;
             break;
         case 6: // cur max
-            lDataArray = rawDataRangeMaxDb;
+            lDataArray = rawDataRangeTestAverageDb;
             break;
         case 7:
             lDataArray = holdThresholdDb;

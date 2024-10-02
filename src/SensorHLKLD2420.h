@@ -150,11 +150,11 @@ class SensorHLKLD2420 : public Sensor
     float measureValue(MeasureType iMeasureType) override;
 
   public:
-    SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire* iWire);
-    SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress);
+    SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire *iWire);
+    SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire *iWire, uint8_t iAddress);
     virtual ~SensorHLKLD2420() {}
 
-    void sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize) override;
+    void sensorReadFlash(const uint8_t *iBuffer, const uint16_t iSize) override;
     void sensorWriteFlash() override;
     uint16_t sensorFlashSize() override;
 
@@ -171,6 +171,10 @@ class SensorHLKLD2420 : public Sensor
     bool processCommand(const std::string iCmd, bool iDebugKo);
     std::string logPrefix() override;
     void switchPower(bool on);
+    bool handleFunctionProperty(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength);
+    bool getCalibrationData(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength);
+    bool setCalibrationData(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength);
+    bool doCalibration(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength);
 };
     #endif
 #endif

@@ -628,7 +628,7 @@ bool SensorHLKLD2420::getSensorData()
                     tempDb = rawToDb(rangeMax[i]);
                     rawDataRangeTempSumDb[i] += tempDb;
                     rawDataRangeTempSquareSumDb[i] += pow(tempDb, 2);
-                    rawDataRangeMaxDb[i] = max(rawDataRangeMaxDb[i] , tempDb);
+                    rawDataRangeMaxDb[i] = max(rawDataRangeMaxDb[i], tempDb);
                 }
                 rawDataRecordingCount++;
 
@@ -656,7 +656,10 @@ bool SensorHLKLD2420::getSensorData()
                     calibrationOnOffTimer = delayTimerInit();
 
                     for (uint8_t i = 0; i < 16; i++)
+                    {
                         rawDataRangeDifferencesDb[i] = (rawDataRangeTempSumDb[i] / (float)rawDataRecordingCount) - rawDataRangeAverageDb[i];
+                        rawDataRangeDeviationDb[i] = sqrtf((rawDataRangeTempSquareSumDb[i] - (pow(rawDataRangeTempSumDb[i], 2) / rawDataRecordingCount)) / (rawDataRecordingCount - 1));
+                    }
                 }
                 else
                 {
@@ -1599,6 +1602,118 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
         }
     }
     return lResult;
+}
+
+bool SensorHLKLD2420::handleFunctionProperty(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength)
+{
+    // dispatch ets online commands
+    switch (iData[0])
+    {
+        case 1:
+            return getCalibrationData(iData, eResultData, eResultLength);
+        case 2:
+            return doCalibration(iData, eResultData, eResultLength);
+        case 3:
+            return setCalibrationData(iData, eResultData, eResultLength);
+        default:
+            return false;
+    }
+}
+
+bool SensorHLKLD2420::getCalibrationData(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength)
+{
+    uint8_t lRequestedData = iData[1];
+    float *lDataArray = nullptr;
+    switch (lRequestedData)
+    {
+        case 1: // cal raw
+            lDataArray = rawDataRangeAverageDb;
+            break;
+        case 2: // cal std
+            lDataArray = rawDataRangeDeviationDb;
+            break;
+        case 3: // cal max
+            lDataArray = rawDataRangeMaxDb;
+            break;
+        case 4: // cur raw
+            lDataArray = rawDataRangeAverageDb;
+            break;
+        case 5: // cur std
+            lDataArray = rawDataRangeDeviationDb;
+            break;
+        case 6: // cur max
+            lDataArray = rawDataRangeMaxDb;
+            break;
+        case 7:
+            lDataArray = holdThresholdDb;
+            break;
+        case 8:
+            lDataArray = triggerThresholdDb;
+            break;
+        default:
+            return false;
+            break;
+    }
+
+    eResultData[0] = 0;
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        uint16_t lValue = lDataArray[i] * 100.0 + 0.5;
+        eResultData[i * 2 + 1] = lValue >> 8;
+        eResultData[i * 2 + 2] = lValue & 0xFF;
+    }
+    eResultLength = 33;
+    return true;
+}
+
+bool SensorHLKLD2420::setCalibrationData(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength)
+{
+    // iData: 1 Byte command (3), 1 Byte subcommand (7 = hold, 8 = trigger), 16*2 Byte dB-Value * 100 (as integer)
+    uint8_t lRequestedData = iData[1];
+    float *lDataArray = nullptr;
+    switch (lRequestedData)
+    {
+        case 7:
+            lDataArray = holdThresholdDb;
+            break;
+        case 8:
+            lDataArray = triggerThresholdDb;
+            break;
+        default:
+            return false;
+            break;
+    }
+
+    eResultData[0] = 0;
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        uint8_t lArrayIndex = i * 2 + 2;
+        float lValue = (iData[lArrayIndex] << 8 | iData[lArrayIndex + 1] & 0xFF) / 100.0;
+        lDataArray[i] = lValue;
+    }
+    eResultLength = 1;
+    return true;
+}
+
+bool SensorHLKLD2420::doCalibration(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength)
+{
+    eResultData[0] = 0;
+    eResultData[1] = 0;
+    eResultLength = 2;
+    switch (iData[1])
+    {
+        case 4:
+            calibrationTestRunOnly = true;
+        case 1:
+            forceCalibration();
+            return true;
+        case 2:
+            eResultData[1] = calibrationCompleted;
+            return true;
+        default:
+            eResultData[0] = 1;
+            return false;
+    }
 }
 
     #endif

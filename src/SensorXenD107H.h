@@ -84,21 +84,21 @@ class SensorXenD107H : public Sensor
     int mBufferIndex = 0;
     PacketStates mPacketState = GET_SYNC_STATE;
     PacketType mPacketType;
-    float lastDetectedRange = NO_NUM;
-    float lastDetectedSpeed = NO_NUM;
+    float lastDetectedRange = -2;
+    float lastDetectedSpeed = -2;
 
-    int moduleVersionMajor = 0;
-    int moduleVersionMinor = 0;
-    int moduleVersionRevision = 0;
+    short moduleVersionMajor = 0;
+    short moduleVersionMinor = 0;
+    short moduleVersionRevision = 0;
 
-    int storedMovingTargetRangeMax = NO_NUM;
-    int storedMotionlessTargetRangeMax = NO_NUM;
+    int storedMovingTargetRangeMax = -1;
+    int storedMotionlessTargetRangeMax = -1;
     bool storedAiPoweredDetection = false;
     bool storedDataTransfer = false;
 
-    int storedDistanceMin = NO_NUM;
-    int storedDistanceMax = NO_NUM;
-    int storedDelayTime = NO_NUM;
+    int storedDistanceMin = -1;
+    int storedDistanceMax = -1;
+    int storedDelayTime = -1;
     int storedTriggerThreshold[16];
     int storedHoldThreshold[16];
     float triggerThresholdDb[16];
@@ -154,7 +154,7 @@ class SensorXenD107H : public Sensor
 
   protected:
     uint8_t mPresence = -1;
-    float mMoveSpeed = NO_NUM;
+    float mMoveSpeed = NAN;
     int8_t mSensitivity = -1;
     uint16_t mDelayTime = 30;
     uint8_t mRangeGateMin = 0;

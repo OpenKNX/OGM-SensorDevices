@@ -79,7 +79,7 @@ void SensorXenD107H::startupLoop()
     switch (mHfSensorStartupState)
     {
         case START_INIT:
-            if (isNum(lastDetectedRange))
+            if (lastDetectedRange >= -1) //if (isNum(lastDetectedRange))
             {
                 pSensorStateDelay = millis();
                 mHfSensorStartupState = START_SENSOR_ACTIVE;
@@ -93,6 +93,7 @@ void SensorXenD107H::startupLoop()
             {
                 pSensorStateDelay = millis();
                 mHfSensorStartupState = START_VERSION_RECEIVED;
+                //mHfSensorStartupState = START_READ3_DONE;
             }
             else if (delayCheck(pSensorStateDelay, 1000))
             {
@@ -102,10 +103,11 @@ void SensorXenD107H::startupLoop()
             break;
         case START_VERSION_RECEIVED:
             // We got version, we wait for read 1 done
-            if (isNum(storedDistanceMin))
+            if (storedDelayTime >= 0) //if (isNum(storedDistanceMin))
             {
                 pSensorStateDelay = millis();
-                mHfSensorStartupState = START_READ1_DONE;
+                //mHfSensorStartupState = START_READ1_DONE;
+                mHfSensorStartupState = START_READ3_DONE;
             }
             else if (delayCheck(pSensorStateDelay, 2000))
             {
@@ -115,7 +117,7 @@ void SensorXenD107H::startupLoop()
             break;
         case START_READ1_DONE:
             // Read 1 is done, we wait for read 2 done
-            if (isNum(storedDelayTime))
+            if (storedDelayTime >= 0) //if (isNum(storedDelayTime))
             {
                 pSensorStateDelay = millis();
                 mHfSensorStartupState = START_READ2_DONE;
@@ -128,10 +130,10 @@ void SensorXenD107H::startupLoop()
             break;
         case START_READ2_DONE:
             // Read 2 is done, we wait for read 2 done
-            if (isNum(storedDelayTime))
+            if (storedDelayTime >= 0) //if (isNum(storedDelayTime))
             {
                 pSensorStateDelay = millis();
-                mHfSensorStartupState = START_READ2_DONE;
+                mHfSensorStartupState = START_READ3_DONE;
             }
             else if (delayCheck(pSensorStateDelay, 2000))
             {
@@ -447,6 +449,10 @@ bool SensorXenD107H::getSensorData()
         {
             payloadSize = mBuffer[4];
 
+            // cut 6 bytes (4 header + 2 size) at the beginning and 4 bytes footer at the end
+            memmove(mBuffer, mBuffer + 6, BUFFER_LENGTH - 6);
+            mBufferIndex -= 10;
+
             if (BUFFER_LENGTH != payloadSize)
             {
                 logDebugP("Invalid data packet size: %d", BUFFER_LENGTH);
@@ -456,7 +462,7 @@ bool SensorXenD107H::getSensorData()
             bool targetDetected = mBuffer[0] == 1;
             if (targetDetected)
             {
-                newDetectedRange = bytesToShort(mBuffer[1], mBuffer[2]) / (float)10;
+                newDetectedRange = bytesToShort(mBuffer[1], mBuffer[2]) / (float)100;
                 lastDetectedSpeed = bytesToShort(mBuffer[3], mBuffer[4]);
 
                 if (lastDetectedRange != newDetectedRange)
@@ -491,8 +497,8 @@ bool SensorXenD107H::getSensorData()
                 break;
             }
 
-            // we expect "01 00 00" after the command code for success
-            success = mBuffer[1] == 1 && mBuffer[2] == 0 && mBuffer[3] == 0;
+            // we expect "01" after the command code for success
+            success = mBuffer[1] == 1;
             successMessage = success ? "success" : "failed";
 
             switch (mBuffer[0])
@@ -511,15 +517,22 @@ bool SensorXenD107H::getSensorData()
                     if (!success)
                         break;
 
-                    // cut 2 bytes at the beginning: 00 01
+                    // cut 2 bytes at the beginning (command word): 00 01
                     memmove(mBuffer, mBuffer + 2, BUFFER_LENGTH - 2);
                     mBufferIndex -= 2;
+                    
+                    // mBuffer now holds 3x2 bytes undocumented version information
+                    moduleVersionMajor = bytesToShort(mBuffer[0], mBuffer[1]);
+                    moduleVersionMinor = bytesToShort(mBuffer[2], mBuffer[3]);
+                    moduleVersionRevision = bytesToShort(mBuffer[4], mBuffer[5]);
+                    logDebugP("Unknown version: %u.%u.%u", moduleVersionMajor, moduleVersionMinor, moduleVersionRevision);
 
-                    // mBuffer now holds the 3x2 bytes version information
-                    moduleVersionMajor = bytesToInt(mBuffer[0], mBuffer[1], mBuffer[2], mBuffer[3]);
-                    moduleVersionMinor = bytesToInt(mBuffer[4], mBuffer[5], mBuffer[6], mBuffer[7]);
-                    moduleVersionRevision = bytesToInt(mBuffer[8], mBuffer[9], mBuffer[10], mBuffer[11]);
+                    // and 3x2 bytes actual version information
+                    moduleVersionMajor = bytesToShort(mBuffer[6], mBuffer[7]);
+                    moduleVersionMinor = bytesToShort(mBuffer[8], mBuffer[9]);
+                    moduleVersionRevision = bytesToShort(mBuffer[10], mBuffer[11]);
                     logDebugP("Module version: %u.%u.%u", moduleVersionMajor, moduleVersionMinor, moduleVersionRevision);
+
                     result = true;
                     break;
                 case CMD_READ_GENERAL_CONFIG:
@@ -1057,7 +1070,7 @@ bool SensorXenD107H::checkSensorConnection()
 
 bool SensorXenD107H::begin()
 {
-    logDebugP("Starting sensor HLK-LD2420 (Presence)... ");
+    logDebugP("Starting sensor XenD107H (Presence)... ");
     bool lResult = Sensor::begin();
     logResult(lResult);
     return lResult;

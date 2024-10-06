@@ -43,9 +43,9 @@
 
         #define BUFFER_LENGTH mBufferIndex
 
-        #define HLKLD2420_FLASH_VERSION 0
+        #define HLKLD2420_FLASH_VERSION 1
         #define HLKLD2420_FLASH_MAGIC_WORD 2274541778
-        #define HLKLD2420_FLASH_SIZE 69
+        #define HLKLD2420_FLASH_SIZE 325
 
 class SensorHLKLD2420 : public Sensor
 {

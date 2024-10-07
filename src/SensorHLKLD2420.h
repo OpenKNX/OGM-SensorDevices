@@ -85,12 +85,8 @@ class SensorHLKLD2420 : public Sensor
     int storedDelayTime = NO_NUM;
     int storedTriggerThreshold[16];
     int storedHoldThreshold[16];
-    float triggerThresholdDb[16];
-    float holdThresholdDb[16];
-    float triggerOffsetDb;
-    float holdOffsetDb;
-    float customeTriggerOffsetDb[16] = {};
-    float customHoldOffsetDb[16] = {};
+    float triggerOffsetDb[16];
+    float holdOffsetDb[16];
     bool calibrationCompleted = false;
     bool useFactoryDefaultThresholds = false;
     // initially suppress ON/OFF signals form HF-Sensor
@@ -138,7 +134,6 @@ class SensorHLKLD2420 : public Sensor
     void restartStartupLoop();
     void resetRawDataRecording();
     void sendCalibrationData();
-    bool useCustomOffsets();
     bool getSensorData();
 
   protected:

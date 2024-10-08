@@ -43,9 +43,9 @@
 
         #define BUFFER_LENGTH mBufferIndex
 
-        #define HLKLD2420_FLASH_VERSION 0
+        #define HLKLD2420_FLASH_VERSION 1
         #define HLKLD2420_FLASH_MAGIC_WORD 2274541778
-        #define HLKLD2420_FLASH_SIZE 69
+        #define HLKLD2420_FLASH_SIZE 325
 
 class SensorHLKLD2420 : public Sensor
 {
@@ -85,12 +85,8 @@ class SensorHLKLD2420 : public Sensor
     int storedDelayTime = NO_NUM;
     int storedTriggerThreshold[16];
     int storedHoldThreshold[16];
-    float triggerThresholdDb[16];
-    float holdThresholdDb[16];
-    float triggerOffsetDb;
-    float holdOffsetDb;
-    float customeTriggerOffsetDb[16] = {};
-    float customHoldOffsetDb[16] = {};
+    float triggerOffsetDb[16];
+    float holdOffsetDb[16];
     bool calibrationCompleted = false;
     bool useFactoryDefaultThresholds = false;
     // initially suppress ON/OFF signals form HF-Sensor
@@ -98,9 +94,16 @@ class SensorHLKLD2420 : public Sensor
 
     uint32_t rawDataLastRecordingReceived = 0;
     int rawDataRecordingCount = 0;
-    float rawDataRangeAverageTempDb[16];
+    float rawDataRangeTempSumDb[16];
+    double rawDataRangeTempSquareSumDb[16];
+    float rawDataRangeTempMaxDb[16] = {};
     float rawDataRangeAverageDb[16] = {};
-    float rawDataRangeDifferencesDb[16] = {};
+    float rawDataRangeDeviationDb[16] = {};
+    float rawDataRangeMaxDb[16] = {};
+    float rawDataRangeTestAverageDb[16] = {};
+    float rawDataRangeTestDifferencesDb[16] = {};
+    float rawDataRangeTestDeviationDb[16] = {};
+    float rawDataRangeTestMaxDb[16] = {};
     bool calibrationTestRunOnly = false;
 
     int8_t mDefaultSensitivity = 5;
@@ -131,7 +134,6 @@ class SensorHLKLD2420 : public Sensor
     void restartStartupLoop();
     void resetRawDataRecording();
     void sendCalibrationData();
-    bool useCustomOffsets();
     bool getSensorData();
 
   protected:
@@ -147,11 +149,11 @@ class SensorHLKLD2420 : public Sensor
     float measureValue(MeasureType iMeasureType) override;
 
   public:
-    SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire* iWire);
-    SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress);
+    SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire *iWire);
+    SensorHLKLD2420(uint16_t iMeasureTypes, TwoWire *iWire, uint8_t iAddress);
     virtual ~SensorHLKLD2420() {}
 
-    void sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize) override;
+    void sensorReadFlash(const uint8_t *iBuffer, const uint16_t iSize) override;
     void sensorWriteFlash() override;
     uint16_t sensorFlashSize() override;
 
@@ -168,6 +170,10 @@ class SensorHLKLD2420 : public Sensor
     bool processCommand(const std::string iCmd, bool iDebugKo);
     std::string logPrefix() override;
     void switchPower(bool on);
+    bool handleFunctionProperty(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength);
+    bool getCalibrationData(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength);
+    bool setCalibrationData(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength);
+    bool doCalibration(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength);
 };
     #endif
 #endif

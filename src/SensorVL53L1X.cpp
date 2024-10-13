@@ -4,10 +4,10 @@
     #include <Wire.h>
 
 SensorVL53L1X::SensorVL53L1X(uint16_t iMeasureTypes, TwoWire* iWire)
-    : Sensor(iMeasureTypes, iWire, VL53L1X_I2C_ADDR), VL53L1X(){};
+    : Sensor(iMeasureTypes, iWire, VL53L1X_I2C_ADDR), VL53L1X() {};
 
 SensorVL53L1X::SensorVL53L1X(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress)
-    : Sensor(iMeasureTypes, iWire, iAddress), VL53L1X(){};
+    : Sensor(iMeasureTypes, iWire, iAddress), VL53L1X() {};
 
 uint8_t SensorVL53L1X::getSensorClass()
 {
@@ -41,7 +41,7 @@ void SensorVL53L1X::sensorLoopInternal()
             }
             break;
         case Running:
-            if (delayCheck(pSensorStateDelay, 2000))
+            if (delayCheck(pSensorStateDelay, 250))
             {
                 getSensorData();
                 pSensorStateDelay = millis();
@@ -70,7 +70,7 @@ float SensorVL53L1X::measureValue(MeasureType iMeasureType)
 bool SensorVL53L1X::begin()
 {
     logDebugP("Starting sensor VL53L1X... ");
-    this->setTimeout(500);
+    this->setTimeout(100);
     bool lResult = this->init();
     if (lResult)
     {
@@ -80,7 +80,7 @@ bool SensorVL53L1X::begin()
         // medium and long distance modes. See the VL53L1X datasheet for more
         // information on range and timing limits.
         this->setDistanceMode(VL53L1X::Long);
-        this->setMeasurementTimingBudget(100000);
+        this->setMeasurementTimingBudget(50000);
 
         // Start continuous readings at a rate of one measurement every 50 ms (the
         // inter-measurement period). This period should be at least as long as the

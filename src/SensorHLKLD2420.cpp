@@ -658,7 +658,7 @@ bool SensorHLKLD2420::getSensorData()
                     for (uint8_t i = 0; i < 16; i++)
                     {
                         rawDataRangeTestAverageDb[i] = rawDataRangeTempSumDb[i] / (float)rawDataRecordingCount;
-                        rawDataRangeTestDifferencesDb[i] = (rawDataRangeTempSumDb[i] / (float)rawDataRecordingCount) - rawDataRangeAverageDb[i];
+                        rawDataRangeTestDifferencesDb[i] = rawDataRangeTestAverageDb[i] - rawDataRangeAverageDb[i];
                         rawDataRangeTestDeviationDb[i] = sqrtf((rawDataRangeTempSquareSumDb[i] - (pow(rawDataRangeTempSumDb[i], 2) / rawDataRecordingCount)) / (rawDataRecordingCount - 1));
                         rawDataRangeTestMaxDb[i] = rawDataRangeTempMaxDb[i];
                     }
@@ -757,26 +757,30 @@ void SensorHLKLD2420::sendCalibrationData()
 
         logIndentDown();
 
-        // if (useFormula)
-        // {
-        //     logDebugP("Using formula with sensitivity: %d", mSensitivity);
-        //     int8_t lSensitivity = mSensitivity > 0 && mSensitivity <= 10 ? mSensitivity : SENSITIVITY_DEFAULT;
-        //     for (uint8_t i = 0; i < 16; i++)
-        //     {
-        //         triggerOffsetDb[i] = 6 / log10(lSensitivity + 1);
-        //         holdOffsetDb[i] = 3 * (1 / log10(lSensitivity + 1)) - 1.5;
-        //     }
-        // }
-        // else
-             logDebugP("No formula used, sensitivity ignored");
+        if (ParamPM_HlkSettings)
+        {
+            logDebugP("No formula used, sensitivity ignored");
 
-        // calculate trigger thresholds
-        for (uint8_t i = 0; i < 16; i++)
-            triggerThresholdDb[i] = rawDataRangeAverageDb[i] + triggerOffsetDb[i];
+            // calculate trigger thresholds
+            for (uint8_t i = 0; i < 16; i++)
+                triggerThresholdDb[i] = rawDataRangeAverageDb[i] + triggerOffsetDb[i];
 
-        // calculate hold thresholds
-        for (uint8_t i = 0; i < 16; i++)
-            holdThresholdDb[i] = rawDataRangeAverageDb[i] + holdOffsetDb[i];
+            // calculate hold thresholds
+            for (uint8_t i = 0; i < 16; i++)
+                holdThresholdDb[i] = rawDataRangeAverageDb[i] + holdOffsetDb[i];
+        }
+        else
+        {
+            logDebugP("Using formula with sensitivity: %d", mSensitivity);
+            int8_t lSensitivity = mSensitivity > 0 && mSensitivity <= 10 ? mSensitivity : SENSITIVITY_DEFAULT;
+            for (uint8_t i = 0; i < 16; i++)
+            {
+                triggerOffsetDb[i] = 6 / log10(lSensitivity + 1);
+                triggerThresholdDb[i] = rawDataRangeAverageDb[i] + triggerOffsetDb[i];
+                holdOffsetDb[i] = 3 * (1 / log10(lSensitivity + 1)) - 1.5;
+                holdThresholdDb[i] = rawDataRangeAverageDb[i] + holdOffsetDb[i];
+            }
+        }
     }
 
     bool storedCurrentDistanceTime =
@@ -1493,13 +1497,13 @@ bool SensorHLKLD2420::getCalibrationData(uint8_t *iData, uint8_t *eResultData, u
             lDataArray = rawDataRangeTestDeviationDb;
             break;
         case 6: // cur max
-            lDataArray = rawDataRangeTestAverageDb;
+            lDataArray = rawDataRangeTestMaxDb;
             break;
         case 7:
-            lDataArray = triggerOffsetDb;
+            lDataArray = holdOffsetDb;
             break;
         case 8:
-            lDataArray = holdOffsetDb;
+            lDataArray = triggerOffsetDb;
             break;
         default:
             return false;

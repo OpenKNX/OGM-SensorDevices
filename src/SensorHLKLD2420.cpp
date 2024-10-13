@@ -804,6 +804,13 @@ void SensorHLKLD2420::sendCalibrationData()
 
     uint8_t param[48];
 
+    if (!storedCurrentDistanceTime ||
+        !storedCurrentCalibration)
+    {
+        sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
+        delay(100);
+    }
+
     if (storedCurrentDistanceTime)
         logDebugP("Skip writing distance/time to sensor as data is current");
     else
@@ -1546,6 +1553,10 @@ bool SensorHLKLD2420::setCalibrationData(uint8_t *iData, uint8_t *eResultData, u
         float lValue = (iData[lArrayIndex] << 8 | iData[lArrayIndex + 1] & 0xFF) / 100.0;
         lDataArray[i] = lValue;
     }
+
+    sendCalibrationData();
+    openknx.flash.save(true);
+
     eResultLength = 1;
     return true;
 }

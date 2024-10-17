@@ -63,10 +63,10 @@ class SensorHLKLD2420 : public Sensor
 
     enum PacketType
     {
-        //! Presence detection on
-        ON = 0,
-        //! Presence detection off
-        OFF,
+        //! Presence detection minimal data
+        DATA_MINIMAL = 0,
+        //! Presence detection standard data
+        DATA_STANDARD,
         //! Command packet
         COMMAND_RESPONSE,
         //! Raw data packet
@@ -109,10 +109,12 @@ class SensorHLKLD2420 : public Sensor
     int8_t mDefaultSensitivity = 5;
     uint8_t mHfSensorStartupState = 0;
 
-    uint8_t HEADER_ON[4] = {0x4F, 0x4E, 0x0D, 0x0A};
-    uint8_t HEADER_OFF[4] = {0x4F, 0x46, 0x46, 0x0D};
+    uint8_t HEADER_DATA_MINIMAL[1] = {0x6E};
+    uint8_t FOOTER_DATA_MINIMAL[1] = {0x62};
+    uint8_t HEADER_DATA_STANDARD[4] = {0xF4, 0xF3, 0xF2, 0xF1};
+    uint8_t FOOTER_DATA_STANDARD[4] = {0xF8, 0xF7, 0xF6, 0xF5};
     uint8_t HEADER_COMMAND[4] = {0xFD, 0xFC, 0xFB, 0xFA};
-    uint8_t FOOTER[4] = {0x04, 0x03, 0x02, 0x01};
+    uint8_t FOOTER_COMMAND[4] = {0x04, 0x03, 0x02, 0x01};
 
     uint8_t HEADER_RAW_DATA[4] = {0xAA, 0xBF, 0x10, 0x14};
     uint8_t FOOTER_RAW_DATA[4] = {0xFD, 0xFC, 0xFB, 0xFA};
@@ -129,6 +131,7 @@ class SensorHLKLD2420 : public Sensor
     void startupLoop();
     void uartGetPacket();
     int bytesToInt(byte byte1, byte byte2, byte byte3, byte byte4);
+    short bytesToShort(byte byte0, byte byte1);
     float rawToDb(int rawValue);
     int dBToRaw(float dbValue);
     void restartStartupLoop();

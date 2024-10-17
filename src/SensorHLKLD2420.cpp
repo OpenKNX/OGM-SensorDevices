@@ -43,6 +43,8 @@ uint8_t SensorHLKLD2420::getSensorClass()
 
 void SensorHLKLD2420::sensorLoopInternal()
 {
+    pSensorState = Running;
+    
     switch (pSensorState)
     {
         case Wakeup:
@@ -76,6 +78,8 @@ void SensorHLKLD2420::sensorLoopInternal()
 // state machine handles startup behavior and calibration of HF sensor
 void SensorHLKLD2420::startupLoop()
 {
+    logDebugP("startupLoop");
+
     switch (mHfSensorStartupState)
     {
         case START_INIT:
@@ -197,22 +201,36 @@ void SensorHLKLD2420::uartGetPacket()
                 mBuffer[mBufferIndex] = rxByte;
                 mBufferIndex++;
 
-                if (BUFFER_LENGTH == HEADER_FOOTER_SIZE)
-                {
-                    /*logTraceP("Header:");
-                    logIndentUp();
-                    logHexTraceP(mBuffer, BUFFER_LENGTH);
-                    logIndentDown();*/
+                logTraceP("Header:");
+                logIndentUp();
+                logHexTraceP(mBuffer, BUFFER_LENGTH);
+                logIndentDown();
 
-                    if (memcmp(mBuffer, HEADER_ON, HEADER_FOOTER_SIZE) == 0)
+                if (BUFFER_LENGTH == 1)
+                {
+                    // logTraceP("Header:");
+                    // logIndentUp();
+                    // logHexTraceP(mBuffer, BUFFER_LENGTH);
+                    // logIndentDown();
+
+                    if (mBuffer[0] == HEADER_DATA_MINIMAL[0])
                     {
-                        mPacketType = ON;
+                        mPacketType = DATA_MINIMAL;
                         mPacketState = GET_PACKET_DATA;
                         break;
                     }
-                    if (memcmp(mBuffer, HEADER_OFF, HEADER_FOOTER_SIZE) == 0)
+                }
+
+                if (BUFFER_LENGTH == HEADER_FOOTER_SIZE)
+                {
+                    // logTraceP("Header:");
+                    // logIndentUp();
+                    // logHexTraceP(mBuffer, BUFFER_LENGTH);
+                    // logIndentDown();
+
+                    if (memcmp(mBuffer, HEADER_DATA_STANDARD, HEADER_FOOTER_SIZE) == 0)
                     {
-                        mPacketType = OFF;
+                        mPacketType = DATA_STANDARD;
                         mPacketState = GET_PACKET_DATA;
                         break;
                     }
@@ -259,16 +277,11 @@ void SensorHLKLD2420::uartGetPacket()
                 mBuffer[mBufferIndex] = rxByte;
                 mBufferIndex++;
 
-                if (mPacketType == COMMAND_RESPONSE && memcmp(mBuffer + mBufferIndex - HEADER_FOOTER_SIZE, FOOTER, HEADER_FOOTER_SIZE) == 0 ||
+                if (mPacketType == DATA_MINIMAL && memcmp(mBuffer + mBufferIndex - sizeof(FOOTER_DATA_MINIMAL), FOOTER_DATA_MINIMAL, sizeof(FOOTER_DATA_MINIMAL)) == 0 ||
+                    mPacketType == DATA_STANDARD && memcmp(mBuffer + mBufferIndex - sizeof(FOOTER_DATA_STANDARD), FOOTER_DATA_STANDARD, sizeof(FOOTER_DATA_STANDARD)) == 0 ||
+                    mPacketType == COMMAND_RESPONSE && memcmp(mBuffer + mBufferIndex - HEADER_FOOTER_SIZE, FOOTER_COMMAND, HEADER_FOOTER_SIZE) == 0 ||
                     mPacketType == RAW_DATA && memcmp(mBuffer + mBufferIndex - HEADER_FOOTER_SIZE, FOOTER_RAW_DATA, HEADER_FOOTER_SIZE) == 0)
                 {
-                    mPacketState = PROCESS_PACKET_STATE;
-                    break;
-                }
-
-                if ((mPacketType == OFF || mPacketType == ON && BUFFER_LENGTH > 10) &&
-                    mBuffer[mBufferIndex - 2] == 13 && mBuffer[mBufferIndex - 1] == 10)
-                { // new line
                     mPacketState = PROCESS_PACKET_STATE;
                     break;
                 }
@@ -297,6 +310,12 @@ int SensorHLKLD2420::bytesToInt(byte byte0, byte byte1, byte byte2, byte byte3)
                (unsigned char)(byte2) << 16 |
                (unsigned char)(byte1) << 8 |
                (unsigned char)(byte0));
+}
+
+short SensorHLKLD2420::bytesToShort(byte byte0, byte byte1)
+{
+    return short((unsigned char)(byte1) << 8 |
+                 (unsigned char)(byte0));
 }
 
 float SensorHLKLD2420::rawToDb(int rawValue)
@@ -404,30 +423,22 @@ bool SensorHLKLD2420::getSensorData()
 
     switch (mPacketType)
     {
-        case ON:
+        case DATA_MINIMAL:
         {
-            /*logTraceP("Content ON:");
-            logIndentUp();
-            logHexTraceP(mBuffer, BUFFER_LENGTH);
-            logIndentDown();*/
+            // cut 2 bytes (1 header) at the beginning and 1 byte footer at the end
+            memmove(mBuffer, mBuffer + 1, BUFFER_LENGTH - 1);
+            mBufferIndex -= 2;
 
-            // cut 10 bytes at the beginning: 4F 4E 0D 0A 52 61 6E 67 65 20 ("ON  RANGE ")
-            // and 2 bytes at the end
-            memmove(mBuffer, mBuffer + 10, BUFFER_LENGTH - 10);
-            mBufferIndex -= 12;
-            // exceptions not possible, we check if string consists of digits
-            bool justDigits = true;
-            for (uint8_t i = 0; i < BUFFER_LENGTH; i++)
-                if (mBuffer[i] < 0x30 || mBuffer[i] > 0x39)
-                {
-                    justDigits = false;
-                    break;
-                }
-            if (justDigits)
+            if (BUFFER_LENGTH != 3)
             {
-                // mBuffer now holds the detection range decimal value as string
-                rangeString = std::string(reinterpret_cast<const char *>(&mBuffer[0]), BUFFER_LENGTH);
-                newDetectedRange = stoi(rangeString) / (float)100;
+                logDebugP("Invalid data packet size: %d", BUFFER_LENGTH);
+                break;
+            }
+
+            bool targetDetected = mBuffer[0] > 1;
+            if (targetDetected)
+            {
+                newDetectedRange = bytesToShort(mBuffer[1], mBuffer[2]) / (float)100;
 
                 if (lastDetectedRange != newDetectedRange)
                 {
@@ -437,29 +448,23 @@ bool SensorHLKLD2420::getSensorData()
             }
             else
             {
-                logDebugP("Presence range contains non-digit-characters");
-                logIndentUp();
-                logHexTraceP(mBuffer, BUFFER_LENGTH);
-                logIndentDown();
+                if (lastDetectedRange != -1)
+                {
+                    lastDetectedRange = -1;
+                    logDebugP("No presence detected");
+                }
             }
 
             result = true;
             break;
         }
-        case OFF:
-            /*logTraceP("Content OFF:");
-            logIndentUp();
-            logHexTraceP(mBuffer, BUFFER_LENGTH);
-            logIndentDown();*/
 
-            if (lastDetectedRange != -1)
-            {
-                lastDetectedRange = -1;
-                logDebugP("No presence detected");
-            }
-
+        case DATA_STANDARD:
+        {
+            logInfoP("Standard precense detection data currently not supported!");
             result = true;
             break;
+        }
 
         case COMMAND_RESPONSE:
             payloadSize = mBuffer[4];
@@ -975,7 +980,7 @@ void SensorHLKLD2420::sendCommand(uint8_t command, const uint8_t parameter[], ui
     memcpy(cmdData + cmdDataIndex, parameter, parameterLength);
     cmdDataIndex += parameterLength;
 
-    memcpy(cmdData + cmdDataIndex, FOOTER, HEADER_FOOTER_SIZE);
+    memcpy(cmdData + cmdDataIndex, FOOTER_COMMAND, HEADER_FOOTER_SIZE);
 
     if (HF_SERIAL.availableForWrite())
     {

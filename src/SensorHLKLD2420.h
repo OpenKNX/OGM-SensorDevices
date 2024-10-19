@@ -1,6 +1,6 @@
 #pragma once
 #ifdef PMMODULE
-    #ifdef HF_SERIAL
+    #ifdef HLK_SERIAL
         #include "Sensor.h"
         #include <string>
 
@@ -178,5 +178,9 @@ class SensorHLKLD2420 : public Sensor
     bool setCalibrationData(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength);
     bool doCalibration(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength);
 };
+
+      #ifdef HF_USE_SERIALPIO
+        extern SerialPIO HLK_SERIAL;
+      #endif
     #endif
 #endif

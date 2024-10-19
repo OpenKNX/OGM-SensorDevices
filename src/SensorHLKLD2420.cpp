@@ -1,5 +1,5 @@
 #ifdef PMMODULE
-    #ifdef HF_SERIAL
+    #ifdef HLK_SERIAL
         #include "SensorHLKLD2420.h"
         #include <Arduino.h>
         #include <OpenKNX.h>
@@ -18,6 +18,12 @@ std::string SensorHLKLD2420::logPrefix()
 {
     return "Sensor<HLKLD2420>";
 }
+
+#ifdef HF_USE_SERIALPIO 
+    SerialPIO HLK_SERIAL(HF_UART_TX_PIN, HF_UART_RX_PIN, 1300);
+#endif
+
+
 
 void SensorHLKLD2420::defaultSensorParameters(uint8_t iSensitivity, uint16_t iDelayTime, uint8_t iRangeGateMin, uint8_t iRangeGateMax)
 {
@@ -43,12 +49,12 @@ uint8_t SensorHLKLD2420::getSensorClass()
 
 void SensorHLKLD2420::sensorLoopInternal()
 {
-    pSensorState = Running;
     
     switch (pSensorState)
     {
         case Wakeup:
             Sensor::sensorLoopInternal();
+            pSensorState = Running;
             break;
         case Calibrate:
             uartGetPacket();
@@ -194,7 +200,7 @@ void SensorHLKLD2420::uartGetPacket()
             // wait for a valid header
             while (
                 mPacketState == GET_SYNC_STATE &&
-                HF_SERIAL.available() > 0 && HF_SERIAL.readBytes(&rxByte, 1) == 1)
+                HLK_SERIAL.available() > 0 && HLK_SERIAL.readBytes(&rxByte, 1) == 1)
             {
                 lastDataReceived = millis();
 
@@ -255,8 +261,8 @@ void SensorHLKLD2420::uartGetPacket()
                     memmove(mBuffer, mBuffer + 1, BUFFER_LENGTH - 1);
                     mBufferIndex -= 1;
                 }
+            
             }
-
             if (delayCheck(lastDataReceived, 100))
             {
                 // no data received for 100 millisec., cancel header sync
@@ -270,7 +276,7 @@ void SensorHLKLD2420::uartGetPacket()
             // add data till valid footer received
             while (
                 mPacketState == GET_PACKET_DATA &&
-                HF_SERIAL.available() > 0 && HF_SERIAL.readBytes(&rxByte, 1) == 1)
+                HLK_SERIAL.available() > 0 && HLK_SERIAL.readBytes(&rxByte, 1) == 1)
             {
                 lastDataReceived = millis();
 
@@ -982,9 +988,9 @@ void SensorHLKLD2420::sendCommand(uint8_t command, const uint8_t parameter[], ui
 
     memcpy(cmdData + cmdDataIndex, FOOTER_COMMAND, HEADER_FOOTER_SIZE);
 
-    if (HF_SERIAL.availableForWrite())
+    if (HLK_SERIAL.availableForWrite())
     {
-        HF_SERIAL.write(cmdData, totalLength);
+        HLK_SERIAL.write(cmdData, totalLength);
 
         logTraceP("Sending to sensor:");
         logIndentUp();

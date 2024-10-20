@@ -9,21 +9,26 @@
         #define CMD_OPEN_COMMAND_MODE 0xFF
         #define CMD_CLOSE_COMMAND_MODE 0xFE
         #define CMD_READ_VERSION 0x00
-        #define CMD_REBOOT_MODULE 0x68
-        #define CMD_READ_MODULE_CONFIG 0x08
-        #define CMD_WRITE_MODULE_CONFIG 0x07
-        #define CMD_RAW_DATA_MODE 0x12
+        //#define CMD_REBOOT_MODULE 0x68
+        #define CMD_READ_GENERAL_CONFIG 0x71
+        #define CMD_WRITE_GENERAL_CONFIG 0x70
+        #define CMD_READ_TRIGGER_CONFIG 0x73
+        #define CMD_WRITE_TRIGGER_CONFIG 0x72
+        #define CMD_READ_HOLD_CONFIG 0x77
+        #define CMD_WRITE_HOLD_CONFIG 0x76
+        #define CMD_DATA_MODE 0x7A
 
-        #define OFFSET_PARAM_RANGE_GATE_MIN 0x00
-        #define OFFSET_PARAM_RANGE_GATE_MAX 0x01
-        #define OFFSET_PARAM_DELAY_TIME 0x04
-        #define OFFSET_PARAM_TRIGGERS 0x10
-        #define OFFSET_PARAM_HOLDS 0x20
+        #define OFFSET_PARAM_RANGE_GATE_MIN 0x0A
+        #define OFFSET_PARAM_RANGE_GATE_MAX 0x05
+        #define OFFSET_PARAM_DELAY_TIME 0x06
+        #define OFFSET_PARAM_STATUS_REPORT_FREQUENCY 0x02
+        #define OFFSET_PARAM_DISTANCE_REPORT_FREQUENCY 0x0C
+        #define OFFSET_PARAM_RESPONSE_SPEED 0x0B
 
         #define PARAM_OPEN_COMMAND_MODE_LENGTH 2
-        #define PARAM_READ_DISTANCE_TRIGGER_LENGTH 36
-        #define PARAM_READ_DELAY_MAINTAIN_LENGTH 34
-        #define PARAM_RAW_DATA_MODE_LENGTH 6
+        #define PARAM_READ_GENERAL_CONFIG_LENGTH 12
+        #define PARAM_READ_TRIGGER_HOLD_LENGTH 32
+        #define PARAM_DATA_MODE_LENGTH 6
 
         #define CALIBRATION_VALUE_COUNT 100
         #define CALIBRATION_TRIGGER_OFFSET_DB 10
@@ -36,9 +41,10 @@
         #define START_INIT 0
         #define START_SENSOR_ACTIVE 1
         #define START_VERSION_RECEIVED 2
-        #define START_READ1_DONE 3
-        #define START_READ2_DONE 4
-        #define START_CALIBRATING 5
+        #define START_READ_GENEAL_DONE 3
+        #define START_READ_TRIGGER_DONE 4
+        #define START_READ_HOLD_DONE 5
+        #define START_CALIBRATING 6
         #define START_FINISHED 255
 
         #define BUFFER_LENGTH mBufferIndex
@@ -79,12 +85,17 @@ class SensorHLKLD2420 : public Sensor
     PacketType mPacketType;
     float lastDetectedRange = NO_NUM;
 
-    std::string moduleVersion = "";
+    short moduleVersionMajor = 0;
+    short moduleVersionMinor = 0;
+    short moduleVersionRevision = 0;
     int storedDistanceMin = NO_NUM;
     int storedDistanceMax = NO_NUM;
     int storedDelayTime = NO_NUM;
-    int storedTriggerThreshold[16];
-    int storedHoldThreshold[16];
+    int storedStatusReportFrequency = NO_NUM;
+    int storedDistanceReportFrequency = NO_NUM;
+    int storedResponseSpeed = NO_NUM;
+    int storedTriggerThreshold[16] = {};
+    int storedHoldThreshold[16] = {};
     float triggerOffsetDb[16];
     float holdOffsetDb[16];
     bool calibrationCompleted = false;
@@ -93,7 +104,8 @@ class SensorHLKLD2420 : public Sensor
     uint32_t calibrationOnOffTimer = 1;
 
     uint32_t rawDataLastRecordingReceived = 0;
-    int rawDataRecordingCount = 0;
+    byte rawDataRecordingCount = 0;
+    byte rawDataRecordingCountGate[16] = {};
     float rawDataRangeTempSumDb[16];
     double rawDataRangeTempSquareSumDb[16];
     float rawDataRangeTempMaxDb[16] = {};
@@ -120,23 +132,25 @@ class SensorHLKLD2420 : public Sensor
     uint8_t FOOTER_RAW_DATA[4] = {0xFD, 0xFC, 0xFB, 0xFA};
 
     uint8_t PARAM_OPEN_COMMAND_MODE[PARAM_OPEN_COMMAND_MODE_LENGTH] = {0x01, 0x00};
-    uint8_t PARAM_READ_DISTANCE_TRIGGER[PARAM_READ_DISTANCE_TRIGGER_LENGTH] = {0x00, 0x00, 0x01, 0x00, 0x10, 0x00, 0x11, 0x00, 0x12, 0x00, 0x13, 0x00, 0x14, 0x00, 0x15, 0x00, 0x16, 0x00, 0x17, 0x00, 0x18, 0x00, 0x19, 0x00, 0x1A, 0x00, 0x1B, 0x00, 0x1C, 0x00, 0x1D, 0x00, 0x1E, 0x00, 0x1F, 0x00};
-    uint8_t PARAM_READ_DELAY_MAINTAIN[PARAM_READ_DELAY_MAINTAIN_LENGTH] = {0x04, 0x00, 0x20, 0x00, 0x21, 0x00, 0x22, 0x00, 0x23, 0x00, 0x24, 0x00, 0x25, 0x00, 0x26, 0x00, 0x27, 0x00, 0x28, 0x00, 0x29, 0x00, 0x2A, 0x00, 0x2B, 0x00, 0x2C, 0x00, 0x2D, 0x00, 0x2E, 0x00, 0x2F, 0x00};
-    uint8_t PARAM_RAW_DATA_MODE[PARAM_RAW_DATA_MODE_LENGTH] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t PARAM_OPEN_COMMAND_MODE_EXT[PARAM_OPEN_COMMAND_MODE_LENGTH] = {0x02, 0x00};
+    uint8_t PARAM_READ_GENERAL_CONFIG[PARAM_READ_GENERAL_CONFIG_LENGTH] = {0x05, 0x00, 0x0A, 0x00, 0x06, 0x00, 0x02, 0x00, 0x0C, 0x00, 0x0B, 0x00};
+    uint8_t PARAM_READ_TRIGGER_HOLD[PARAM_READ_TRIGGER_HOLD_LENGTH] = {0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00, 0x05, 0x00, 0x06, 0x00, 0x07, 0x00, 0x08, 0x00, 0x09, 0x00, 0x0A, 0x00, 0x0B, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0x0E, 0x00, 0x0F, 0x00};
+    uint8_t PARAM_DATA_MODE_STANDARD[PARAM_DATA_MODE_LENGTH] = {0x00, 0x00, 0x01, 0x00, 0x00, 0x00};
+    uint8_t PARAM_DATA_MODE_MINIMAL[PARAM_DATA_MODE_LENGTH] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     float maxDbValue = log10(pow(2, 31) - 1) * 10;
 
-    void rebootSensorSoft();
+    // void rebootSensorSoft();
     void rebootSensorHard();
     void startupLoop();
     void uartGetPacket();
     int bytesToInt(byte byte1, byte byte2, byte byte3, byte byte4);
     short bytesToShort(byte byte0, byte byte1);
     float rawToDb(int rawValue);
-    int dBToRaw(float dbValue);
     void restartStartupLoop();
     void resetRawDataRecording();
     void sendCalibrationData();
+    void sendCalibrationDataGeneral(uint8_t rangeGateMin, uint8_t rangeGateMax, uint16_t delayTime, uint8_t statusReportFrequency, uint8_t distanceReportFrequency, uint8_t responseSpeed);
     bool getSensorData();
 
   protected:
@@ -146,6 +160,9 @@ class SensorHLKLD2420 : public Sensor
     uint16_t mDelayTime = 30;
     uint8_t mRangeGateMin = 0;
     uint8_t mRangeGateMax = 15;
+    uint8_t mStatusReportFrequency = 40; // value / 10 = sec. (resolution: 0.5 sec.)
+    uint8_t mDistanceReportFrequency = 5; // value / 10 = sec. (resolution: 0.5 sec.)
+    uint8_t mResponseSpeed = 5; // 5 = normal, 10 = fast (no other values possible)
     uint8_t getSensorClass() override; // returns unique ID for this sensor type
     void sensorLoopInternal() override;
     bool checkSensorConnection() override;
@@ -164,7 +181,7 @@ class SensorHLKLD2420 : public Sensor
 
     bool begin() override;
     uint8_t getI2cSpeed() override;
-    void defaultSensorParameters(uint8_t iSensitivity, uint16_t iDelayTime, uint8_t iRangeGateMin, uint8_t iRangeGateMax);
+    void defaultSensorParameters(uint8_t iSensitivity, uint16_t iDelayTime, uint8_t iRangeGateMin, uint8_t iRangeGateMax, uint8_t iStatusReportFrequency = 40, uint8_t iDistanceReportFrequency = 5, uint8_t iResponseSpeed = 5);
     // void resetSensor();
     void writeSensitivity(int8_t iSensitivity);
     // void readSensitivity();

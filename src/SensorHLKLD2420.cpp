@@ -25,14 +25,29 @@ std::string SensorHLKLD2420::logPrefix()
 
 
 
-void SensorHLKLD2420::defaultSensorParameters(uint8_t iSensitivity, uint16_t iDelayTime, uint8_t iRangeGateMin, uint8_t iRangeGateMax)
+void SensorHLKLD2420::defaultSensorParameters(uint8_t iSensitivity, uint16_t iDelayTime, uint8_t iRangeGateMin, uint8_t iRangeGateMax, uint8_t iStatusReportFrequency, uint8_t iDistanceReportFrequency, uint8_t iResponseSpeed)
 {
     mSensitivity = iSensitivity;
     mDelayTime = iDelayTime;
-    mRangeGateMin = iRangeGateMin;
 
-    if (iRangeGateMax > iRangeGateMin)
+    if (iRangeGateMin <= 15)
+        mRangeGateMin = iRangeGateMin;
+
+    if (iRangeGateMax > iRangeGateMin &&
+        iRangeGateMax <= 15)
         mRangeGateMax = iRangeGateMax;
+
+    if (iStatusReportFrequency <= 80 &&
+        iStatusReportFrequency % 5 == 0)
+        mStatusReportFrequency = iStatusReportFrequency;
+
+    if (iDistanceReportFrequency <= 80 &&
+        iDistanceReportFrequency % 5 == 0)
+        mDistanceReportFrequency = iDistanceReportFrequency;
+    
+    if (iResponseSpeed == 5 ||
+        iResponseSpeed == 10)
+        mResponseSpeed = iResponseSpeed;
 }
 
 void SensorHLKLD2420::writeSensitivity(int8_t iSensitivity)
@@ -54,7 +69,6 @@ void SensorHLKLD2420::sensorLoopInternal()
     {
         case Wakeup:
             Sensor::sensorLoopInternal();
-            pSensorState = Running;
             break;
         case Calibrate:
             uartGetPacket();
@@ -84,8 +98,6 @@ void SensorHLKLD2420::sensorLoopInternal()
 // state machine handles startup behavior and calibration of HF sensor
 void SensorHLKLD2420::startupLoop()
 {
-    logDebugP("startupLoop");
-
     switch (mHfSensorStartupState)
     {
         case START_INIT:
@@ -94,12 +106,12 @@ void SensorHLKLD2420::startupLoop()
                 pSensorStateDelay = millis();
                 mHfSensorStartupState = START_SENSOR_ACTIVE;
 
-                sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
+                sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_EXT, PARAM_OPEN_COMMAND_MODE_LENGTH);
             }
             break;
         case START_SENSOR_ACTIVE:
             // Communication is established, we wait for version info from Sensor
-            if (!moduleVersion.empty())
+            if (moduleVersionMajor > 0)
             {
                 pSensorStateDelay = millis();
                 mHfSensorStartupState = START_VERSION_RECEIVED;
@@ -111,32 +123,45 @@ void SensorHLKLD2420::startupLoop()
             }
             break;
         case START_VERSION_RECEIVED:
-            // We got version, we wait for read 1 done
-            if (storedDistanceMin > NO_NUM)
-            {
-                pSensorStateDelay = millis();
-                mHfSensorStartupState = START_READ1_DONE;
-            }
-            else if (delayCheck(pSensorStateDelay, 2000))
-            {
-                pSensorStateDelay = millis();
-                sendCommand(CMD_READ_MODULE_CONFIG, PARAM_READ_DISTANCE_TRIGGER, PARAM_READ_DISTANCE_TRIGGER_LENGTH);
-            }
-            break;
-        case START_READ1_DONE:
-            // Read 1 is done, we wait for read 2 done
+            // We got version, we wait for general read
             if (storedDelayTime > NO_NUM)
             {
                 pSensorStateDelay = millis();
-                mHfSensorStartupState = START_READ2_DONE;
+                mHfSensorStartupState = START_READ_GENEAL_DONE;
             }
             else if (delayCheck(pSensorStateDelay, 2000))
             {
                 pSensorStateDelay = millis();
-                sendCommand(CMD_READ_MODULE_CONFIG, PARAM_READ_DELAY_MAINTAIN, PARAM_READ_DELAY_MAINTAIN_LENGTH);
+                sendCommand(CMD_READ_GENERAL_CONFIG, PARAM_READ_GENERAL_CONFIG, PARAM_READ_GENERAL_CONFIG_LENGTH);
             }
             break;
-        case START_READ2_DONE:
+        case START_READ_GENEAL_DONE:
+            // Read general is done, we wait for read trigger done
+            if (storedTriggerThreshold[0] > 0)
+            {
+                pSensorStateDelay = millis();
+                mHfSensorStartupState = START_READ_TRIGGER_DONE;
+            }
+            else if (delayCheck(pSensorStateDelay, 2000))
+            {
+                pSensorStateDelay = millis();
+                sendCommand(CMD_READ_TRIGGER_CONFIG, PARAM_READ_TRIGGER_HOLD, PARAM_READ_TRIGGER_HOLD_LENGTH);
+            }
+            break;
+        case START_READ_TRIGGER_DONE:
+            // Read general is done, we wait for read trigger done
+            if (storedHoldThreshold[0] > 0)
+            {
+                pSensorStateDelay = millis();
+                mHfSensorStartupState = START_READ_HOLD_DONE;
+            }
+            else if (delayCheck(pSensorStateDelay, 2000))
+            {
+                pSensorStateDelay = millis();
+                sendCommand(CMD_READ_HOLD_CONFIG, PARAM_READ_TRIGGER_HOLD, PARAM_READ_TRIGGER_HOLD_LENGTH);
+            }
+            break;
+        case START_READ_HOLD_DONE:
             // All done, close command mode again
             if (delayCheck(pSensorStateDelay, 50))
             {
@@ -154,7 +179,6 @@ void SensorHLKLD2420::startupLoop()
                     mHfSensorStartupState = START_CALIBRATING;
 
                     resetRawDataRecording();
-                    sendCommand(CMD_RAW_DATA_MODE, PARAM_RAW_DATA_MODE, PARAM_RAW_DATA_MODE_LENGTH);
                 }
 
                 sendCommand(CMD_CLOSE_COMMAND_MODE);
@@ -165,10 +189,10 @@ void SensorHLKLD2420::startupLoop()
             {
                 mHfSensorStartupState = START_FINISHED;
             }
-            else if (delayCheck(pSensorStateDelay, 40000))
+            else if (delayCheck(pSensorStateDelay, 300000))
             {
-                // if not complete after 40 sec., restart calibration
-                mHfSensorStartupState = START_READ2_DONE;
+                // if not complete after 5 min., restart calibration
+                mHfSensorStartupState = START_READ_HOLD_DONE;
             }
             break;
     }
@@ -178,7 +202,7 @@ void SensorHLKLD2420::forceCalibration()
 {
     logDebugP("Force sensor calibration");
 
-    sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
+    sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_EXT, PARAM_OPEN_COMMAND_MODE_LENGTH);
     delay(100);
 
     pSensorState = Calibrate;
@@ -186,7 +210,6 @@ void SensorHLKLD2420::forceCalibration()
     pSensorStateDelay = millis();
 
     resetRawDataRecording();
-    sendCommand(CMD_RAW_DATA_MODE, PARAM_RAW_DATA_MODE, PARAM_RAW_DATA_MODE_LENGTH);
     sendCommand(CMD_CLOSE_COMMAND_MODE);
 }
 
@@ -207,10 +230,10 @@ void SensorHLKLD2420::uartGetPacket()
                 mBuffer[mBufferIndex] = rxByte;
                 mBufferIndex++;
 
-                logTraceP("Header:");
-                logIndentUp();
-                logHexTraceP(mBuffer, BUFFER_LENGTH);
-                logIndentDown();
+                // logTraceP("Header:");
+                // logIndentUp();
+                // logHexTraceP(mBuffer, BUFFER_LENGTH);
+                // logIndentDown();
 
                 if (BUFFER_LENGTH == 1)
                 {
@@ -329,25 +352,17 @@ float SensorHLKLD2420::rawToDb(int rawValue)
     return float(10 * log10(rawValue));
 }
 
-int SensorHLKLD2420::dBToRaw(float dbValue)
-{
-    if (dbValue > maxDbValue)
-        dbValue = maxDbValue;
+// void SensorHLKLD2420::rebootSensorSoft()
+// {
+//     // enter command mode to stop raw data transfer
+//     sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_EXT, PARAM_OPEN_COMMAND_MODE_LENGTH);
 
-    return int(pow(10, dbValue / 10));
-}
+//     // reboot module to return to normal (not raw data) operation
+//     sendCommand(CMD_REBOOT_MODULE);
+//     delay(1000);
 
-void SensorHLKLD2420::rebootSensorSoft()
-{
-    // enter command mode to stop raw data transfer
-    sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
-
-    // reboot module to return to normal (not raw data) operation
-    sendCommand(CMD_REBOOT_MODULE);
-    delay(1000);
-
-    restartStartupLoop();
-}
+//     restartStartupLoop();
+// }
 
 void SensorHLKLD2420::rebootSensorHard()
 {
@@ -372,10 +387,17 @@ void SensorHLKLD2420::switchPower(bool on)
 
 void SensorHLKLD2420::restartStartupLoop()
 {
-    moduleVersion = "";
+    moduleVersionMajor = 0;
+    moduleVersionMinor = 0;
+    moduleVersionRevision = 0;
     storedDistanceMin = NO_NUM;
     storedDistanceMax = NO_NUM;
     storedDelayTime = NO_NUM;
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        storedTriggerThreshold[i] = 0;
+        storedHoldThreshold[i] = 0;
+    }
     pSensorState = Calibrate;
     mHfSensorStartupState = START_INIT;
 }
@@ -387,6 +409,7 @@ void SensorHLKLD2420::resetRawDataRecording()
         rawDataRangeTempSumDb[i] = 0;
         rawDataRangeTempSquareSumDb[i] = 0;
         rawDataRangeTempMaxDb[i] = 0;
+        rawDataRecordingCountGate[i] = 0;
     }
 
     rawDataLastRecordingReceived = millis();
@@ -403,6 +426,9 @@ void SensorHLKLD2420::resetRawDataRecording()
         logDebugP("Start sensor calibration");
         openknx.console.writeDiagenoseKo("HLK cal start");
     }
+
+    sendCalibrationDataGeneral(mRangeGateMin, mRangeGateMax, mDelayTime, 80, 80, 10);
+    sendCommand(CMD_DATA_MODE, PARAM_DATA_MODE_STANDARD, PARAM_DATA_MODE_LENGTH);
 }
 
 bool SensorHLKLD2420::getSensorData()
@@ -418,9 +444,6 @@ bool SensorHLKLD2420::getSensorData()
     uint8_t payloadSize;
 
     int rangeMax[16] = {};
-    int dopplerOffset;
-    int rangeOffset;
-    int rangeValue;
 
     // if (calibrationOnOffTimer == 0 || delayCheck(calibrationOnOffTimer, 15000))
     //     calibrationOnOffTimer = 0;
@@ -467,7 +490,138 @@ bool SensorHLKLD2420::getSensorData()
 
         case DATA_STANDARD:
         {
-            logInfoP("Standard precense detection data currently not supported!");
+            // we use this for calibration
+
+                //logHexTraceP(mBuffer, BUFFER_LENGTH);
+
+            payloadSize = mBuffer[4];
+
+            // cut 6 bytes (4 header + 2 size) at the beginning and 4 bytes footer at the end
+            memmove(mBuffer, mBuffer + 6, BUFFER_LENGTH - 6);
+            mBufferIndex -= 10;
+
+            if (BUFFER_LENGTH != payloadSize)
+            {
+                logDebugP("Invalid command reponse packet size: %d", BUFFER_LENGTH);
+                break;
+            }
+
+            // cut 5 bytes at the beginning: 1 byte target status, 2 bytes target distance, 2 bytes reserved
+            memmove(mBuffer, mBuffer + 5, BUFFER_LENGTH - 2);
+            mBufferIndex -= 5;
+
+            bool allZero = true;
+            for (uint8_t i = 0; i < 16; i++)
+            {
+                rangeMax[i] = bytesToInt(mBuffer[i * 4], mBuffer[i * 4 + 1], mBuffer[i * 4 + 2], mBuffer[i * 4 + 3]);
+                if (rangeMax[i] > 0)
+                    allZero = false;
+            }
+
+            if (allZero)
+            {
+                logTraceP("Only zero values received, ignoring");
+                break;
+            }
+
+            logTraceP("Range values received (%d):", rawDataRecordingCount);
+            logIndentUp();
+            for (uint8_t i = 0; i < 16; i++)
+            {
+                if (rangeMax[i] > 0)
+                    logTraceP("Gate %i: %.2f", i, rawToDb(rangeMax[i]));
+                else
+                    logTraceP("Gate %i: 0 (ignored)", i);
+            }
+            logIndentDown();
+
+            // if more than 5 sec. past since last raw data value (should be every 1-2 sec.),
+            // something when wrong, start recording from scratch
+            if (delayCheck(rawDataLastRecordingReceived, 5000))
+            {
+                logDebugP("Too long without new data, restarting calibration");
+                resetRawDataRecording();
+            }
+            else if (rawDataRecordingCount < CALIBRATION_VALUE_COUNT)
+            {
+                float tempDb;
+                for (uint8_t i = 0; i < 16; i++)
+                {
+                    if (rangeMax[i] > 0)
+                    {
+                        tempDb = rawToDb(rangeMax[i]);
+                        rawDataRangeTempSumDb[i] += tempDb;
+                        rawDataRangeTempSquareSumDb[i] += pow(tempDb, 2);
+                        rawDataRangeTempMaxDb[i] = max(rawDataRangeTempMaxDb[i], tempDb);
+                        rawDataRecordingCountGate[i]++;
+                    }
+                }
+                rawDataRecordingCount++;
+
+                rawDataLastRecordingReceived = millis();
+            }
+
+            if (!calibrationCompleted &&
+                rawDataRecordingCount == CALIBRATION_VALUE_COUNT)
+            {
+                logIndentDown();
+
+                // enter command mode to stop raw data transfer
+                sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_EXT, PARAM_OPEN_COMMAND_MODE_LENGTH);
+                delay(100);
+                // set frequencies back to normal
+                sendCalibrationDataGeneral(mRangeGateMin, mRangeGateMax, mDelayTime, mStatusReportFrequency, mDistanceReportFrequency, mResponseSpeed);
+                delay(100);
+
+                // reset back to minimal data mode
+                sendCommand(CMD_DATA_MODE, PARAM_DATA_MODE_MINIMAL, PARAM_DATA_MODE_LENGTH);
+                delay(100);
+                sendCommand(CMD_CLOSE_COMMAND_MODE);
+                delay(100);
+
+                if (calibrationTestRunOnly)
+                {
+                    openknx.console.writeDiagenoseKo("HLK calt done");
+                    logDebugP("Sensor calibrarion test finished, data not stored");
+                    calibrationTestRunOnly = false;
+                    calibrationCompleted = true;
+                    calibrationOnOffTimer = delayTimerInit();
+
+                    for (uint8_t i = 0; i < 16; i++)
+                    {
+                        rawDataRangeTestAverageDb[i] = rawDataRangeTempSumDb[i] / (float)rawDataRecordingCountGate[i];
+                        rawDataRangeTestDifferencesDb[i] = rawDataRangeTestAverageDb[i] - rawDataRangeAverageDb[i];
+                        rawDataRangeTestDeviationDb[i] = sqrtf((rawDataRangeTempSquareSumDb[i] - (pow(rawDataRangeTempSumDb[i], 2) / rawDataRecordingCountGate[i])) / (rawDataRecordingCount - 1));
+                        rawDataRangeTestMaxDb[i] = rawDataRangeTempMaxDb[i];
+                    }
+                }
+                else
+                {
+                    sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_EXT, PARAM_OPEN_COMMAND_MODE_LENGTH);
+                    delay(500);
+
+                    for (uint8_t i = 0; i < 16; i++)
+                    {
+                        rawDataRangeAverageDb[i] = rawDataRangeTempSumDb[i] / (float)rawDataRecordingCountGate[i];
+                        rawDataRangeDeviationDb[i] = sqrtf((rawDataRangeTempSquareSumDb[i] - (pow(rawDataRangeTempSumDb[i], 2) / rawDataRecordingCountGate[i])) / (rawDataRecordingCountGate[i] - 1));
+                        rawDataRangeMaxDb[i] = rawDataRangeTempMaxDb[i];
+                    }
+
+                    openknx.console.writeDiagenoseKo("HLK cal done");
+                    // will be followed by "HLK cal send"
+                    openknx.console.writeDiagenoseKo("");
+                    logDebugP("Sensor calibration finished");
+                    calibrationCompleted = true;
+                    calibrationOnOffTimer = delayTimerInit();
+
+                    // persist new calibration data in flash
+                    openknx.flash.save(true);
+
+                    useFactoryDefaultThresholds = false;
+                    sendCalibrationData();
+                }
+            }
+            
             result = true;
             break;
         }
@@ -505,91 +659,122 @@ bool SensorHLKLD2420::getSensorData()
                     if (!success)
                         break;
 
-                    // cut 6 bytes at the beginning: 00 01 00 00 06 00
-                    memmove(mBuffer, mBuffer + 6, BUFFER_LENGTH - 6);
-                    mBufferIndex -= 6;
+                    // cut 2 bytes at the beginning (command word): 00 01
+                    memmove(mBuffer, mBuffer + 2, BUFFER_LENGTH - 2);
+                    mBufferIndex -= 2;
+                    
+                    // mBuffer now holds 3x2 bytes undocumented version information
+                    moduleVersionMajor = bytesToShort(mBuffer[0], mBuffer[1]);
+                    moduleVersionMinor = bytesToShort(mBuffer[2], mBuffer[3]);
+                    moduleVersionRevision = bytesToShort(mBuffer[4], mBuffer[5]);
+                    logDebugP("Unknown version: %u.%u.%u", moduleVersionMajor, moduleVersionMinor, moduleVersionRevision);
 
-                    // mBuffer now holds the version value as string
-                    moduleVersion = std::string(reinterpret_cast<const char *>(&mBuffer[0]), BUFFER_LENGTH);
-                    logDebugP("Module version: %s", moduleVersion.c_str());
+                    // and 3x2 bytes actual version information
+                    moduleVersionMajor = bytesToShort(mBuffer[6], mBuffer[7]);
+                    moduleVersionMinor = bytesToShort(mBuffer[8], mBuffer[9]);
+                    moduleVersionRevision = bytesToShort(mBuffer[10], mBuffer[11]);
+                    logDebugP("Module version: %u.%u.%u", moduleVersionMajor, moduleVersionMinor, moduleVersionRevision);
+
                     result = true;
                     break;
-                case CMD_READ_MODULE_CONFIG:
-                    logDebugP("Received response: CMD_READ_MODULE_CONFIG (%s)", successMessage.c_str());
+                case CMD_READ_GENERAL_CONFIG:
+                    logDebugP("Received response: CMD_READ_GENERAL_CONFIG (%s)", successMessage.c_str());
 
                     if (!success)
                         break;
 
-                    // We only support 2 types of read requests:
-                    // - Read both distances and all trigger thresholds (= in total 18)
-                    // - Read the delay and all metain thresholds (= in total 17)
-                    // This way, based on the returned amount of data we can recognize which read request was fullfilled.
+                    // cut 4 bytes at the beginning: 71 01 00 00
+                    memmove(mBuffer, mBuffer + 4, BUFFER_LENGTH - 4);
+                    mBufferIndex -= 4;
+                    
+                    logDebugP("Read general config from sensor:");
+                    logIndentUp();
 
-                    // cut 4 bytes at the beginning: 08 01 00 00
+                    storedDistanceMax = bytesToInt(mBuffer[0], mBuffer[1], mBuffer[2], mBuffer[3]);
+                    logDebugP("distanceMax: %u", storedDistanceMax);
+
+                    storedDistanceMin = bytesToInt(mBuffer[4], mBuffer[5], mBuffer[6], mBuffer[7]);
+                    logDebugP("distanceMin: %u", storedDistanceMin);
+
+                    storedDelayTime = bytesToInt(mBuffer[8], mBuffer[9], mBuffer[10], mBuffer[11]);
+                    logDebugP("delayTime: %u", storedDelayTime);
+
+                    storedStatusReportFrequency = bytesToInt(mBuffer[12], mBuffer[13], mBuffer[14], mBuffer[15]);
+                    logDebugP("statusReportFrequency: %.1f", storedStatusReportFrequency / (float)10);
+
+                    storedDistanceReportFrequency = bytesToInt(mBuffer[16], mBuffer[17], mBuffer[18], mBuffer[19]);
+                    logDebugP("distanceReportFrequency: %.1f", storedDistanceReportFrequency / (float)10);
+
+                    storedResponseSpeed = bytesToInt(mBuffer[20], mBuffer[21], mBuffer[22], mBuffer[23]);
+                    logDebugP("responseSpeed: %u", storedResponseSpeed);
+
+                    logIndentDown();
+                    result = true;
+                    break;
+                case CMD_WRITE_GENERAL_CONFIG:
+                    logDebugP("Received response: CMD_WRITE_GENERAL_CONFIG (%s)", successMessage.c_str());
+                    result = true;
+                    break;
+                case CMD_READ_TRIGGER_CONFIG:
+                    logDebugP("Received response: CMD_READ_TRIGGER_CONFIG (%s)", successMessage.c_str());
+
+                    if (!success)
+                        break;
+
+                    // cut 4 bytes at the beginning: 73 01 00 00
                     memmove(mBuffer, mBuffer + 4, BUFFER_LENGTH - 4);
                     mBufferIndex -= 4;
 
-                    if (payloadSize == 0x4C)
+                    logDebugP("Read trigger config from sensor:");
+                    logIndentUp();
+
+                    logDebugP("triggerThreshold:");
+                    logIndentUp();
+                    for (uint8_t i = 0; i < 16; i++)
                     {
-                        // 76 - 4 = 72 bytes (18 x 4 bytes)
-                        // - Read both distances and all trigger thresholds (= in total 18)
-
-                        logDebugP("Read config part 1 from sensor:");
-                        logIndentUp();
-
-                        storedDistanceMin = bytesToInt(mBuffer[0], mBuffer[1], mBuffer[2], mBuffer[3]);
-                        logDebugP("minDistance: %d", storedDistanceMin);
-
-                        storedDistanceMax = bytesToInt(mBuffer[4], mBuffer[5], mBuffer[6], mBuffer[7]);
-                        logDebugP("maxDistance: %d", storedDistanceMax);
-
-                        logDebugP("triggerThreshold:");
-                        logIndentUp();
-                        for (uint8_t i = 0; i < 16; i++)
-                        {
-                            storedTriggerThreshold[i] = bytesToInt(mBuffer[i * 4 + 8], mBuffer[i * 4 + 9], mBuffer[i * 4 + 10], mBuffer[i * 4 + 11]);
-                            logDebugP("Gate %i: %.2f", i, rawToDb(storedTriggerThreshold[i]));
-                        }
-                        logIndentDown();
-
-                        logIndentDown();
+                        storedTriggerThreshold[i] = bytesToInt(mBuffer[i * 4], mBuffer[i * 4 + 1], mBuffer[i * 4 + 2], mBuffer[i * 4 + 3]);
+                        logDebugP("Gate %u: %u", i, storedTriggerThreshold[i]);
                     }
-                    else if (payloadSize == 0x48)
-                    {
-                        // 72 - 4 = 68 bytes (17 x 4 bytes)
-                        // - Read the delay and all metain thresholds (= in total 17)
+                    logIndentDown();
 
-                        logDebugP("Read config part 2 from sensor:");
-                        logIndentUp();
+                    logIndentDown();
+                    result = true;
+                    break;
+                case CMD_WRITE_TRIGGER_CONFIG:
+                    logDebugP("Received response: CMD_WRITE_TRIGGER_CONFIG (%s)", successMessage.c_str());
+                    result = true;
+                    break;
+                case CMD_READ_HOLD_CONFIG:
+                    logDebugP("Received response: CMD_READ_HOLD_CONFIG (%s)", successMessage.c_str());
 
-                        storedDelayTime = bytesToInt(mBuffer[0], mBuffer[1], mBuffer[2], mBuffer[3]);
-                        logDebugP("delayTime: %d", storedDelayTime);
-
-                        logDebugP("holdThreshold:");
-                        logIndentUp();
-                        for (uint8_t i = 0; i < 16; i++)
-                        {
-                            storedHoldThreshold[i] = bytesToInt(mBuffer[i * 4 + 4], mBuffer[i * 4 + 5], mBuffer[i * 4 + 6], mBuffer[i * 4 + 7]);
-                            logDebugP("Gate %i: %.2f", i, rawToDb(storedHoldThreshold[i]));
-                        }
-                        logIndentDown();
-
-                        logIndentDown();
-                    }
-                    else
-                    {
-                        logDebugP("Unknown read response, payload size: %d", payloadSize);
+                    if (!success)
                         break;
-                    }
 
+                    // cut 4 bytes at the beginning: 77 01 00 00
+                    memmove(mBuffer, mBuffer + 4, BUFFER_LENGTH - 4);
+                    mBufferIndex -= 4;
+
+                    logDebugP("Read hold config from sensor:");
+                    logIndentUp();
+
+                    logDebugP("holdThreshold:");
+                    logIndentUp();
+                    for (uint8_t i = 0; i < 16; i++)
+                    {
+                        storedHoldThreshold[i] = bytesToInt(mBuffer[i * 4], mBuffer[i * 4 + 1], mBuffer[i * 4 + 2], mBuffer[i * 4 + 3]);
+                        logDebugP("Gate %u: %u", i, storedHoldThreshold[i]);
+                    }
+                    logIndentDown();
+
+                    logIndentDown();
                     result = true;
                     break;
-                case CMD_WRITE_MODULE_CONFIG:
-                    logDebugP("Received response: CMD_WRITE_MODULE_CONFIG (%s)", successMessage.c_str());
+                case CMD_WRITE_HOLD_CONFIG:
+                    logDebugP("Received response: CMD_WRITE_HOLD_CONFIG (%s)", successMessage.c_str());
                     result = true;
                     break;
-                case CMD_RAW_DATA_MODE:
-                    logDebugP("Received response: CMD_RAW_DATA_MODE (%s)", successMessage.c_str());
+                case CMD_DATA_MODE:
+                    logDebugP("Received response: CMD_DATA_MODE (%s)", successMessage.c_str());
                     result = true;
                     break;
                 default:
@@ -597,111 +782,6 @@ bool SensorHLKLD2420::getSensorData()
                     break;
             }
 
-            break;
-
-        case RAW_DATA:
-            // cut 4 bytes at the beginning and 4 bytes footer at the end
-            memmove(mBuffer, mBuffer + 4, BUFFER_LENGTH - 4);
-            mBufferIndex -= 8;
-
-            for (uint8_t i = 0; i < 20; i++)
-            {
-                dopplerOffset = i * 64;
-
-                for (uint8_t j = 0; j < 16; j++)
-                {
-                    rangeOffset = dopplerOffset + j * 4;
-                    rangeValue = bytesToInt(mBuffer[rangeOffset], mBuffer[rangeOffset + 1], mBuffer[rangeOffset + 2], mBuffer[rangeOffset + 3]);
-                    rangeMax[j] = max(rangeMax[j], rangeValue);
-                }
-            }
-
-            logTraceP("Range values received (%d):", rawDataRecordingCount);
-            logIndentUp();
-            for (uint8_t i = 0; i < 16; i++)
-            {
-                logTraceP("Gate %i: %.2f", i, rawToDb(rangeMax[i]));
-            }
-            logIndentDown();
-
-            // if more than 1 sec. past since last raw data value (should be 4-5/sec.),
-            // something when wrong, start recording from scratch
-            if (delayCheck(rawDataLastRecordingReceived, 1000))
-            {
-                logDebugP("Too long without new data, restarting calibration");
-                resetRawDataRecording();
-            }
-            else if (rawDataRecordingCount < CALIBRATION_VALUE_COUNT)
-            {
-                float tempDb;
-                for (uint8_t i = 0; i < 16; i++)
-                {
-                    tempDb = rawToDb(rangeMax[i]);
-                    rawDataRangeTempSumDb[i] += tempDb;
-                    rawDataRangeTempSquareSumDb[i] += pow(tempDb, 2);
-                    rawDataRangeTempMaxDb[i] = max(rawDataRangeTempMaxDb[i], tempDb);
-                }
-                rawDataRecordingCount++;
-
-                rawDataLastRecordingReceived = millis();
-            }
-
-            if (!calibrationCompleted &&
-                rawDataRecordingCount == CALIBRATION_VALUE_COUNT)
-            {
-                logIndentDown();
-
-                // enter command mode to stop raw data transfer
-                sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
-
-                // reboot module to return to normal (not raw data) operation
-                sendCommand(CMD_REBOOT_MODULE);
-                delay(1000);
-
-                if (calibrationTestRunOnly)
-                {
-                    openknx.console.writeDiagenoseKo("HLK calt done");
-                    logDebugP("Sensor calibrarion test finished, data not stored");
-                    calibrationTestRunOnly = false;
-                    calibrationCompleted = true;
-                    calibrationOnOffTimer = delayTimerInit();
-
-                    for (uint8_t i = 0; i < 16; i++)
-                    {
-                        rawDataRangeTestAverageDb[i] = rawDataRangeTempSumDb[i] / (float)rawDataRecordingCount;
-                        rawDataRangeTestDifferencesDb[i] = rawDataRangeTestAverageDb[i] - rawDataRangeAverageDb[i];
-                        rawDataRangeTestDeviationDb[i] = sqrtf((rawDataRangeTempSquareSumDb[i] - (pow(rawDataRangeTempSumDb[i], 2) / rawDataRecordingCount)) / (rawDataRecordingCount - 1));
-                        rawDataRangeTestMaxDb[i] = rawDataRangeTempMaxDb[i];
-                    }
-                }
-                else
-                {
-                    sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
-                    delay(500);
-
-                    for (uint8_t i = 0; i < 16; i++)
-                    {
-                        rawDataRangeAverageDb[i] = rawDataRangeTempSumDb[i] / (float)rawDataRecordingCount;
-                        rawDataRangeDeviationDb[i] = sqrtf((rawDataRangeTempSquareSumDb[i] - (pow(rawDataRangeTempSumDb[i], 2) / rawDataRecordingCount)) / (rawDataRecordingCount - 1));
-                        rawDataRangeMaxDb[i] = rawDataRangeTempMaxDb[i];
-                    }
-
-                    openknx.console.writeDiagenoseKo("HLK cal done");
-                    // will be followed by "HLK cal send"
-                    openknx.console.writeDiagenoseKo("");
-                    logDebugP("Sensor calibration finished");
-                    calibrationCompleted = true;
-                    calibrationOnOffTimer = delayTimerInit();
-
-                    // persist new calibration data in flash
-                    openknx.flash.save(true);
-
-                    useFactoryDefaultThresholds = false;
-                    sendCalibrationData();
-                }
-            }
-
-            result = true;
             break;
 
         default:
@@ -722,39 +802,39 @@ void SensorHLKLD2420::sendCalibrationData()
 
     if (useFactoryDefaultThresholds)
     {
-        triggerThresholdDb[0] = 47.78;
-        triggerThresholdDb[1] = 44.77;
-        triggerThresholdDb[2] = 34.77;
-        triggerThresholdDb[3] = 33.01;
-        triggerThresholdDb[4] = 26.99;
-        triggerThresholdDb[5] = 26.02;
-        triggerThresholdDb[6] = 26.02;
-        triggerThresholdDb[7] = 24.77;
-        triggerThresholdDb[8] = 24.77;
-        triggerThresholdDb[9] = 24.77;
-        triggerThresholdDb[10] = 24.77;
-        triggerThresholdDb[11] = 23.98;
-        triggerThresholdDb[12] = 23.98;
-        triggerThresholdDb[13] = 23.01;
-        triggerThresholdDb[14] = 23.01;
-        triggerThresholdDb[15] = 23.01;
+        triggerThresholdDb[0] = 48;
+        triggerThresholdDb[1] = 42;
+        triggerThresholdDb[2] = 36;
+        triggerThresholdDb[3] = 34;
+        triggerThresholdDb[4] = 32;
+        triggerThresholdDb[5] = 31;
+        triggerThresholdDb[6] = 31;
+        triggerThresholdDb[7] = 31;
+        triggerThresholdDb[8] = 31;
+        triggerThresholdDb[9] = 31;
+        triggerThresholdDb[10] = 31;
+        triggerThresholdDb[11] = 31;
+        triggerThresholdDb[12] = 31;
+        triggerThresholdDb[13] = 31;
+        triggerThresholdDb[14] = 31;
+        triggerThresholdDb[15] = 31;
 
-        holdThresholdDb[0] = 46.02;
-        holdThresholdDb[1] = 43.01;
-        holdThresholdDb[2] = 26.02;
-        holdThresholdDb[3] = 24.77;
-        holdThresholdDb[4] = 24.77;
-        holdThresholdDb[5] = 23.01;
-        holdThresholdDb[6] = 23.01;
-        holdThresholdDb[7] = 21.76;
-        holdThresholdDb[8] = 21.76;
-        holdThresholdDb[9] = 20.00;
-        holdThresholdDb[10] = 20.00;
-        holdThresholdDb[11] = 20.00;
-        holdThresholdDb[12] = 20.00;
-        holdThresholdDb[13] = 20.00;
-        holdThresholdDb[14] = 20.00;
-        holdThresholdDb[15] = 20.00;
+        holdThresholdDb[0] = 45;
+        holdThresholdDb[1] = 42;
+        holdThresholdDb[2] = 36;
+        holdThresholdDb[3] = 33;
+        holdThresholdDb[4] = 32;
+        holdThresholdDb[5] = 28;
+        holdThresholdDb[6] = 28;
+        holdThresholdDb[7] = 28;
+        holdThresholdDb[8] = 28;
+        holdThresholdDb[9] = 28;
+        holdThresholdDb[10] = 28;
+        holdThresholdDb[11] = 28;
+        holdThresholdDb[12] = 28;
+        holdThresholdDb[13] = 28;
+        holdThresholdDb[14] = 28;
+        holdThresholdDb[15] = 28;
 
         logDebugP("Factory default thresholds used");
     }
@@ -764,7 +844,7 @@ void SensorHLKLD2420::sendCalibrationData()
         logIndentUp();
 
         for (uint8_t i = 0; i < 16; i++)
-            logTraceP("Gate %i:  %.2f", i, rawDataRangeAverageDb[i]);
+            logTraceP("Gate %i: %.2f", i, rawDataRangeAverageDb[i]);
 
         logIndentDown();
 
@@ -774,11 +854,11 @@ void SensorHLKLD2420::sendCalibrationData()
 
             // calculate trigger thresholds
             for (uint8_t i = 0; i < 16; i++)
-                triggerThresholdDb[i] = rawDataRangeAverageDb[i] + triggerOffsetDb[i];
+                triggerThresholdDb[i] = round(rawDataRangeAverageDb[i] + triggerOffsetDb[i]);
 
             // calculate hold thresholds
             for (uint8_t i = 0; i < 16; i++)
-                holdThresholdDb[i] = rawDataRangeAverageDb[i] + holdOffsetDb[i];
+                holdThresholdDb[i] = round(rawDataRangeAverageDb[i] + holdOffsetDb[i]);
         }
         else
         {
@@ -787,24 +867,28 @@ void SensorHLKLD2420::sendCalibrationData()
             for (uint8_t i = 0; i < 16; i++)
             {
                 triggerOffsetDb[i] = 6 / log10(lSensitivity + 1);
-                triggerThresholdDb[i] = rawDataRangeAverageDb[i] + triggerOffsetDb[i];
+                triggerThresholdDb[i] = round(rawDataRangeAverageDb[i] + triggerOffsetDb[i]);
                 holdOffsetDb[i] = 3 * (1 / log10(lSensitivity + 1)) - 1.5;
-                holdThresholdDb[i] = rawDataRangeAverageDb[i] + holdOffsetDb[i];
+                holdThresholdDb[i] = round(rawDataRangeAverageDb[i] + holdOffsetDb[i]);
             }
         }
     }
 
-    bool storedCurrentDistanceTime =
+    bool storedCurrentGeneral =
         (storedDistanceMin == mRangeGateMin) &&
         (storedDistanceMax == mRangeGateMax) &&
-        (storedDelayTime == mDelayTime);
+        (storedDelayTime == mDelayTime) &&
+        (storedStatusReportFrequency == mStatusReportFrequency) &&
+        (storedDistanceReportFrequency == mDistanceReportFrequency) &&
+        (storedResponseSpeed == mResponseSpeed);
 
     bool storedCurrentCalibration = true;
     for (uint8_t i = 0; i < 16; i++)
     {
-        if ((storedTriggerThreshold[i] != dBToRaw(triggerThresholdDb[i])) ||
-            (storedHoldThreshold[i] != dBToRaw(holdThresholdDb[i])))
+        if ((storedTriggerThreshold[i] != triggerThresholdDb[i]) ||
+            (storedHoldThreshold[i] != holdThresholdDb[i]))
         {
+            logTraceP("Gate %i mismatch: trigger %u ?= %.2f, hold %u ?= %.2f", i, storedTriggerThreshold[i], triggerThresholdDb[i], storedHoldThreshold[i], holdThresholdDb[i]);
             storedCurrentCalibration = false;
             break;
         }
@@ -813,49 +897,20 @@ void SensorHLKLD2420::sendCalibrationData()
     logDebugP("Write config to sensor:");
     logIndentUp();
 
-    uint8_t param[48];
+    uint8_t param[96];
 
-    if (!storedCurrentDistanceTime ||
+    if (!storedCurrentGeneral ||
         !storedCurrentCalibration)
     {
-        sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_LENGTH);
+        sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_EXT, PARAM_OPEN_COMMAND_MODE_LENGTH);
         delay(100);
     }
 
-    if (storedCurrentDistanceTime)
+    if (storedCurrentGeneral)
         logDebugP("Skip writing distance/time to sensor as data is current");
     else
     {
-        logDebugP("Range gate min.: %d", mRangeGateMin);
-        logDebugP("Range gate max.: %d", mRangeGateMax);
-        logDebugP("Delay time: %d", mDelayTime);
-
-        // write range gate min./max. and delay time, for each:
-        // first 2 bytes parameter offset, then 4 bytes value
-
-        param[0] = OFFSET_PARAM_RANGE_GATE_MIN;
-        param[1] = 0;
-        param[2] = mRangeGateMin;
-        param[3] = 0;
-        param[4] = 0;
-        param[5] = 0;
-        param[6] = OFFSET_PARAM_RANGE_GATE_MAX;
-        param[7] = 0;
-        param[8] = mRangeGateMax;
-        param[9] = 0;
-        param[10] = 0;
-        param[11] = 0;
-
-        param[12] = OFFSET_PARAM_DELAY_TIME;
-        param[13] = 0;
-        param[14] = (uint8_t)(mDelayTime & 0xFF);
-        param[15] = (uint8_t)((mDelayTime >> 8) & 0xFF);
-        param[16] = 0;
-        param[17] = 0;
-
-        sendCommand(CMD_WRITE_MODULE_CONFIG, param, 18);
-        delay(500);
-
+        sendCalibrationDataGeneral(mRangeGateMin, mRangeGateMax, mDelayTime, mStatusReportFrequency, mDistanceReportFrequency, mResponseSpeed);
         openknx.console.writeDiagenoseKo("HLK par send");
     }
 
@@ -868,40 +923,21 @@ void SensorHLKLD2420::sendCalibrationData()
 
         // write back trigger thresholds, for each:
         // first 2 bytes parameter offset, then 4 bytes value
-        // write in 2 steps as it seems 100 bytes are maximum in one package
         uint8_t offset;
-        int rawValue;
-        for (uint8_t i = 0; i < 8; i++)
+        for (uint8_t i = 0; i < 16; i++)
         {
             offset = i * 6;
-            param[offset] = OFFSET_PARAM_TRIGGERS + i;
+            param[offset] = i;
             param[offset + 1] = 0;
 
-            rawValue = dBToRaw(triggerThresholdDb[i]);
-            param[offset + 2] = (uint8_t)(rawValue & 0xFF);
-            param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
-            param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
-            param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
+            param[offset + 2] = (uint8_t)triggerThresholdDb[i];
+            param[offset + 3] = 0;
+            param[offset + 4] = 0;
+            param[offset + 5] = 0;
 
-            logDebugP("Gate %i:  %.2f", i, triggerThresholdDb[i]);
+            logDebugP("Gate %u: %u", i, (uint8_t)triggerThresholdDb[i]);
         }
-        sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
-        delay(500);
-        for (uint8_t i = 8; i < 16; i++)
-        {
-            offset = (i - 8) * 6;
-            param[offset] = OFFSET_PARAM_TRIGGERS + i;
-            param[offset + 1] = 0;
-
-            rawValue = dBToRaw(triggerThresholdDb[i]);
-            param[offset + 2] = (uint8_t)(rawValue & 0xFF);
-            param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
-            param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
-            param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
-
-            logDebugP("Gate %i:  %.2f", i, triggerThresholdDb[i]);
-        }
-        sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
+        sendCommand(CMD_WRITE_TRIGGER_CONFIG, param, 96);
         delay(500);
         logIndentDown();
 
@@ -910,42 +946,24 @@ void SensorHLKLD2420::sendCalibrationData()
 
         // write back hold thresholds, for each:
         // first 2 bytes parameter offset, then 4 bytes value
-        // write in 2 steps as it seems 100 bytes are maximum in one package
-        for (uint8_t i = 0; i < 8; i++)
+        for (uint8_t i = 0; i < 16; i++)
         {
             offset = i * 6;
-            param[offset] = OFFSET_PARAM_HOLDS + i;
+            param[offset] = i;
             param[offset + 1] = 0;
 
-            rawValue = dBToRaw(holdThresholdDb[i]);
-            param[offset + 2] = (uint8_t)(rawValue & 0xFF);
-            param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
-            param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
-            param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
+            param[offset + 2] = (uint8_t)holdThresholdDb[i];
+            param[offset + 3] = 0;
+            param[offset + 4] = 0;
+            param[offset + 5] = 0;
 
-            logDebugP("Gate %i:  %.2f", i, holdThresholdDb[i]);
+            logDebugP("Gate %u: %u", i, (uint8_t)holdThresholdDb[i]);
         }
-        sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
-        delay(500);
-        for (uint8_t i = 8; i < 16; i++)
-        {
-            offset = (i - 8) * 6;
-            param[offset] = OFFSET_PARAM_HOLDS + i;
-            param[offset + 1] = 0;
-
-            rawValue = dBToRaw(holdThresholdDb[i]);
-            param[offset + 2] = (uint8_t)(rawValue & 0xFF);
-            param[offset + 3] = (uint8_t)((rawValue >> 8) & 0xFF);
-            param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
-            param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
-
-            logDebugP("Gate %i:  %.2f", i, holdThresholdDb[i]);
-        }
-        sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
+        sendCommand(CMD_WRITE_HOLD_CONFIG, param, 96);
         delay(500);
         logIndentDown();
 
-        if (!storedCurrentDistanceTime)
+        if (!storedCurrentGeneral)
             openknx.console.writeDiagenoseKo("");
         openknx.console.writeDiagenoseKo("HLK cal send");
         openknx.console.writeDiagenoseKo("");
@@ -957,13 +975,68 @@ void SensorHLKLD2420::sendCalibrationData()
 
     logIndentDown();
 
-    if (!storedCurrentDistanceTime ||
+    if (!storedCurrentGeneral ||
         !storedCurrentCalibration)
     {
         // re-start startup loop to readback values from sensor
         restartStartupLoop();
         calibrationOnOffTimer = delayTimerInit();
     }
+}
+
+void SensorHLKLD2420::sendCalibrationDataGeneral(uint8_t rangeGateMin, uint8_t rangeGateMax, uint16_t delayTime, uint8_t statusReportFrequency, uint8_t distanceReportFrequency, uint8_t responseSpeed)
+{
+    logDebugP("Range gate min.: %d", rangeGateMin);
+    logDebugP("Range gate max.: %d", rangeGateMax);
+    logDebugP("Delay time: %d", delayTime);
+    logDebugP("Status report frequency: %.1f", statusReportFrequency / (float)10);
+    logDebugP("Distance report frequency: %.1f", distanceReportFrequency / (float)10);
+    logDebugP("Response speed: %d", responseSpeed);
+
+    uint8_t param[36];
+    param[0] = OFFSET_PARAM_RANGE_GATE_MAX;
+    param[1] = 0;
+    param[2] = rangeGateMax;
+    param[3] = 0;
+    param[4] = 0;
+    param[5] = 0;
+    param[6] = OFFSET_PARAM_RANGE_GATE_MIN;
+    param[7] = 0;
+    param[8] = rangeGateMin;
+    param[9] = 0;
+    param[10] = 0;
+    param[11] = 0;
+
+    param[12] = OFFSET_PARAM_DELAY_TIME;
+    param[13] = 0;
+    param[14] = (uint8_t)(delayTime & 0xFF);
+    param[15] = (uint8_t)((delayTime >> 8) & 0xFF);
+    param[16] = 0;
+    param[17] = 0;
+
+    param[18] = OFFSET_PARAM_STATUS_REPORT_FREQUENCY;
+    param[19] = 0;
+    param[20] = statusReportFrequency;
+    param[21] = 0;
+    param[22] = 0;
+    param[23] = 0;
+
+    param[24] = OFFSET_PARAM_DISTANCE_REPORT_FREQUENCY;
+    param[25] = 0;
+    param[26] = distanceReportFrequency;
+    param[27] = 0;
+    param[28] = 0;
+    param[29] = 0;
+
+    param[30] = OFFSET_PARAM_RESPONSE_SPEED;
+    param[31] = 0;
+    param[32] = responseSpeed;
+    param[33] = 0;
+    param[34] = 0;
+    param[35] = 0;
+
+    sendCommand(CMD_WRITE_GENERAL_CONFIG, param, 36);
+    delay(500);
 }
 
 void SensorHLKLD2420::sendCommand(uint8_t command, const uint8_t parameter[], uint8_t parameterLength)
@@ -1142,7 +1215,7 @@ void SensorHLKLD2420::showHelp()
     openknx.console.printHelpLine("hlk cal run", "Start new sensor calibration run and send data to sensor.");
     openknx.console.printHelpLine("hlk calt run", "Start new sensor calibration test run (no data send to sensor).");
     openknx.console.printHelpLine("hlk cal def", "Send factory default calibration data to sensor.");
-    openknx.console.printHelpLine("hlk reb soft", "Reboot sensor via software.");
+    //openknx.console.printHelpLine("hlk reb soft", "Reboot sensor via software.");
     openknx.console.printHelpLine("hlk reb hard", "Reboot sensor via hardware (cut power).");
 }
 
@@ -1205,9 +1278,9 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
     }
     else if (iCmd.length() == 7 && iCmd.substr(4, 3) == "ver")
     {
-        logInfoP("Module version: %s", moduleVersion.c_str());
+        logDebugP("Module version: %u.%u.%u", moduleVersionMajor, moduleVersionMinor, moduleVersionRevision);
         if (iDebugKo)
-            openknx.console.writeDiagenoseKo("HLK ver %s", moduleVersion.c_str());
+            openknx.console.writeDiagenoseKo("HLK ver %u.%u.%u", moduleVersionMajor, moduleVersionMinor, moduleVersionRevision);
         lResult = true;
     }
     else if (iCmd.length() == 8 && iCmd.substr(4, 4) == "sens")
@@ -1266,11 +1339,11 @@ bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
         sendCalibrationData();
         lResult = true;
     }
-    else if (iCmd.length() == 12 && iCmd.substr(4, 10) == "reb soft")
-    {
-        rebootSensorSoft();
-        lResult = true;
-    }
+    // else if (iCmd.length() == 12 && iCmd.substr(4, 10) == "reb soft")
+    // {
+    //     rebootSensorSoft();
+    //     lResult = true;
+    // }
     else if (iCmd.length() == 12 && iCmd.substr(4, 10) == "reb hard")
     {
         rebootSensorHard();

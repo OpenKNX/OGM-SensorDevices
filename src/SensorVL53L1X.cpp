@@ -70,8 +70,14 @@ float SensorVL53L1X::measureValue(MeasureType iMeasureType)
 bool SensorVL53L1X::begin()
 {
     logDebugP("Starting sensor VL53L1X... ");
-    this->setTimeout(100);
-    bool lResult = this->init();
+    bool lResult = Sensor::begin();
+    if (lResult)
+    {
+        // logDebugP("Found sensor VL53L1X, initializing... ");
+        this->setBus(pWire);
+        this->setTimeout(500);
+        lResult = this->init();
+    }
     if (lResult)
     {
         // Use long distance mode and allow up to 50000 us (50 ms) for a measurement.
@@ -86,7 +92,7 @@ bool SensorVL53L1X::begin()
         // inter-measurement period). This period should be at least as long as the
         // timing budget.
         // this->startContinuous(50);
-        lResult = Sensor::begin();
+        // lResult = Sensor::begin();
     }
     logResult(lResult);
     return lResult;

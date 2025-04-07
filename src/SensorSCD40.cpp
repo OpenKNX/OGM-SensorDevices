@@ -132,6 +132,7 @@ bool SensorSCD40::prepareTemperatureOffset(float iTempOffset)
 // quick hack: make pressure available by KO
 void SensorSCD40::processPressure()
 {
+    #ifdef KoSENS_Pre
     // pressure is in mBar
     uint16_t lPressure = KoSENS_Pre.value(DPT_Value_Pres);
     // hack for testing: We take pressure from according KO and try to take this value as pressure compensation
@@ -141,6 +142,7 @@ void SensorSCD40::processPressure()
         mPressure = lPressure;
         logDebugP("Pressure set to %i", lPressure);
     }
+    #endif
 }
 
 // pressure is in mBar

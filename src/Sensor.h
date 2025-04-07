@@ -60,8 +60,6 @@ enum MeasureType
     Distance = 16384
 };
 
-#if defined(SENSORMODULE) || defined(PMMODULE)
-// #include "OpenKNX/Helper.h"
 struct sSensorInfo
 {
     float lastValue;
@@ -84,6 +82,8 @@ union uData
     sActorInfo actor;
 };
 
+#if defined(SENSORMODULE) || defined(PMMODULE)
+// #include "OpenKNX/Helper.h"
 class Sensor
 {
   protected:

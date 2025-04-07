@@ -55,7 +55,7 @@ void OneWireSearch::newSearchAll()
     for (uint8_t i = 0; i < 8; i++)
         mSearchResultId[i] = 0;
     #if ONEWIRE_TRACE_SEARCH == detail
-    searchDebug("### Init search all ###\n");
+    // searchDebug("### Init search all ###\n");
     #endif
 }
 
@@ -66,7 +66,7 @@ void OneWireSearch::newSearchFamily(uint8_t iFamily)
     mSearchMode = Family;
     mSearchFamily = iFamily;
     #if ONEWIRE_TRACE_SEARCH == detail
-    searchDebug("### Init search Family %02x ###\n", iFamily);
+    // searchDebug("### Init search Family %02x ###\n", iFamily);
     #endif
 }
 
@@ -77,7 +77,7 @@ void OneWireSearch::newSearchNoFamily(uint8_t iFamily)
     mSearchMode = NoFamily;
     mSearchFamily = iFamily;
     #if ONEWIRE_TRACE_SEARCH == detail
-    searchDebug("### Init search NoFamily %02x ###\n", iFamily);
+    // searchDebug("### Init search NoFamily %02x ###\n", iFamily);
     #endif
 }
 

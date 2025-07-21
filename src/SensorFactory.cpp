@@ -17,6 +17,7 @@
     #include "SensorSHT3x.h"
     #include "SensorVEML7700.h"
     #include "SensorVL53L1X.h"
+    #include "SensorMAX31865.h"
 
 Sensor* SensorDevices::newSensor(uint8_t iSensorClass, MeasureType iMeasureType, TwoWire* iWire)
 {
@@ -58,6 +59,12 @@ Sensor* SensorDevices::newSensor(uint8_t iSensorClass, MeasureType iMeasureType,
         case SENS_SGP30:
             lSensor = new SensorSGP30(iMeasureType, iWire);
             break;
+
+        #if defined(OPENKNX_SPI_MISO)
+        case SENS_MAX31865:
+            lSensor = new SensorMAX31865(iMeasureType, iWire);
+            break;
+        #endif
     #endif
     #if defined(SENSORMODULE) || defined(PMMODULE)
         case SENS_OPT300X:

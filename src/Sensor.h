@@ -31,6 +31,7 @@
 #define SENS_MR24xxB1 10  // HF-Presence
 #define SENS_VEML7700 11  // Lux
 #define SENS_HLKLD2420 12 // HF-Presence
+#define SENS_MAX31865 14  // PT1000
 
 enum SensorState
 {

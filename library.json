@@ -7,7 +7,6 @@
         "adafruit/Adafruit BusIO": "^1.14.1",
         "adafruit/Adafruit BME280 Library": "2.1.2",
         "adafruit/Adafruit Unified Sensor": "1.1.13",
-        "adafruit/Adafruit MAX31865 library": "1.6.2",
         "sparkfun/SparkFun SCD30 Arduino Library": "1.0.20",
         "sensirion/Sensirion I2C SCD4x": "1.0.0", 
         "sensirion/Sensirion Core": "0.7.1",

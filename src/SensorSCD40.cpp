@@ -25,7 +25,10 @@ void SensorSCD40::sensorLoopInternal()
     switch (pSensorState)
     {
         case Wakeup:
-            Sensor::sensorLoopInternal();
+            if (delayCheck(pSensorStateDelay, 5000))
+            {
+                Sensor::sensorLoopInternal();
+            }
             break;
         case Calibrate:
 
@@ -82,10 +85,12 @@ bool SensorSCD40::begin()
 bool SensorSCD40::beginInternal()
 {
     SensirionI2cScd4x::begin(*pWire, SCD40_I2C_ADDR);
-    bool lResult = false;
+    bool lResult = true;
     lResult = (stopPeriodicMeasurement() == 0);
-    if (lResult)
-        lResult = (setTemperatureOffset(-pTempOffset) == 0);
+    // if (lResult) {
+    //     lResult = (setTemperatureOffset(-pTempOffset) == 0);
+    //     logDebugP("TempOffset %.2f gesetzt", pTempOffset);
+    // }
     if (lResult)
         lResult = Sensor::begin();
     logResult(lResult);
@@ -125,7 +130,7 @@ bool SensorSCD40::getSensorData()
 
 bool SensorSCD40::prepareTemperatureOffset(float iTempOffset)
 {
-    pTempOffset = -4.0 + iTempOffset;
+    pTempOffset = iTempOffset;
     return true;
 }
 

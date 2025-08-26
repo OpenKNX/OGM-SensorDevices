@@ -100,7 +100,8 @@ void SensorBME680::sensorLoopInternal()
     switch (pSensorState)
     {
         case Wakeup:
-            if (pSensorStateDelay == 0 || delayCheck(pSensorStateDelay, 1000))
+            // if (pSensorStateDelay == 0 || delayCheck(pSensorStateDelay, 1000))
+            if (delayCheck(pSensorStateDelay, 60000))
             {
                 Sensor::sensorLoopInternal();
             }
@@ -118,28 +119,20 @@ void SensorBME680::sensorLoopInternal()
             }
             break;
         case Finalize:
-            if (delayCheck(pSensorStateDelay, 100))
+            if (delayCheck(pSensorStateDelay, 3000))
             {
                 // as long as there are no new values, sensor is not yet ready
-                if (Bsec2::run()) {
-                    pSensorState = Running;
-                    pSensorStateDelay = 0;
-                } 
-                else 
-                {
-                    pSensorStateDelay = millis();
-                }
+                if (Bsec2::run()) pSensorState = Running;
+                pSensorStateDelay = millis();
             }
             break;
         case Running:
             if (delayCheck(pSensorStateDelay, 3000)) {
                 if (Bsec2::run())
                 {
-                    if (Bsec2::status == 100)
-                      pSensorStateDelay = millis();
-                    else
-                      checkIaqSensorStatus();
+                    if (Bsec2::status != 100) checkIaqSensorStatus();
                 }
+                pSensorStateDelay = millis();
             }
             break;
         default:
@@ -262,7 +255,7 @@ bool SensorBME680::checkIaqSensorStatus(void)
 
     if (Bsec2::sensor.status < BME680_OK)
     {
-        logDebugP("BME680 error code : %d", Bsec2::sensor.status);
+        // logDebugP("BME680 error code : %d", Bsec2::sensor.status);
         return false;
         // fatalError(-iaqSensor.bme680Status, "BME680 error code");
     }

@@ -1,6 +1,6 @@
 // Sensor MAX31865 - PT1000 interface
 #include "SensorMAX31865.h"
-#if defined(SENSORMODULE) && defined(OPENKNX_SPI_MISO)
+#if defined(SENSORMODULE) && defined(OPENKNX_SENSOR_SPI_MISO)
     #include "SPI.h"
 
 SensorMAX31865::SensorMAX31865(uint16_t iMeasureTypes, TwoWire* iWire)
@@ -12,6 +12,49 @@ SensorMAX31865::SensorMAX31865(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t i
 uint8_t SensorMAX31865::getSensorClass()
 {
     return SENS_MAX31865;
+}
+
+void SensorMAX31865::setSensorResistence(uint8_t iResistenceIndex)
+{
+    switch (iResistenceIndex)
+    {
+        case 0:
+            // 1000 Ohm
+            break;
+        case 1:
+            // 100 Ohm
+            mRNominal = 100.0;
+            mRRef = 430.0;
+            break;
+        default:
+            // default is 1000 Ohm
+            mRNominal = 1000.0;
+            mRRef = 4300.0;
+            break;
+    }
+}
+
+void SensorMAX31865::setSensorWires(uint8_t iWireIndex)
+{
+    switch (iWireIndex)
+    {
+        case 0:
+            // 2 Wire
+            mWires = MAX31865_2WIRE;
+            break;
+        case 1:
+            // 3 Wire
+            mWires = MAX31865_3WIRE;
+            break;
+        case 2:
+            // 4 Wire
+            mWires = MAX31865_4WIRE;
+            break;
+        default:
+            // default is 3 Wire
+            mWires = MAX31865_2WIRE;
+            break;
+    }
 }
 
 std::string SensorMAX31865::logPrefix()
@@ -106,14 +149,14 @@ bool SensorMAX31865::begin()
     bool lResult = Sensor::begin();
     if (lResult)
     {
-        SPI.setRX(OPENKNX_SPI_MISO); // or setMISO()
-        SPI.setCS(OPENKNX_SPI_CS);
-        SPI.setSCK(OPENKNX_SPI_SCK);
-        SPI.setTX(OPENKNX_SPI_MOSI); // or setMOSI()
-        spi_dev = new Adafruit_SPIDevice(OPENKNX_SPI_CS, 1000000, SPI_BITORDER_MSBFIRST, SPI_MODE1, &SPI);
+        SPI.setRX(OPENKNX_SENSOR_SPI_MISO); // or setMISO()
+        SPI.setCS(OPENKNX_SENSOR_SPI_CS);
+        SPI.setSCK(OPENKNX_SENSOR_SPI_SCK);
+        SPI.setTX(OPENKNX_SENSOR_SPI_MOSI); // or setMOSI()
+        spi_dev = new Adafruit_SPIDevice(OPENKNX_SENSOR_SPI_CS, 1000000, SPI_BITORDER_MSBFIRST, SPI_MODE1, &SPI);
         spi_dev->begin();
 
-        setWires(MAX31865_3WIRE);
+        setWires(mWires);
         enableBias(false);
         autoConvert(false);
         setThresholds(0, 0xFFFF);
@@ -130,8 +173,9 @@ uint8_t SensorMAX31865::getI2cSpeed()
 
 bool SensorMAX31865::getSensorData()
 {
-    mTemp = calculateTemperature(doReadRTD(),RNOMINAL, RREF);
-    uint8_t fault = readFault();
+    mTemp = calculateTemperature(doReadRTD(), mRNominal, mRRef);
+    uint8_t fault = (mTemp < -240.0);
+    fault = fault || readFault();
 
     return (fault == 0);
 }

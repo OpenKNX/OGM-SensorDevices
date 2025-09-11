@@ -30,8 +30,11 @@ class SensorBME680 : public Sensor, protected Bsec2
     bool mDelayCallbackIsActive = false;
 
     const uint8_t* mFlashBuffer = nullptr; // Pointer to stored flash content
+    uint8_t mWorkBuffer[BME680_SAVE_SIZE - 5]; // working buffer for reading/writing BME calibration data
+
     // new flash handling
     void sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize) override;
+    void sensorSavePower() override;
     void sensorWriteFlash() override;
     uint16_t sensorFlashSize() override;
     static float temperature;

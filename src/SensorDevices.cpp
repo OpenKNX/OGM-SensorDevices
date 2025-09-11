@@ -118,12 +118,19 @@ void SensorDevices::readFlash(const uint8_t* iBuffer, const uint16_t iSize)
         mSensors[lCounter]->sensorReadFlash(iBuffer, iSize);
 }
 
+void SensorDevices::savePower()
+{
+    // dispatch the call to all sensors
+    for (uint8_t lCounter = 0; lCounter < mNumSensors; lCounter++)
+        mSensors[lCounter]->sensorSavePower();
+}
+
 void SensorDevices::writeFlash()
 {
     // dispatch the call to all sensors
     for (uint8_t lCounter = 0; lCounter < mNumSensors; lCounter++)
         mSensors[lCounter]->sensorWriteFlash();
-}
+}        
 
 uint16_t SensorDevices::flashSize()
 {
@@ -131,8 +138,8 @@ uint16_t SensorDevices::flashSize()
     // dispatch the call to all sensors
     for (uint8_t lCounter = 0; lCounter < mNumSensors; lCounter++)
         lResult += mSensors[lCounter]->sensorFlashSize();
-    return lResult;
-}
+    return lResult;    
+}    
 
 bool SensorDevices::measureValue(MeasureType iMeasureType, float& eValue)
 {

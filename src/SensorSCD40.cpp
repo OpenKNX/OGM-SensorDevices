@@ -143,9 +143,9 @@ void SensorSCD40::processPressure()
     // hack for testing: We take pressure from according KO and try to take this value as pressure compensation
     if (lPressure > 600 && lPressure < 1060 && (lPressure > mPressure + 1 || lPressure < mPressure - 1))
     {
-        setPressure(lPressure);
+        // setPressure(lPressure);
         mPressure = lPressure;
-        logDebugP("Pressure set to %i", lPressure);
+        logDebugP("Pressure set to %i (deactivated)", lPressure);
     }
     #endif
 }

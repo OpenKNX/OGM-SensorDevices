@@ -31,6 +31,7 @@ class SensorDevices : public OpenKNX::Module
     const std::string name() override;
     const std::string version() override;
     uint16_t flashSize() override;
+    void savePower() override;
     void writeFlash() override;
     void readFlash(const uint8_t *iBuffer, const uint16_t iSize) override;
 

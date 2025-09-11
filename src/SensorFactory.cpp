@@ -60,7 +60,7 @@ Sensor* SensorDevices::newSensor(uint8_t iSensorClass, MeasureType iMeasureType,
             lSensor = new SensorSGP30(iMeasureType, iWire);
             break;
 
-        #if defined(OPENKNX_SPI_MISO)
+        #if defined(OPENKNX_SENSOR_SPI_MISO)
         case SENS_MAX31865:
             lSensor = new SensorMAX31865(iMeasureType, iWire);
             break;

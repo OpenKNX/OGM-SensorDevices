@@ -279,6 +279,7 @@ void SensorBME680::sensorLoadState()
         else
         {
             logDebugP("*** BME680 calibration from Flash failed! ***");
+            Bsec2::setConfig(bsec_config_iaq);
         }
     }
     else
@@ -350,6 +351,7 @@ void SensorBME680::sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize)
     else
     {
         logDebugP("Calibration data read from flash");
+        // we read here just to use the byte stream, data itself is contained in mFlashBuffer
         openknx.flash.read(sensorFlashSize() - 1);
         // for (uint8_t i = 1; i < sensorFlashSize(); i++)
         //     openknx.flash.readByte();
@@ -357,14 +359,17 @@ void SensorBME680::sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize)
     logIndentDown();
 }
 
+void SensorBME680::sensorSavePower()
+{
+    Bsec2::getState(mWorkBuffer);
+}
+
 void SensorBME680::sensorWriteFlash()
 {
     openknx.flash.writeByte(1); // version
     for (uint8_t lIndex = 0; lIndex < 4; lIndex++)
         openknx.flash.writeByte(sMagicWord[lIndex]);
-    uint8_t workBuffer[BME680_SAVE_SIZE - 5];
-    Bsec2::getState(workBuffer);
-    openknx.flash.write(workBuffer, BME680_SAVE_SIZE - 6);
+    openknx.flash.write(mWorkBuffer, BME680_SAVE_SIZE - 6);
     bool lCheck = checkIaqSensorStatus();
     if (lCheck)
     {

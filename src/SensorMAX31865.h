@@ -3,15 +3,9 @@
 #pragma once
 #ifdef SENSORMODULE
 #include "Sensor.h"
-#ifdef OPENKNX_SPI_MISO
+#ifdef OPENKNX_SENSOR_SPI_MISO
   #include "Sensor.h"
   #include "Adafruit_SPIDevice.h"
-
-  // The value of the Rref resistor. Use 430.0 for PT100 and 4300.0 for PT1000
-  #define RREF      4300.0
-  // The 'nominal' 0-degrees-C resistance of the sensor
-  // 100.0 for PT100, 1000.0 for PT1000
-  #define RNOMINAL  1000.0
 
   #define MAX31865_CONFIG_REG 0x00
   #define MAX31865_CONFIG_BIAS 0x80
@@ -72,6 +66,13 @@ class SensorMAX31865 : public Sensor
 
   protected:
     float mTemp = NO_NUM;
+    // The value of the Rref resistor. Use 430.0 for PT100 and 4300.0 for PT1000
+    float mRRef = 4300.0;
+    // The 'nominal' 0-degrees-C resistance of the sensor
+    // 100.0 for PT100, 1000.0 for PT1000
+    float mRNominal = 1000.0;
+    max31865_numwires_t mWires = MAX31865_3WIRE;
+
     ReadState pReadState = Setup;
 
     uint8_t getSensorClass() override; // returns unique ID for this sensor type
@@ -103,6 +104,8 @@ class SensorMAX31865 : public Sensor
     bool begin() override;
     uint8_t getI2cSpeed() override;
     std::string logPrefix() override;
+    void setSensorResistence(uint8_t iResistenceIndex);
+    void setSensorWires(uint8_t iWireIndex);
   };
 #endif
 #endif

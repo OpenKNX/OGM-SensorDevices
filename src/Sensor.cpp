@@ -94,6 +94,12 @@ void Sensor::sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize)
         return;
 }
 
+// should be overridden, if there is some data to fetch from a sensor before power failure
+void Sensor::sensorSavePower()
+{
+    // do nothing here
+}
+
 // should be overridden, if there is a state to save before power failure
 void Sensor::sensorWriteFlash()
 {

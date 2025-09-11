@@ -31,7 +31,7 @@
 #define SENS_MR24xxB1 10  // HF-Presence
 #define SENS_VEML7700 11  // Lux
 #define SENS_HLKLD2420 12 // HF-Presence
-#define SENS_MAX31865 14  // PT1000
+#define SENS_MAX31865 14  // PT100/PT1000
 
 enum SensorState
 {
@@ -111,6 +111,7 @@ class Sensor
     virtual uint8_t getI2cSpeed();
     virtual bool prepareTemperatureOffset(float iTempOffset);
     virtual void sensorReadFlash(const uint8_t *iBuffer, const uint16_t iSize);
+    virtual void sensorSavePower();
     virtual void sensorWriteFlash();
     virtual uint16_t sensorFlashSize();
     virtual std::string logPrefix();

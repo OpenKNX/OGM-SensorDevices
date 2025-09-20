@@ -112,12 +112,15 @@ class Sensor
     virtual bool prepareTemperatureOffset(float iTempOffset);
     virtual void sensorReadFlash(const uint8_t *iBuffer, const uint16_t iSize);
     virtual void sensorSavePower();
+    virtual bool sensorRestorePower();
     virtual void sensorWriteFlash();
     virtual uint16_t sensorFlashSize();
     virtual std::string logPrefix();
     virtual uint8_t getSensorClass() = 0; // pure; returns unique ID for this sensor type
     virtual SensorState getSensorState();
     virtual uint16_t getMeasureTypes();
+    virtual void sensorShowHelp();
+    virtual bool sensorProcessCommand(const std::string iCmd, bool iDebugKo);
     void addMeasureType(MeasureType iMeasureType);
     bool checkMeasureType(MeasureType iMeasureType);
     virtual void sensorLoopInternal();

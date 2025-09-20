@@ -129,7 +129,7 @@ void SensorHLKLD2420::startupLoop()
                 }
                 else
                 {
-                    mDelayTime = ParamPM_HfDelayTime;
+                    mDelayTime = MAX(ParamPM_HfDelayTime, 1); // sensor accepts minimum 1 ms
                     mRangeGateMin = ParamPM_HfRangeGateMin;
                     if (ParamPM_HfRangeGateMax > mRangeGateMin)
                         mRangeGateMax = ParamPM_HfRangeGateMax;
@@ -370,6 +370,17 @@ void SensorHLKLD2420::switchPower(bool on)
         delay(1000);
         restartStartupLoop();
     }
+}
+
+void SensorHLKLD2420::sensorSavePower()
+{
+    switchPower(false);
+}
+
+bool SensorHLKLD2420::sensorRestorePower()
+{
+    switchPower(true);
+    return true;
 }
 
 void SensorHLKLD2420::restartStartupLoop()
@@ -937,7 +948,7 @@ uint8_t SensorHLKLD2420::getI2cSpeed()
 }
 
 
-void SensorHLKLD2420::showHelp()
+void SensorHLKLD2420::sensorShowHelp()
 {
     openknx.console.printHelpLine("hlk ver", "Print firmware version of HLK-LD2420 sensor.");
     openknx.console.printHelpLine("hlk rmin", "Print min. range defined by ETS app.");
@@ -961,9 +972,11 @@ void SensorHLKLD2420::showHelp()
     openknx.console.printHelpLine("hlk reb hard", "Reboot sensor via hardware (cut power).");
 }
 
-bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
+bool SensorHLKLD2420::sensorProcessCommand(const std::string iCmd, bool iDebugKo)
 {
     bool lResult = false;
+    if (iCmd.length() < 5 || iCmd.substr(0, 4) != "hlk ")
+        return lResult;
     if (iCmd.length() == 5 && iCmd.substr(4, 1) == "h")
     {
         // Command help

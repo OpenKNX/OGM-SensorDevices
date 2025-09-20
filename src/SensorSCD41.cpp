@@ -24,8 +24,7 @@ void SensorSCD41::setMeasureInterval(uint32_t iMeasureInterval)
     mMeasureInterval = MAX(iMeasureInterval, 5);
 }
 
-static uint8_t communication_buffer[9] = {0};
-
+// override measureSingleShot to avoid blocking forever
 int16_t SensorSCD41::measureSingleShot(bool blocking) {
     int16_t localError = 0; //NO_ERROR
     uint8_t* buffer_ptr = communication_buffer;
@@ -40,56 +39,66 @@ int16_t SensorSCD41::measureSingleShot(bool blocking) {
     return localError;
 }
 
+uint8_t SensorSCD41::calibrateExtended()
+{
+    // check for standard intervals
+    if (mMeasureInterval == 30)
+        return SensorSCD40::calibrateExtended();
+    else if (mMeasureInterval == 5) 
+    {
+        sError = startPeriodicMeasurement();
+        if (sError) {
+            logSensorError(sError, "Error trying to execute startPeriodicMeasurement(): ");
+            return 130;
+        }
+        logDebugP("Normal power mode enabled!");
+    }
+    else
+    {
+        // set ASC initial period according to data sheet:
+        // 44 h for 5 min. intervals, scaled inversely proportional for other intervals
+        uint16_t lAscInitial = 44 * (300 / mMeasureInterval);
 
+        // it has to be dividable by 4
+        lAscInitial = (lAscInitial + 3) & ~(decltype(lAscInitial))3;
+
+        sError = setAutomaticSelfCalibrationInitialPeriod(lAscInitial);
+        if (sError) {
+            logSensorError(sError, "Error trying to execute setAutomaticSelfCalibrationInitialPeriod(): ");
+            return 140;
+        }
+
+        // set ASC standard period according to data sheet:
+        // 156 h for 5 min. intervals, scaled inversely proportional for other intervals
+        uint16_t lAscStandard = 156 * (300 / mMeasureInterval);
+
+        // it has to be dividable by 4
+        lAscStandard = (lAscStandard + 3) & ~(decltype(lAscStandard))3;
+
+        sError = setAutomaticSelfCalibrationStandardPeriod(lAscStandard);
+        if (sError) {
+            logSensorError(sError, "Error trying to execute setAutomaticSelfCalibrationStandardPeriod(): ");
+            return 140;
+        }
+        logDebugP("Single shot mode every %i seconds with ASC enabled!", mMeasureInterval);
+    }
+    return 0;
+}
 
 void SensorSCD41::sensorLoopInternal()
 {
     switch (pSensorState)
     {
         case Wakeup:
-            Sensor::sensorLoopInternal();
+            SensorSCD40::sensorLoopInternal();
             break;
         case Calibrate:
-            // check for standard intervals
-            if (mMeasureInterval == 5)
-                startPeriodicMeasurement();
-            else if (mMeasureInterval == 30)
-                startLowPowerPeriodicMeasurement();
-            else
-            {
-                // set ASC initial period according to data sheet:
-                // 44 h for 5 min. intervals, scaled inversely proportional for other intervals
-                uint16_t lAscInitial = 44 * (300 / mMeasureInterval);
-
-                // it has to be dividable by 4
-                lAscInitial = (lAscInitial + 3) & ~(decltype(lAscInitial))3;
-
-                setAutomaticSelfCalibrationInitialPeriod(lAscInitial);
-
-                // set ASC standard period according to data sheet:
-                // 156 h for 5 min. intervals, scaled inversely proportional for other intervals
-                uint16_t lAscStandard = 156 * (300 / mMeasureInterval);
-
-                // it has to be dividable by 4
-                lAscStandard = (lAscStandard + 3) & ~(decltype(lAscStandard))3;
-
-                setAutomaticSelfCalibrationStandardPeriod(lAscStandard);
-            }
-
-            Sensor::sensorLoopInternal();
+            SensorSCD40::sensorLoopInternal();
             break;
         case Finalize:
             // if standard intervals used, we wait for first data
             if (mMeasureInterval == 5 || mMeasureInterval == 30)
-            {
-                // we ask for value until we get a valid value
-                if (delayCheck(pSensorStateDelay, 2000))
-                {
-                    if (getSensorData())
-                        pSensorState = Running;
-                    pSensorStateDelay = delayTimerInit();
-                }
-            }
+                SensorSCD40::sensorLoopInternal();
             else
                 pSensorState = Running;
 

@@ -100,6 +100,12 @@ void Sensor::sensorSavePower()
     // do nothing here
 }
 
+// should be overridden, if there is some data to restore to a sensor after power failure
+bool Sensor::sensorRestorePower()
+{
+    return true;
+}
+
 // should be overridden, if there is a state to save before power failure
 void Sensor::sensorWriteFlash()
 {
@@ -157,4 +163,15 @@ SensorState Sensor::getSensorState()
 uint16_t Sensor::getMeasureTypes()
 {
     return pMeasureTypes;
+}
+
+void Sensor::sensorShowHelp()
+{
+    // do nothing here, override if help is available
+}
+
+bool Sensor::sensorProcessCommand(const std::string iCmd, bool iDebugKo)
+{
+    // do nothing here, override if help is available
+    return false;
 }

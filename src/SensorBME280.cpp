@@ -28,7 +28,7 @@ void SensorBME280::sensorLoopInternal()
         case Wakeup:
             if (pSensorStateDelay == 0 || delayCheck(pSensorStateDelay, 1000))
             {
-                if (SensorBME280::begin() && initWakeup()) pSensorState = Calibrate;
+                pSensorState = (SensorBME280::begin() && initWakeup()) ? Calibrate : Off;
                 pSensorStateDelay = millis();
             }
             break;
@@ -61,7 +61,7 @@ bool SensorBME280::initWakeup()
 {
     // check if sensor, i.e. the chip ID is correct
     _sensorID = read8(BME280_REGISTER_CHIPID);
-    if (_sensorID != 0x60 && _sensorID != 0x58)
+    if (_sensorID != 0x60 && _sensorID != 0x58 && _sensorID != 0x61) // 0x60 for BME280, 0x58 for BMP280, 0x61 for BME680   
         return false;
 
     // reset the device using soft-reset

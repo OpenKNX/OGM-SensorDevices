@@ -100,8 +100,8 @@ void SensorBME680::sensorLoopInternal()
     switch (pSensorState)
     {
         case Wakeup:
-            // if (pSensorStateDelay == 0 || delayCheck(pSensorStateDelay, 1000))
-            if (delayCheck(pSensorStateDelay, 60000))
+        // if (delayCheck(pSensorStateDelay, 60000))
+        if (pSensorStateDelay == 0 || delayCheck(pSensorStateDelay, 1000))
             {
                 Sensor::sensorLoopInternal();
             }
@@ -178,11 +178,16 @@ bool SensorBME680::begin()
         Bsec2::begin(pI2CAddress, *pWire, mDelayCallback);
         lResult = checkIaqSensorStatus();
     }
-    if (lResult)
-    {
-        Bsec2::setConfig(bsec_config_iaq);
-        lResult = checkIaqSensorStatus();
-    }
+    if (lResult) lResult = reinitialize();
+    logResult(lResult);
+    return lResult;
+}
+
+bool SensorBME680::reinitialize()
+{
+    bool lResult = false;
+    Bsec2::setConfig(bsec_config_iaq);
+    lResult = checkIaqSensorStatus();
     if (lResult)
     {
         Bsec2::updateSubscription(sensorList, sizeof(sensorList), BSEC_SAMPLE_RATE_LP);
@@ -192,7 +197,6 @@ bool SensorBME680::begin()
         Bsec2::setTemperatureOffset(-pTempOffset);
         attachCallback(bme680DataCallback);
     }
-    logResult(lResult);
     return lResult;
 }
 
@@ -222,7 +226,7 @@ void SensorBME680::bme680DataCallback(const bme68xData data, const bsecOutputs o
             //     temperature = output.signal;
             //     break;
             case BSEC_OUTPUT_RAW_PRESSURE:
-                SensorBME680::pressure = output.signal;
+                SensorBME680::pressure = output.signal * 100.0; // pressure seems to be in hPa, not in Pa
                 break;
             // case BSEC_OUTPUT_RAW_HUMIDITY:
             //     humidity = output.signal;
@@ -279,7 +283,7 @@ void SensorBME680::sensorLoadState()
         else
         {
             logDebugP("*** BME680 calibration from Flash failed! ***");
-            Bsec2::setConfig(bsec_config_iaq);
+            reinitialize();
         }
     }
     else
@@ -362,10 +366,12 @@ void SensorBME680::sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize)
 void SensorBME680::sensorSavePower()
 {
     Bsec2::getState(mWorkBuffer);
+    mWorkBufferInitialized = true;
 }
 
 void SensorBME680::sensorWriteFlash()
 {
+    if (!mWorkBufferInitialized) sensorSavePower();
     openknx.flash.writeByte(1); // version
     for (uint8_t lIndex = 0; lIndex < 4; lIndex++)
         openknx.flash.writeByte(sMagicWord[lIndex]);
@@ -375,6 +381,7 @@ void SensorBME680::sensorWriteFlash()
     {
         logDebugP("BME680: Written state to Flash\n");
     }
+    mWorkBufferInitialized = false;
 }
 
 uint16_t SensorBME680::sensorFlashSize()

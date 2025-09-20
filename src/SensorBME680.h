@@ -21,7 +21,7 @@ class SensorBME680 : public Sensor, protected Bsec2
     // ugly, but works
     static void bme680DataCallback(const bme68xData data, const bsecOutputs outputs, Bsec2 bsec);
 
-
+    bool reinitialize();
     void sensorLoadState();
     // void sensorUpdateState();
     uint32_t stateUpdateTimer = 0;
@@ -30,6 +30,7 @@ class SensorBME680 : public Sensor, protected Bsec2
     bool mDelayCallbackIsActive = false;
 
     const uint8_t* mFlashBuffer = nullptr; // Pointer to stored flash content
+    bool mWorkBufferInitialized = false;
     uint8_t mWorkBuffer[BME680_SAVE_SIZE - 5]; // working buffer for reading/writing BME calibration data
 
     // new flash handling

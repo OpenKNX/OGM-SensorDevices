@@ -151,6 +151,24 @@ void SensorHLKLD2420::startupLoop()
                     triggerThresholdDb[14] = ParamPM_Trigger14 / 100.0;
                     triggerThresholdDb[15] = ParamPM_Trigger15 / 100.0;
 
+                    // ensure minimum threshold, usually just neccessary for test mode
+                    triggerThresholdDb[0] = triggerThresholdDb[0] < 1.0 ? 47.78 : triggerThresholdDb[0];
+                    triggerThresholdDb[1] = triggerThresholdDb[1] < 1.0 ? 47.77 : triggerThresholdDb[1];
+                    triggerThresholdDb[2] = triggerThresholdDb[2] < 1.0 ? 34.77 : triggerThresholdDb[2];
+                    triggerThresholdDb[3] = triggerThresholdDb[3] < 1.0 ? 33.01 : triggerThresholdDb[3];
+                    triggerThresholdDb[4] = triggerThresholdDb[4] < 1.0 ? 26.99 : triggerThresholdDb[4];
+                    triggerThresholdDb[5] = triggerThresholdDb[5] < 1.0 ? 26.02 : triggerThresholdDb[5];
+                    triggerThresholdDb[6] = triggerThresholdDb[6] < 1.0 ? 26.02 : triggerThresholdDb[6];
+                    triggerThresholdDb[7] = triggerThresholdDb[7] < 1.0 ? 24.77 : triggerThresholdDb[7];
+                    triggerThresholdDb[8] = triggerThresholdDb[8] < 1.0 ? 24.77 : triggerThresholdDb[8];
+                    triggerThresholdDb[9] = triggerThresholdDb[9] < 1.0 ? 24.77 : triggerThresholdDb[9];
+                    triggerThresholdDb[10] = triggerThresholdDb[10] < 1.0 ? 24.77 : triggerThresholdDb[10];
+                    triggerThresholdDb[11] = triggerThresholdDb[11] < 1.0 ? 23.98 : triggerThresholdDb[11];
+                    triggerThresholdDb[12] = triggerThresholdDb[12] < 1.0 ? 23.98 : triggerThresholdDb[12];
+                    triggerThresholdDb[13] = triggerThresholdDb[13] < 1.0 ? 23.01 : triggerThresholdDb[13];
+                    triggerThresholdDb[14] = triggerThresholdDb[14] < 1.0 ? 23.01 : triggerThresholdDb[14];
+                    triggerThresholdDb[15] = triggerThresholdDb[15] < 1.0 ? 22.25 : triggerThresholdDb[15];
+
                     holdThresholdDb[0] = ParamPM_Hold00 / 100.0;
                     holdThresholdDb[1] = ParamPM_Hold01 / 100.0;
                     holdThresholdDb[2] = ParamPM_Hold02 / 100.0;
@@ -167,8 +185,26 @@ void SensorHLKLD2420::startupLoop()
                     holdThresholdDb[13] = ParamPM_Hold13 / 100.0;
                     holdThresholdDb[14] = ParamPM_Hold14 / 100.0;
                     holdThresholdDb[15] = ParamPM_Hold15 / 100.0;
-                    sendCalibrationData(true); // correct place? WP
 
+                    // ensure minimum threshold, usually just neccessary for test mode
+                    holdThresholdDb[0] = holdThresholdDb[0] < 1.0 ? 46.02 : holdThresholdDb[0];
+                    holdThresholdDb[1] = holdThresholdDb[1] < 1.0 ? 43.01 : holdThresholdDb[1];
+                    holdThresholdDb[2] = holdThresholdDb[2] < 1.0 ? 26.02 : holdThresholdDb[2];
+                    holdThresholdDb[3] = holdThresholdDb[3] < 1.0 ? 24.77 : holdThresholdDb[3];
+                    holdThresholdDb[4] = holdThresholdDb[4] < 1.0 ? 24.77 : holdThresholdDb[4];
+                    holdThresholdDb[5] = holdThresholdDb[5] < 1.0 ? 23.01 : holdThresholdDb[5];
+                    holdThresholdDb[6] = holdThresholdDb[6] < 1.0 ? 23.01 : holdThresholdDb[6];
+                    holdThresholdDb[7] = holdThresholdDb[7] < 1.0 ? 21.76 : holdThresholdDb[7];
+                    holdThresholdDb[8] = holdThresholdDb[8] < 1.0 ? 21.76 : holdThresholdDb[8];
+                    holdThresholdDb[9] = holdThresholdDb[9] < 1.0 ? 20.00 : holdThresholdDb[9];
+                    holdThresholdDb[10] = holdThresholdDb[10] < 1.0 ? 20.00 : holdThresholdDb[10];
+                    holdThresholdDb[11] = holdThresholdDb[11] < 1.0 ? 20.00 : holdThresholdDb[11];
+                    holdThresholdDb[12] = holdThresholdDb[12] < 1.0 ? 20.00 : holdThresholdDb[12];
+                    holdThresholdDb[13] = holdThresholdDb[13] < 1.0 ? 20.00 : holdThresholdDb[13];
+                    holdThresholdDb[14] = holdThresholdDb[14] < 1.0 ? 20.00 : holdThresholdDb[14];
+                    holdThresholdDb[15] = holdThresholdDb[15] < 1.0 ? 20.00 : holdThresholdDb[15];
+
+                    sendCalibrationData(true); // correct place? WP
                 }
                 if (mHfSensorStartupState == START_READ2_DONE)
                     mHfSensorStartupState = START_FINISHED;

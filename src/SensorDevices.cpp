@@ -212,8 +212,7 @@ void SensorDevices::testSensors()
     // this method tests all sensors 
     // each sensor is initialized and should provide at least one measure value
     factory(SENS_SHT3X, Temperature);
-    factory(SENS_BME280, Temperature); // tests also BME680
-    // Köfactory(SENS_BME680, Temperature);
+    factory(SENS_BME280, Temperature); // tests also BMP280 and BME680
     SensorSCD41 *lSensor = (SensorSCD41 *)factory(SENS_SCD41, Temperature);
     lSensor->setMeasureInterval(5); // 5 seconds interval for test
     factory(SENS_VL53L1X, Tof);
@@ -224,7 +223,7 @@ void SensorDevices::testSensors()
     pinMode(HF_POWER_PIN, OUTPUT);
     // at startup, we turn HF-Sensor on
     digitalWrite(HF_POWER_PIN, HIGH);
-    delay(1000);
+    delay(100);
 
     // ensure no data lost even for sensor raw data
     // up to 1288 bytes are send by the sensor at once
@@ -235,7 +234,7 @@ void SensorDevices::testSensors()
     // factory(SENS_MR24xxB1, Pres);
     factory(SENS_HLKLD2420, Pres);
 #endif
-    delay(1000);
+    delay(100);
 
     beginSensors();
     mSensorTestDuration = delayTimerInit();
@@ -279,7 +278,7 @@ void SensorDevices::testSensorMeasurement() {
             {
                 sCheckedSensors[lCounter] = true;
             }
-            if (lSensorState == SensorState::Running || (lSensorState == SensorState::Calibrate && lSensor->checkMeasureType(Pres))) {
+            if (lSensorState == SensorState::Running) {
                 for (uint8_t lMeasureIndex = 0; lMeasureIndex < 4; lMeasureIndex++)
                 {
                     if (lSensor->checkMeasureType(lMeasureTypes[lMeasureIndex])) {

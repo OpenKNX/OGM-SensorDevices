@@ -13,9 +13,19 @@ uint8_t SensorBME280::getSensorClass()
     return SENS_BME280;
 }
 
+std::string SensorBME280::getSensorName()
+{
+    if (_sensorID == 0x58)
+        return "BMP280";
+    else if (_sensorID == 0x61)
+        return "BME680";
+    else
+        return "BME280";
+}
+
 std::string SensorBME280::logPrefix()
 {
-    return "Sensor<BME280>";
+    return "Sensor<" + getSensorName() + ">";
 }
 
 /*!
@@ -28,7 +38,7 @@ void SensorBME280::sensorLoopInternal()
         case Wakeup:
             if (pSensorStateDelay == 0 || delayCheck(pSensorStateDelay, 1000))
             {
-                pSensorState = (SensorBME280::begin() && initWakeup()) ? Calibrate : Off;
+                pSensorState = (initWakeup() && SensorBME280::begin()) ? Calibrate : Off;
                 pSensorStateDelay = millis();
             }
             break;
@@ -59,6 +69,8 @@ void SensorBME280::sensorLoopInternal()
  */
 bool SensorBME280::initWakeup()
 {
+    _i2caddr = pI2CAddress;
+    _wire = pWire;
     // check if sensor, i.e. the chip ID is correct
     _sensorID = read8(BME280_REGISTER_CHIPID);
     if (_sensorID != 0x60 && _sensorID != 0x58 && _sensorID != 0x61) // 0x60 for BME280, 0x58 for BMP280, 0x61 for BME680   
@@ -99,12 +111,9 @@ float SensorBME280::measureValue(MeasureType iMeasureType)
 
 bool SensorBME280::begin()
 {
-    logDebugP("Starting sensor BME280... ");
-    _i2caddr = pI2CAddress;
-    _wire = pWire;
+    logDebugP("Starting sensor " + getSensorName() + "... ");
     bool lResult = Sensor::begin();
-    // pSensorState = Wakeup;
-    // logResult(lResult);
+    logResult(lResult);
     return lResult;
 }
 

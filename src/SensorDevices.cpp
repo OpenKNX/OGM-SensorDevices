@@ -250,30 +250,7 @@ void SensorDevices::testSensorMeasurement() {
             Sensor* lSensor = mSensors[lCounter];
             lFinished = false;
             SensorState lSensorState = lSensor->getSensorState();
-            const char *lSensorStateString;
-            switch (lSensorState)
-            {
-                case SensorState::Wakeup:
-                    lSensorStateString = "Wakeup";
-                    break;
-                case SensorState::Calibrate:
-                    lSensorStateString = "Calibrate";
-                    break;
-                case SensorState::Finalize:
-                    lSensorStateString = "Finalize";
-                    break;
-                case SensorState::Running:
-                    lSensorStateString = "Running";
-                    break;
-                case SensorState::Off:
-                    lSensorStateString = "Off";
-                    break;
-                default:
-                    lSensorStateString = "(unknown)";
-                    break;
-            }
-            logDebug(lSensor->logPrefix(), "Current state is: %s", lSensorStateString);
-
+            logDebug(lSensor->logPrefix(), "Current state is: %s", lSensor->getSensorStateAsString());
             if (lSensorState == SensorState::Off) 
             {
                 sCheckedSensors[lCounter] = true;

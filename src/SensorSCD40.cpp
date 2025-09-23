@@ -250,29 +250,224 @@ bool SensorSCD40::setPressure(uint32_t pressure)
 
 void SensorSCD40::sensorShowHelp()
 {
-    openknx.console.printHelpLine("scd ver", "Print connected SCD4x sensor variant.");
-    // openknx.console.printHelpLine("scd asc", "Print current auto self calibration state.");
+    openknx.console.printHelpLine("scd asc", "Get current auto self calibration state.");
+    openknx.console.printHelpLine("scd asc NNNN", "Set auto calibration target to NNNN ppm.");
+    openknx.console.printHelpLine("scd factory", "Reset sensor with factory settings.");
+    openknx.console.printHelpLine("scd force NNNN", "Set current CO2 value to NNNN ppm.");
+    openknx.console.printHelpLine("scd persist", "persist volatile settings to EEPROM. Be careful, EEPROM has just 2000 write cycles.");
+    openknx.console.printHelpLine("scd start", "Leave stop state and continue measureing.");
+    openknx.console.printHelpLine("scd stop", "Stop measuring to allow management commands.");
+    openknx.console.printHelpLine("scd ver", "Get connected SCD4x sensor variant.");
 }
+
+bool SensorSCD40::isInt(const std::string& s) {
+    for (char c : s) {
+        if (!std::isdigit(c) && !std::isspace(c)) return false;
+    }
+    return true;
+}
+
+int16_t SensorSCD40::getIntArg(const std::string& s) {
+    if (s.length() <= 4) return -1; 
+    std::string arg=s.substr(s.length()-4); // Extract nuber argument at the end
+    if (!isInt(arg)) return -1; 
+    return std::stoi(arg);
+}
+
 
 bool SensorSCD40::sensorProcessCommand(const std::string iCmd, bool iDebugKo)
 {
     bool lResult = false;
-    if (iCmd.length() < 5 || iCmd.substr(0, 4) != "scd ")
+    if (iCmd.find("scd ") != 0)
         return lResult;
-    if (iCmd.length() == 5 && iCmd.substr(4, 1) == "h")
+    std::string lStateString = getSensorStateAsString();
+    if (iCmd.find("scd h") == 0)
     {
         // Command help
         if (iDebugKo)
         {
-            openknx.console.writeDiagnoseKo("-> ver");
+            openknx.console.writeDiagnoseKo("-> asc");
             openknx.console.writeDiagnoseKo("");
+            openknx.console.writeDiagnoseKo("-> asc NNNN");
+            openknx.console.writeDiagnoseKo("");
+            openknx.console.writeDiagnoseKo("-> factory");
+            openknx.console.writeDiagnoseKo("");
+            openknx.console.writeDiagnoseKo("-> force NNNN");
+            openknx.console.writeDiagnoseKo("");
+            openknx.console.writeDiagnoseKo("-> persist");
+            openknx.console.writeDiagnoseKo("");
+            openknx.console.writeDiagnoseKo("-> start");
+            openknx.console.writeDiagnoseKo("");
+            openknx.console.writeDiagnoseKo("-> stop");
+            openknx.console.writeDiagnoseKo("");
+            openknx.console.writeDiagnoseKo("-> ver");
         }
+        else
+            sensorShowHelp();
+        lResult = true;
     }
-    else if (iCmd.length() == 7 && iCmd.substr(4, 3) == "ver")
+    else if (iCmd.find("scd v") == 0)
     {
-        logDebugP("SCD4%u connected", mSensorVariant);
+        logInfoP("SCD4%u connected", mSensorVariant);
         if (iDebugKo)
             openknx.console.writeDiagnoseKo("SCD4%u", mSensorVariant);
+        lResult = true;
+    } 
+    else if (iCmd.find("scd sto") == 0)
+    {
+        if (pSensorState == Running && !pSensorStateStopped) {
+            sError = stopPeriodicMeasurement(true);
+            if (sError) {
+                logWarningP("Sensor could not be stopped, please retry");
+                if (iDebugKo) openknx.console.writeDiagnoseKo("SCD4%u retry", mSensorVariant);
+            }
+            else
+            {
+                logInfoP("SCD4%u stopped", mSensorVariant);
+                if (iDebugKo) openknx.console.writeDiagnoseKo("SCD4%u stopped", mSensorVariant);
+            }
+            pSensorStateStopped = true;
+            pSensorState = Off;
+        }
+        else if (pSensorState == Off && pSensorStateStopped)
+        {
+            logInfoP("Sensor is already stopped");
+            if (iDebugKo) openknx.console.writeDiagnoseKo("SCD4%u stopped", mSensorVariant);
+        } 
+        else
+        {
+            logInfoP("Sensor is in state %s, no stop possible", lStateString.c_str());
+            if (iDebugKo) openknx.console.writeDiagnoseKo("IS %s", lStateString.substr(0,11).c_str());
+        }
+        lResult = true;
+    } 
+    else if (iCmd.find("scd star") == 0)
+    {
+        if (pSensorState == Off && pSensorStateStopped) {
+            pSensorStateStopped = false;
+            pSensorState = Wakeup;
+            logInfoP("SCD4%u starting sensor", mSensorVariant);
+            if (iDebugKo) openknx.console.writeDiagnoseKo("SCD4%u staring", mSensorVariant);
+        }
+        else
+        {
+            logInfoP("Sensor state is %s", lStateString.c_str());
+            if (iDebugKo) openknx.console.writeDiagnoseKo("IS %s", lStateString.substr(0,11).c_str());
+        }
+        lResult = true;
+    } 
+    // following commands only possible if sensor is stopped
+    else if (pSensorState == Off && pSensorStateStopped) 
+    {
+        if (iCmd.find("scd persist") == 0)
+        {
+            sError = persistSettings();
+            if (sError) {
+                logErrorP("Persisting settings failed");
+                if (iDebugKo) openknx.console.writeDiagnoseKo("SCD4%u failed", mSensorVariant);
+            }
+            else
+            {
+                logInfoP("SCD4%u persisting settings was successful", mSensorVariant);
+                if (iDebugKo) openknx.console.writeDiagnoseKo("SCD4%u OK", mSensorVariant);
+            }
+            lResult = true;
+        }
+        if (iCmd.find("scd factory") == 0)
+        {
+            sError = performFactoryReset();
+            if (sError) {
+                logErrorP("Factory reset failed");
+                if (iDebugKo) openknx.console.writeDiagnoseKo("SCD4%u failed", mSensorVariant);
+            }
+            else
+            {
+                logInfoP("SCD4%u factroy reset was successful", mSensorVariant);
+                if (iDebugKo) openknx.console.writeDiagnoseKo("SCD4%u OK", mSensorVariant);
+            }
+            lResult = true;
+        }
+        else if (iCmd.find("scd a") == 0)
+        {
+            int16_t lTarget = getIntArg(iCmd);
+            if (lTarget < 0) 
+            {
+                // no valid number given, we just want to know the current state
+                uint16_t ascEnabled = 9999; 
+                uint16_t ascTarget = 9999; 
+                sError = getAutomaticSelfCalibrationEnabled(ascEnabled);
+                if (sError) 
+                {
+                    logErrorP("Failed to get ASC state");
+                    if (iDebugKo) openknx.console.writeDiagnoseKo("SCD4%u failed", mSensorVariant);
+                }
+                else
+                {
+                    sError = getAutomaticSelfCalibrationTarget(ascTarget);
+                    if (sError) 
+                    {
+                        logErrorP("Failed to get ASC target");
+                        if (iDebugKo) openknx.console.writeDiagnoseKo("SCD4%u failed", mSensorVariant);
+                    }
+                    else
+                    {
+                        logInfoP("SCD4%u automatic self calibration %s, target is %u ppm", mSensorVariant, (ascEnabled == 1) ? "enabled" : "disabled", ascTarget);
+                        if (iDebugKo) openknx.console.writeDiagnoseKo("ASC %s %4u ppm", (ascEnabled == 1) ? "X" : "-", ascTarget);
+                    }
+                }
+            }
+            else if (lTarget < 400 || lTarget > 5000) 
+            {
+                logInfoP("Invalid target value, must be between 400 and 5000 ppm");
+                if (iDebugKo) openknx.console.writeDiagnoseKo("SCD4%u invalid", mSensorVariant);
+            }
+            else
+            {
+                sError = setAutomaticSelfCalibrationTarget(lTarget);
+                if (sError) 
+                {
+                    logErrorP("Failed to set ASC target");
+                    if (iDebugKo) openknx.console.writeDiagnoseKo("SCD4%u failed", mSensorVariant);
+                }
+                else
+                {
+                    logInfoP("SCD4%u automatic self calibration enabled, target is %i ppm", mSensorVariant, lTarget);
+                    if (iDebugKo) openknx.console.writeDiagnoseKo("ASC X %4u ppm", lTarget);
+                }
+            }
+            lResult = true;
+        }
+        else if (iCmd.find("scd force ") == 0)
+        {
+            int16_t lCo2 = getIntArg(iCmd);
+            if (lCo2 < 400 || lCo2 > 5000) 
+            {
+                logInfoP("Invalid CO2 value, must be between 400 and 5000 ppm");
+                if (iDebugKo) openknx.console.writeDiagnoseKo("SCD4%u invalid", mSensorVariant);
+                lResult = true;
+            }
+            else
+            {
+                uint16_t frcCorr = 0;
+                sError = performForcedRecalibration(lCo2, frcCorr);
+                if (sError || frcCorr == 0xFFFF) 
+                {
+                    logErrorP("Failed to force recalibration");
+                    if (iDebugKo) openknx.console.writeDiagnoseKo("SCD4%u failed", mSensorVariant);
+                }
+                else
+                {
+                    logInfoP("SCD4%u forced recalibration to %i ppm successful", mSensorVariant, lCo2);
+                    if (iDebugKo) openknx.console.writeDiagnoseKo("FORCE %4u ppm", lCo2);
+                }
+                lResult = true;
+            }
+        }    
+    } 
+    else
+    {
+        logInfoP("Sensor not stopped, stop first");
+        if (iDebugKo) openknx.console.writeDiagnoseKo("Stop first");
         lResult = true;
     }
     return lResult;

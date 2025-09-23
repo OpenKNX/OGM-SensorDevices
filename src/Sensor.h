@@ -35,6 +35,7 @@
 
 enum SensorState
 {
+    Nil,
     Off,
     Wakeup,
     Calibrate,
@@ -118,6 +119,7 @@ class Sensor
     virtual std::string logPrefix();
     virtual uint8_t getSensorClass() = 0; // pure; returns unique ID for this sensor type
     virtual SensorState getSensorState();
+    virtual std::string getSensorStateAsString(SensorState iState = Nil);
     virtual uint16_t getMeasureTypes();
     virtual void sensorShowHelp();
     virtual bool sensorProcessCommand(const std::string iCmd, bool iDebugKo);

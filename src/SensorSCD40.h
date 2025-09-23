@@ -20,7 +20,8 @@ class SensorSCD40 : public Sensor, protected SensirionI2cScd4x
     static char sErrorMessage[64];
     static uint8_t communication_buffer[9];
     uint8_t mSensorVariant = 0; // SCD40 or SCD41
-    
+    bool pSensorStateStopped = false; // additional state, we use this for diagnose commands
+
     uint8_t getSensorClass() override; // returns unique ID for this sensor type
     void sensorLoopInternal() override;
     float measureValue(MeasureType iMeasureType) override;
@@ -35,6 +36,9 @@ class SensorSCD40 : public Sensor, protected SensirionI2cScd4x
     void logSensorError(int16_t iError, const char* iErrorMessage);
     void sensorShowHelp() override;
     bool sensorProcessCommand(const std::string iCmd, bool iDebugKo) override;
+
+    bool isInt(const std::string& s);
+    int16_t getIntArg(const std::string& s);
 
   public:
     SensorSCD40(uint16_t iMeasureTypes, TwoWire* iWire);

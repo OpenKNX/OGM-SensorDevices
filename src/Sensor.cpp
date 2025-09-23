@@ -175,3 +175,30 @@ bool Sensor::sensorProcessCommand(const std::string iCmd, bool iDebugKo)
     // do nothing here, override if help is available
     return false;
 }
+
+std::string Sensor::getSensorStateAsString(SensorState iState /* = -1 */)
+{
+    SensorState lState = iState == Nil ? pSensorState : iState;
+    switch (lState)
+    {
+        case SensorState::Wakeup:
+            return "Wakeup";
+        break;
+        case SensorState::Calibrate:
+            return "Calibrate";
+        break;
+        case SensorState::Finalize:
+            return "Finalize";
+        break;
+        case SensorState::Running:
+            return "Running";
+        break;
+        case SensorState::Off:
+            return "Off";
+        break;
+        default:
+            return "(unknown)";
+        break;
+    }
+}
+            

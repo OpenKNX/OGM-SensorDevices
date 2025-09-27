@@ -347,7 +347,7 @@ bool SensorSCD40::sensorProcessCommand(const std::string iCmd, bool iDebugKo)
             pSensorStateStopped = false;
             pSensorState = Wakeup;
             logInfoP("SCD4%u starting sensor", mSensorVariant);
-            if (iDebugKo) openknx.console.writeDiagnoseKo("SCD4%u staring", mSensorVariant);
+            if (iDebugKo) openknx.console.writeDiagnoseKo("SCD4%u starting", mSensorVariant);
         }
         else
         {
@@ -382,7 +382,7 @@ bool SensorSCD40::sensorProcessCommand(const std::string iCmd, bool iDebugKo)
             }
             else
             {
-                logInfoP("SCD4%u factroy reset was successful", mSensorVariant);
+                logInfoP("SCD4%u factory reset was successful", mSensorVariant);
                 if (iDebugKo) openknx.console.writeDiagnoseKo("SCD4%u OK", mSensorVariant);
             }
             lResult = true;

@@ -109,6 +109,8 @@ bool SensorVL53L1X::getSensorData()
     if (lResult)
     {
         mDistance = this->read(false);
+        // handle special distance 0
+        if (mDistance == 0) mDistance = 1;
         // do the next reading
         this->readSingle(false);
     }

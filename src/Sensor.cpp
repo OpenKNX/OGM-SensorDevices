@@ -176,7 +176,7 @@ bool Sensor::sensorProcessCommand(const std::string iCmd, bool iDebugKo)
     return false;
 }
 
-std::string Sensor::getSensorStateAsString(SensorState iState /* = -1 */)
+std::string Sensor::getSensorStateAsString(SensorState iState /* = Nil */)
 {
     SensorState lState = iState == Nil ? pSensorState : iState;
     switch (lState)

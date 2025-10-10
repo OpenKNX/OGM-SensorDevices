@@ -194,9 +194,13 @@ bool SensorDevices::processCommand(const std::string iCmd, bool iDiagnoseKo)
 {
     bool lResult = false;
     if (iCmd.length() == 13 && iCmd == "sen test mode") {
+#if defined(SENSORMODULE) || defined(PMMODULE)
         logInfoP("Testing all sensors");
         mSensorTestDelayTimer = delayTimerInit() + 5000;
         testSensors();
+#else
+        logErrorP("Sensor test mode not supported in this configuration");
+#endif
         lResult = true;
     }
     else {
@@ -223,7 +227,7 @@ void SensorDevices::testSensors()
     pinMode(HF_POWER_PIN, OUTPUT);
     // at startup, we turn HF-Sensor on
     digitalWrite(HF_POWER_PIN, HIGH);
-    delay(100);
+    delay(1000);
 
     // ensure no data lost even for sensor raw data
     // up to 1288 bytes are send by the sensor at once
@@ -250,7 +254,7 @@ void SensorDevices::testSensorMeasurement() {
             Sensor* lSensor = mSensors[lCounter];
             lFinished = false;
             SensorState lSensorState = lSensor->getSensorState();
-            logDebug(lSensor->logPrefix(), "Current state is: %s", lSensor->getSensorStateAsString());
+            logDebug(lSensor->logPrefix(), "Current state is: %s", lSensor->getSensorStateAsString().c_str());
             if (lSensorState == SensorState::Off) 
             {
                 sCheckedSensors[lCounter] = true;

@@ -1,3 +1,4 @@
+#if defined(SENSORMODULE) || defined(PMMODULE)
 #include "OpenKNX.h"
 #include "Sensor.h"
 
@@ -50,3 +51,4 @@ class SensorDevices : public OpenKNX::Module
 };
 
 extern SensorDevices openknxSensorDevicesModule;
+#endif

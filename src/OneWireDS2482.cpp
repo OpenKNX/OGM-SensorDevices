@@ -216,7 +216,7 @@ bool OneWireDS2482::ProcessIButton()
 bool OneWireDS2482::ProcessPriorityBusUse()
 {
     bool lFound = false;
-    // priority use means to evaluate a Priority sensor with each iternation
+    // priority use means to evaluate a Priority sensor with each iteration
     // so we search for a prio sensor and do the according action
     while (mProcessPrioSensorIndex < mDeviceCount && !lFound)
     {

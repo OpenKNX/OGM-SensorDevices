@@ -1,3 +1,4 @@
+#if defined(SENSORMODULE) || defined(PMMODULE)
 #include "SensorDevices.h"
 #include "SensorSCD41.h"
 
@@ -304,4 +305,4 @@ void SensorDevices::testSensorMeasurement() {
     }
 }
 
-
+#endif

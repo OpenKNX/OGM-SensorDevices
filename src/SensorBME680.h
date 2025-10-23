@@ -1,6 +1,6 @@
 #pragma once
 // #include "IncludeManager.h"
-// #ifdef SENSORMODULE
+#ifdef SENSORMODULE
 
 #include "Sensor.h"
 #include "bsec2/bsec2.h"
@@ -65,4 +65,4 @@ class SensorBME680 : public Sensor, protected Bsec2
     // EepromManager *mEEPROM;
     uint8_t mLastAccuracy = 0;   
 };
-// #endif
+#endif

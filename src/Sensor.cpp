@@ -148,7 +148,6 @@ bool Sensor::measureValue(MeasureType iMeasureType, float& eValue)
     return lResult;
 }
 
-#endif
 
 std::string Sensor::logPrefix()
 {
@@ -201,4 +200,5 @@ std::string Sensor::getSensorStateAsString(SensorState iState /* = Nil */)
         break;
     }
 }
-            
+
+#endif

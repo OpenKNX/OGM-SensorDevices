@@ -1,5 +1,5 @@
 // #include "IncludeManager.h"
-// #ifdef SENSORMODULE
+#ifdef SENSORMODULE
 #include "SensorBME680.h"
 #include "bsec/bme680/bme680.h"
 // #include "EepromManager.h"
@@ -333,7 +333,6 @@ bool SensorBME680::prepareTemperatureOffset(float iTemp)
     pTempOffset = iTemp;
     return true;
 }
-// #endif
 
 // IFlashUserData
 void SensorBME680::sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize)
@@ -388,3 +387,5 @@ uint16_t SensorBME680::sensorFlashSize()
 {
     return BME680_SAVE_SIZE;
 }
+
+#endif

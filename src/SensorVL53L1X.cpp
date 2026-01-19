@@ -69,7 +69,7 @@ float SensorVL53L1X::measureValue(MeasureType iMeasureType)
 
 bool SensorVL53L1X::begin()
 {
-    logDebugP("Starting sensor VL53L1X... ");
+    logInfoP("Starting sensor VL53L1X... ");
     bool lResult = Sensor::begin();
     if (lResult)
     {

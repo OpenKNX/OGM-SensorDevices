@@ -972,7 +972,7 @@ bool SensorHLKLD2420::checkSensorConnection()
 
 bool SensorHLKLD2420::begin()
 {
-    logDebugP("Starting sensor HLK-LD2420 (Presence)... ");
+    logInfoP("Starting sensor HLK-LD2420 (Presence)... ");
     bool lResult = Sensor::begin();
     logResult(lResult);
     return lResult;

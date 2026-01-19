@@ -171,7 +171,7 @@ float SensorBME680::measureValue(MeasureType iMeasureType)
 
 bool SensorBME680::begin()
 {
-    logDebugP("Starting sensor BME680... ");
+    logInfoP("Starting sensor BME680... ");
     bool lResult = Sensor::begin();
     if (lResult)
     {

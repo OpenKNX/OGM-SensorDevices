@@ -143,7 +143,7 @@ void SensorSCD41::sensorLoopInternal()
 
 bool SensorSCD41::begin()
 {
-    logDebugP("Starting sensor SCD41... ");
+    logInfoP("Starting sensor SCD41... ");
     return beginInternal();
 }
 #endif

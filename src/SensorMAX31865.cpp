@@ -145,7 +145,7 @@ float SensorMAX31865::measureValue(MeasureType iMeasureType)
 
 bool SensorMAX31865::begin()
 {
-    logDebugP("Starting sensor MAX31865... ");
+    logInfoP("Starting sensor MAX31865... ");
     bool lResult = Sensor::begin();
     if (lResult)
     {

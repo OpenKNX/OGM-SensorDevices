@@ -131,7 +131,7 @@ float SensorSGP30::measureValue(MeasureType iMeasureType)
 
 bool SensorSGP30::begin()
 {
-    logDebugP("Starting sensor BME680... ");
+    logInfoP("Starting sensor BME680... ");
     bool lResult = checkIaqSensorStatus();
     if (lResult)
     {

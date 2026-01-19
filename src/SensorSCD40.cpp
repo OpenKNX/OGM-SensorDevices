@@ -100,7 +100,7 @@ float SensorSCD40::measureValue(MeasureType iMeasureType)
 
 bool SensorSCD40::begin()
 {
-    logDebugP("Starting sensor SCD40... ");
+    logInfoP("Starting sensor SCD40... ");
     return beginInternal();
 }
 

@@ -17,6 +17,7 @@ class SensorSCD40 : public Sensor, protected SensirionI2cScd4x
 
   protected:
     static int16_t sError;
+    static int8_t sInitStep;
     static char sErrorMessage[64];
     static uint8_t communication_buffer[9];
     uint8_t mSensorVariant = 0; // SCD40 or SCD41
@@ -28,7 +29,7 @@ class SensorSCD40 : public Sensor, protected SensirionI2cScd4x
 
     int16_t stopPeriodicMeasurement(bool blocking);
 
-    uint8_t calibrate();
+    uint8_t calibrate(uint8_t iStep);
     virtual uint8_t calibrateExtended();
     bool beginInternal();
     bool getSensorData();

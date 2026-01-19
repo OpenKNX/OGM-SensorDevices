@@ -7,6 +7,7 @@
 // init communication buffer
 uint8_t SensorSCD40::communication_buffer[9] = {0};
 int16_t SensorSCD40::sError = 0;
+int8_t SensorSCD40::sInitStep = 1;
 char SensorSCD40::sErrorMessage[64] = {0};
 
 SensorSCD40::SensorSCD40(uint16_t iMeasureTypes, TwoWire* iWire)
@@ -30,17 +31,20 @@ void SensorSCD40::sensorLoopInternal()
     switch (pSensorState)
     {
         case Wakeup:
-            if (delayCheck(pSensorStateDelay, 10000))
+            if (delayCheck(pSensorStateDelay, 100))
             {
                 Sensor::sensorLoopInternal();
                 mRetryCounter = 0;
             }
             break;
         case Calibrate:
-            if (delayCheck(pSensorStateDelay, 10000)) //SCD needs this to startup
+            if (delayCheck(pSensorStateDelay, 1000)) //SCD needs this to startup
             {
-                uint8_t lError = calibrate();
+                uint8_t lError = calibrate(sInitStep);
                 if (lError == 0)
+                  if (sInitStep == 1) 
+                    sInitStep++;
+                  else
                     pSensorState = Finalize;
                 else if (lError < 100 && mRetryCounter++ == 0)
                     logDebugP("SCD4x still measuring, skipping initial startup.");
@@ -144,49 +148,55 @@ uint8_t SensorSCD40::calibrateExtended()
 }
 
 
-uint8_t SensorSCD40::calibrate()
+uint8_t SensorSCD40::calibrate(uint8_t iStep)
 {
-    sError = wakeUp();
-    if (sError) {
-        logSensorError(sError, "Error trying to execute wakeUp(): ");
-        return 1;
-    }
-    sError = stopPeriodicMeasurement(true);
-    if (sError) {
-        logSensorError(sError, "Error trying to execute stopPeriodicMeasurement(): ");
-        return 2;
-    }
-    sError = reinit();
-    if (sError) {
-        logSensorError(sError, "Error trying to execute reinit(): ");
-        return 3;
-    }
-    uint64_t lSerialNumber;
-    sError = getSerialNumber(lSerialNumber);
-    if (sError) {
-        logSensorError(sError, "Error trying to execute getSerialNumber(): ");
-        return 100;
-    }
-    uint16_t lSensorVariant;
-    sError = getSensorVariantRaw(lSensorVariant);
-    if (sError) {
-        logSensorError(sError, "Error trying to determine Sensor with getSensorVariantRaw(): ");
-        return 110;
-    }
-    mSensorVariant = (lSensorVariant & 0x1000) >> 12;
-    logDebugP("SCD4%u connected, serial number: ", mSensorVariant);
-    logHexDebugP((uint8_t*)&lSerialNumber, 8);
-
-    if (pTempOffset != 0) {
-        sError = setTemperatureOffset(-pTempOffset);
+    // sError = wakeUp();
+    // if (sError) {
+    //     logSensorError(sError, "Error trying to execute wakeUp(): ");
+    //     return 1;
+    // }
+    if (iStep == 1) {
+        sError = stopPeriodicMeasurement(false);
         if (sError) {
-            logSensorError(sError, "Error trying to call setTemperatureOffset(): ");
-            return 120;
-        } else
-            logDebugP("TempOffset %.2f successfully set", pTempOffset);
+            logSensorError(sError, "Error trying to execute stopPeriodicMeasurement(): ");
+            return 2;
+        }
+        return 0;
     }
-        
-    return calibrateExtended();
+    if (iStep == 2) {
+
+        sError = reinit();
+        if (sError) {
+            logSensorError(sError, "Error trying to execute reinit(): ");
+            return 3;
+        }
+        uint64_t lSerialNumber;
+        sError = getSerialNumber(lSerialNumber);
+        if (sError) {
+            logSensorError(sError, "Error trying to execute getSerialNumber(): ");
+            return 100;
+        }
+        uint16_t lSensorVariant;
+        sError = getSensorVariantRaw(lSensorVariant);
+        if (sError) {
+            logSensorError(sError, "Error trying to determine Sensor with getSensorVariantRaw(): ");
+            return 110;
+        }
+        mSensorVariant = (lSensorVariant & 0x1000) >> 12;
+        logDebugP("SCD4%u connected, serial number: ", mSensorVariant);
+        logHexDebugP((uint8_t*)&lSerialNumber, 8);
+
+        if (pTempOffset != 0) {
+            sError = setTemperatureOffset(-pTempOffset);
+            if (sError) {
+                logSensorError(sError, "Error trying to call setTemperatureOffset(): ");
+                return 120;
+            } else
+            logDebugP("TempOffset %.2f successfully set", pTempOffset);
+        }
+        return calibrateExtended();
+    }
+    return 0;
 }
 
 uint8_t SensorSCD40::getI2cSpeed()

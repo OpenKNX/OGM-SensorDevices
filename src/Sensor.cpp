@@ -201,4 +201,49 @@ std::string Sensor::getSensorStateAsString(SensorState iState /* = Nil */)
     }
 }
 
+void Sensor::I2CSoftReset()
+{
+    #ifdef I2C_SDA_PIN
+        #ifdef I2C_SCL_PIN
+        I2CSoftReset(I2C_SDA_PIN, I2C_SCL_PIN);
+        #endif
+    #endif
+}
+
+// I2C Soft Reset function for sensors that do not respond anymore
+// just test implementation here, might need adjustments
+void Sensor::I2CSoftReset(uint8_t iSDA, uint8_t iSCL)
+{
+    pinMode(iSDA, OUTPUT);
+    pinMode(iSCL, OUTPUT);
+
+    //  START
+    digitalWrite(iSCL, HIGH);
+    digitalWrite(iSDA, LOW);
+    delayMicroseconds(10);
+    digitalWrite(iSCL, LOW);
+    digitalWrite(iSDA, HIGH);
+    delayMicroseconds(10);
+
+    for (int i = 0; i < 9; i++)
+    {
+        digitalWrite(iSCL, HIGH);
+        delayMicroseconds(10);
+        digitalWrite(iSCL, LOW);
+        delayMicroseconds(10);
+    }
+
+    //  START
+    digitalWrite(iSCL, HIGH);
+    digitalWrite(iSDA, LOW);
+    delayMicroseconds(10);
+    digitalWrite(iSCL, LOW);
+    delayMicroseconds(10);
+    //  STOP
+    digitalWrite(iSCL, HIGH);
+    digitalWrite(iSDA, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(iSCL, LOW);
+    delayMicroseconds(10);
+};
 #endif

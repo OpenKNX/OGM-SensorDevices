@@ -128,5 +128,9 @@ class Sensor
     virtual void sensorLoopInternal();
     void restartSensor();
     bool measureValue(MeasureType iMeasureType, float &eValue);
+
+    void I2CSoftReset();
+    void I2CSoftReset(uint8_t iSDA, uint8_t iSCL);
+
 };
 #endif

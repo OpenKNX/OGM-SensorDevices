@@ -30,14 +30,14 @@ void SensorSCD40::sensorLoopInternal()
     switch (pSensorState)
     {
         case Wakeup:
-            if (delayCheck(pSensorStateDelay, 100))
+            if (delayCheck(pSensorStateDelay, 10000))
             {
                 Sensor::sensorLoopInternal();
                 mRetryCounter = 0;
             }
             break;
         case Calibrate:
-            if (delayCheck(pSensorStateDelay, 1000)) //SCD needs this to startup
+            if (delayCheck(pSensorStateDelay, 10000)) //SCD needs this to startup
             {
                 uint8_t lError = calibrate();
                 if (lError == 0)
@@ -151,7 +151,7 @@ uint8_t SensorSCD40::calibrate()
         logSensorError(sError, "Error trying to execute wakeUp(): ");
         return 1;
     }
-    sError = stopPeriodicMeasurement(false);
+    sError = stopPeriodicMeasurement(true);
     if (sError) {
         logSensorError(sError, "Error trying to execute stopPeriodicMeasurement(): ");
         return 2;

@@ -3,10 +3,10 @@
     #include "SensorBME280.h"
 
 SensorBME280::SensorBME280(uint16_t iMeasureTypes, TwoWire* iWire)
-    : Sensor(iMeasureTypes, iWire, BME280_I2C_ADDR), Adafruit_BME280(){};
+    : Sensor(iMeasureTypes, iWire, 0), Adafruit_BME280(){};
 
 SensorBME280::SensorBME280(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress)
-    : Sensor(iMeasureTypes, iWire, iAddress), Adafruit_BME280(){};
+    : Sensor(iMeasureTypes, iWire, 0), Adafruit_BME280(){};
 
 uint8_t SensorBME280::getSensorClass()
 {
@@ -15,12 +15,21 @@ uint8_t SensorBME280::getSensorClass()
 
 std::string SensorBME280::getSensorName()
 {
-    if (_sensorID == 0x58)
+    switch (_sensorID)
+    {
+    case 0x58:
         return "BMP280";
-    else if (_sensorID == 0x61)
+        break;
+    case 0x61:
         return "BME680";
-    else
+        break;
+    case 0x60:
         return "BME280";
+        break;
+    default:
+        return "BM(P|E)???";
+        break;
+    }
 }
 
 std::string SensorBME280::logPrefix()
@@ -38,7 +47,21 @@ void SensorBME280::sensorLoopInternal()
         case Wakeup:
             if (pSensorStateDelay == 0 || delayCheck(pSensorStateDelay, 1000))
             {
+                bool lResult = false;
+                if (pI2CAddress == 0)
+                {
+                    logInfoP("Determine I2C address... ");
+                    pI2CAddress = BME280_I2C_ADDR;
+                    lResult = Sensor::begin();
+                    if (!lResult)
+                    {
+                        pI2CAddress = BME280_I2C_ADDR + 1;
+                        lResult = Sensor::begin();
+                    }
+                } 
                 pSensorState = (initWakeup() && SensorBME280::begin()) ? Calibrate : Off;
+                if (lResult)
+                    logInfoP("Found %s at address 0x%02X", getSensorName().c_str(), pI2CAddress);
                 pSensorStateDelay = millis();
             }
             break;

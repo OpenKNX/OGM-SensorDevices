@@ -37,7 +37,6 @@ bool Sensor::checkSensorConnection()
     lResult = (pWire->endTransmission() == 0);
     if (!lResult)
         restartSensor();
-    // }
     return lResult;
 }
 

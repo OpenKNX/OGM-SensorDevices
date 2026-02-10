@@ -17,19 +17,19 @@ float SensorBME680::iaqAccuracy = 0.0f;
 
 
 SensorBME680::SensorBME680(uint16_t iMeasureTypes, TwoWire* iWire)
-    : Sensor(iMeasureTypes, iWire, BME680_I2C_ADDR), Bsec2()
+    : Sensor(iMeasureTypes, iWire, 0), Bsec2()
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
 }
 
 SensorBME680::SensorBME680(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress, bme68x_delay_us_fptr_t iDelayCallback)
-    : Sensor(iMeasureTypes, iWire, iAddress), Bsec2(), mDelayCallback(iDelayCallback)
+    : Sensor(iMeasureTypes, iWire, 0), Bsec2(), mDelayCallback(iDelayCallback)
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
 }
 
 SensorBME680::SensorBME680(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress, bme68x_delay_us_fptr_t iDelayCallback, uint8_t iMagicKeyOffset)
-    : Sensor(iMeasureTypes, iWire, iAddress), Bsec2(), mDelayCallback(iDelayCallback)
+    : Sensor(iMeasureTypes, iWire, 0), Bsec2(), mDelayCallback(iDelayCallback)
 {
     // mEEPROM = new EepromManager(100, 5, sMagicWord);
     sMagicWord[0] ^= iMagicKeyOffset;
@@ -172,9 +172,23 @@ float SensorBME680::measureValue(MeasureType iMeasureType)
 bool SensorBME680::begin()
 {
     logInfoP("Starting sensor BME680... ");
-    bool lResult = Sensor::begin();
+    bool lResult = false;
+    if (pI2CAddress == 0)
+    {
+        logInfoP("Determine I2C address of BME680... ");
+        pI2CAddress = BME680_I2C_ADDR_PRIMARY;
+        lResult = Sensor::begin();
+        if (!lResult)
+        {
+            pI2CAddress = BME680_I2C_ADDR_SECONDARY;
+            lResult = Sensor::begin();
+        }
+    } else {
+        lResult = Sensor::begin();
+    }
     if (lResult)
     {
+        logInfoP("Found BME680 at address 0x%02X", pI2CAddress);
         Bsec2::begin(pI2CAddress, *pWire, mDelayCallback);
         lResult = checkIaqSensorStatus();
     }

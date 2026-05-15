@@ -42,7 +42,7 @@ void SensorSHT3x::sensorLoopInternal()
             }
             break;
         case Running:
-            // quick hack: We use a static member to toggle between aquirering values and fetching them
+            // quick hack: We use a static member to toggle between acquirering values and fetching them
             if (sCommandSent && delayCheck(sCommandSent, 50))
             {
                 getTempHum();

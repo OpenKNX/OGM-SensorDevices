@@ -57,7 +57,7 @@ uint8_t SensorSCD41::calibrateExtended()
     {
         // set ASC initial period according to data sheet:
         // 44 h for 5 min. intervals, scaled inversely proportional for other intervals
-        uint16_t lAscInitial = 44 * (300 / mMeasureInterval);
+        uint16_t lAscInitial = (44UL * 300 + mMeasureInterval - 1) / mMeasureInterval;
 
         // it has to be dividable by 4
         lAscInitial = (lAscInitial + 3) & ~(decltype(lAscInitial))3;
@@ -70,7 +70,7 @@ uint8_t SensorSCD41::calibrateExtended()
 
         // set ASC standard period according to data sheet:
         // 156 h for 5 min. intervals, scaled inversely proportional for other intervals
-        uint16_t lAscStandard = 156 * (300 / mMeasureInterval);
+        uint16_t lAscStandard = (156UL * 300 + mMeasureInterval - 1) / mMeasureInterval;
 
         // it has to be dividable by 4
         lAscStandard = (lAscStandard + 3) & ~(decltype(lAscStandard))3;

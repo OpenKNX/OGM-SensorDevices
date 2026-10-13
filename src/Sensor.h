@@ -25,13 +25,14 @@
 #define SENS_IAQCORE 5    // Voc
 #define SENS_OPT300X 6    // Lux
 #define SENS_VL53L1X 7    // Tof
-#define SENS_SGP30 8      // Temp/Hum/Voc
+#define SENS_SGP30 8      // Voc/Co2Calc
 #define SENS_SCD40 9      // Temp/Hum/Co2
 #define SENS_SCD41 13     // Temp/Hum/Co2
 #define SENS_MR24xxB1 10  // HF-Presence
 #define SENS_VEML7700 11  // Lux
 #define SENS_HLKLD2420 12 // HF-Presence
 #define SENS_MAX31865 14  // PT100/PT1000
+#define SENS_SHT4X 15    // Temp/Hum
 
 enum SensorState
 {
@@ -100,6 +101,7 @@ class Sensor
     SensorState pSensorState = Wakeup;
     uint32_t pSensorStateDelay = 0;
     float pTempOffset = 0.0;
+    uint8_t pWakeupRetries = 0;
 
     virtual bool checkSensorConnection();
     virtual float measureValue(MeasureType iMeasureType) = 0; // pure

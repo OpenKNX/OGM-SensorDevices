@@ -15,6 +15,7 @@
     #include "SensorSCD41.h"
     #include "SensorSGP30.h"
     #include "SensorSHT3x.h"
+    #include "SensorSHT4x.h"
     #include "SensorVEML7700.h"
     #include "SensorVL53L1X.h"
     #include "SensorMAX31865.h"
@@ -27,6 +28,10 @@ Sensor* SensorDevices::newSensor(uint8_t iSensorClass, MeasureType iMeasureType,
     #ifdef SENSORMODULE
         case SENS_SHT3X:
             lSensor = new SensorSHT3x(iMeasureType, iWire);
+            break;
+
+        case SENS_SHT4X:
+            lSensor = new SensorSHT4x(iMeasureType, iWire);
             break;
 
         case SENS_BME280:

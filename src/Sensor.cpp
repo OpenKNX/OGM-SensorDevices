@@ -45,11 +45,22 @@ void Sensor::sensorLoopInternal()
     switch (pSensorState)
     {
         case Wakeup:
-            // try immediately to start the sensor, then every second
+            // try immediately to start the sensor, then every second, max 10 retries
             if (pSensorStateDelay == 0 || delayCheck(pSensorStateDelay, 1000))
             {
-                // if (begin()) gSensorState = Calibrate;
-                pSensorState = begin() ? Calibrate : Off;
+                if (begin())
+                {
+                    pWakeupRetries = 0;
+                    pSensorState = Calibrate;
+                }
+                else if (pWakeupRetries < 10)
+                {
+                    pWakeupRetries++;
+                }
+                else
+                {
+                    pSensorState = Off;
+                }
                 pSensorStateDelay = millis();
             }
             break;
@@ -137,9 +148,7 @@ bool Sensor::measureValue(MeasureType iMeasureType, float& eValue)
     bool lResult = false;
     if (pMeasureTypes & iMeasureType)
     {
-        lResult = checkSensorConnection();
-        if (lResult)
-            lResult = pSensorState == Running;
+        lResult = (pSensorState == Running);
         if (lResult) eValue = measureValue(iMeasureType);
         if (lResult)
             lResult = (eValue > (NO_NUM + 1.0));

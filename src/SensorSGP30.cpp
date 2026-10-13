@@ -1,33 +1,13 @@
 // #include "IncludeManager.h"
 #ifdef SENSORMODULE
     #include "SensorSGP30.h"
-    #include "Wire.h"
-// #include "EepromManager.h"
+    #include <Wire.h>
+    #include <math.h>
 
-    #define STATE_SAVE_PERIOD UINT32_C(360 * 60 * 1000) // 360 minutes - 4 times a day
-    #define EEPROM_BME680_START_ADDRESS 0xC80
+static const uint8_t sMagicWord[] = {0x53, 0x47, 0x50, 0x33}; // "SGP3"
 
 SensorSGP30::SensorSGP30(uint16_t iMeasureTypes, TwoWire* iWire)
-    : Sensor(iMeasureTypes, iWire, SGP30_I2C_ADDR)
-{
-    // mEEPROM = new EepromManager(100, 5, sMagicWord);
-}
-
-SensorSGP30::SensorSGP30(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress)
-    : Sensor(iMeasureTypes, iWire, iAddress)
-{
-    // mEEPROM = new EepromManager(100, 5, sMagicWord);
-}
-
-SensorSGP30::SensorSGP30(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress, uint8_t iMagicKeyOffset)
-    : Sensor(iMeasureTypes, iWire, iAddress)
-{
-    // mEEPROM = new EepromManager(100, 5, sMagicWord);
-    sMagicWord[0] ^= iMagicKeyOffset;
-};
-
-// EEPROM memory start id
-uint8_t SensorSGP30::sMagicWord[] = {0xCA, 0xFE, 0x3D, 0x76};
+    : Sensor(iMeasureTypes, iWire, SGP30_ADDR), Adafruit_SGP30() {}
 
 uint8_t SensorSGP30::getSensorClass()
 {
@@ -39,59 +19,92 @@ std::string SensorSGP30::logPrefix()
     return "Sensor<SGP30>";
 }
 
-void SensorSGP30::setMagicKeyOffset(uint8_t iMagicKeyOffset)
+bool SensorSGP30::begin()
 {
-    sMagicWord[0] ^= iMagicKeyOffset;
+    logInfoP("Starting sensor SGP30... ");
+    bool lResult = Sensor::begin();
+    if (lResult) lResult = Adafruit_SGP30::begin(pWire);
+    if (lResult) lResult = Adafruit_SGP30::IAQinit();
+    logResult(lResult);
+    return lResult;
 }
 
-/*!
- * @brief implements a state engine to restart the sensor without delays
- */
+uint8_t SensorSGP30::getI2cSpeed()
+{
+    return 4; // n * 100kHz
+}
+
+uint32_t SensorSGP30::getAbsoluteHumidity(float iTemp, float iHum)
+{
+    // AH [mg/m³] = 1000 * RH/100 * 216.7 * 6.112 * exp(17.67*T/(T+243.5)) / (273.15+T)
+    float absHum = 1000.0f * (iHum / 100.0f) * 6.112f
+                   * expf(17.67f * iTemp / (iTemp + 243.5f))
+                   * 216.7f / (273.15f + iTemp);
+    return (uint32_t)absHum;
+}
+
+void SensorSGP30::processHumidity()
+{
+#if defined(KoSENS_Temp) && defined(KoSENS_Hum)
+    if (!KoSENS_Temp.initialized() || !KoSENS_Hum.initialized())
+        return;
+    float lTemp = KoSENS_Temp.value(DPT_Value_Temp);
+    float lHum  = KoSENS_Hum.value(DPT_Value_Humidity);
+    if (lTemp < -40.0f || lTemp > 80.0f || lHum < 0.0f || lHum > 100.0f)
+        return;
+    Adafruit_SGP30::setHumidity(getAbsoluteHumidity(lTemp, lHum));
+    logDebugP("Humidity compensation: T=%.1f RH=%.1f", lTemp, lHum);
+#endif
+}
+
 void SensorSGP30::sensorLoopInternal()
 {
-    bool lResult = false;
     switch (pSensorState)
     {
         case Wakeup:
-            if (pSensorStateDelay == 0 || delayCheck(pSensorStateDelay, 1000))
-            {
-                pSensorStateDelay = millis();
-                logDebugP("Restarting Sensor BME680... ");
-                // Bsec::setConfig(bsec_config_iaq);
-                lResult = checkIaqSensorStatus();
-                if (lResult)
-                {
-                    // Bsec::updateSubscription(sensorList, sizeof(sensorList) / sizeof(bsec_virtual_sensor_t), BSEC_SAMPLE_RATE_LP);
-                    lResult = checkIaqSensorStatus();
-                }
-                pSensorState = lResult ? Calibrate : Off;
-            }
+            Sensor::sensorLoopInternal();
             break;
         case Calibrate:
             if (delayCheck(pSensorStateDelay, 100))
             {
-                sensorLoadState();
-                lResult = checkIaqSensorStatus();
-                pSensorState = lResult ? Finalize : Off;
-                pSensorStateDelay = millis();
-                if (lResult)
-                    // Bsec::run();
-                    logResult(lResult);
+                if (mFlashBuffer != nullptr)
+                {
+                    uint16_t eco2Base = ((uint16_t)mFlashBuffer[1] << 8) | mFlashBuffer[0];
+                    uint16_t tvocBase = ((uint16_t)mFlashBuffer[3] << 8) | mFlashBuffer[2];
+                    Adafruit_SGP30::setIAQBaseline(eco2Base, tvocBase);
+                    logDebugP("SGP30: Baseline restored from flash");
+                }
+                Sensor::sensorLoopInternal(); // → Finalize
             }
             break;
         case Finalize:
-            if (delayCheck(pSensorStateDelay, 100))
+        {
+            static uint32_t sMeasTimer = 0;
+            // measure every 1s during warmup (required by SGP30 internal algorithm)
+            if (delayCheck(sMeasTimer, 1000))
             {
-                // as long as there are no new values, sensor is not yet ready
-                // gSensorState = Bsec::run() ? Running : Finalize;
+                Adafruit_SGP30::IAQmeasure();
+                sMeasTimer = millis();
+            }
+            // transition to Running after 15s warmup
+            if (delayCheck(pSensorStateDelay, 15000))
+            {
+                sMeasTimer = 0;
+                pSensorState = Running;
                 pSensorStateDelay = millis();
             }
             break;
+        }
         case Running:
-            if (true) // Bsec::run())
+            if (delayCheck(pSensorStateDelay, 1000))
             {
-                sensorUpdateState();
-                checkIaqSensorStatus();
+                processHumidity();
+                if (Adafruit_SGP30::IAQmeasure())
+                {
+                    mTVOC = (float)Adafruit_SGP30::TVOC;
+                    mECO2 = (float)Adafruit_SGP30::eCO2;
+                }
+                pSensorStateDelay = millis();
             }
             break;
         default:
@@ -104,158 +117,63 @@ float SensorSGP30::measureValue(MeasureType iMeasureType)
 {
     switch (iMeasureType)
     {
-        case Temperature:
-            // hardware calibration
-            return 0.0; // Bsec::temperature - 3.5f;
-            break;
-        case Humidity:
-            return 0.0; // Bsec::humidity;
-            break;
-        case Pressure:
-            return 0.0; // Bsec::pressure;
-            break;
         case Voc:
-            return 0.0; // Bsec::iaq;
-            break;
+            return mTVOC;
         case Co2Calc:
-            return 0.0; // Bsec::co2Equivalent;
-            break;
-        case Accuracy:
-            return 0.0; // (Bsec::iaqAccuracy / 3.0f) * 100.0f ;
-            break;
+            return mECO2;
         default:
             break;
     }
-    return -1000.0f;
+    return NO_NUM;
 }
 
-bool SensorSGP30::begin()
+uint16_t SensorSGP30::sensorFlashSize()
 {
-    logInfoP("Starting sensor BME680... ");
-    bool lResult = checkIaqSensorStatus();
-    if (lResult)
-    {
-        lResult = checkIaqSensorStatus();
-    }
-    if (lResult)
-    {
-        lResult = checkIaqSensorStatus();
-    }
-    if (lResult)
-    {
-        sensorLoadState();
-        lResult = checkIaqSensorStatus();
-        if (!lResult)
-            restartSensor();
-    }
-    if (lResult)
-        lResult = Sensor::begin();
-    pSensorState = Finalize;
-    pSensorStateDelay = millis();
-    logResult(lResult);
-    return lResult;
+    return SGP30_SAVE_SIZE;
 }
 
-uint8_t SensorSGP30::getI2cSpeed()
+void SensorSGP30::sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize)
 {
-    return 4; // n * 100kHz
-}
+    bool lValid = (iBuffer[0] == 1);
+    logDebugP("Reading SGP30 baseline from Flash");
+    for (uint8_t i = 1; i < 5 && lValid; i++)
+        lValid = lValid && (iBuffer[i] == sMagicWord[i - 1]);
 
-bool SensorSGP30::checkIaqSensorStatus(void)
-{
-    // if (Bsec::status < BSEC_OK)
-    // {
-    //     logDebugP("BSEC error code : %d\n", Bsec::status);
-    //     return false;
-    //     // fatalError(-iaqSensor.status, "BSEC error code");
-    // }
-    // else if (Bsec::status > BSEC_OK)
-    //     logDebugP("BSEC warning code : %d\n", Bsec::status);
+    mFlashBuffer = lValid ? iBuffer + 5 : nullptr;
 
-    // if (Bsec::bme680Status < BME680_OK)
-    // {
-    //     logDebugP("BME680 error code : %d\n", Bsec::bme680Status);
-    //     return false;
-    //     // fatalError(-iaqSensor.bme680Status, "BME680 error code");
-    // }
-    // else if (Bsec::bme680Status > BME680_OK)
-    //     logDebugP("BME680 warning code : %d\n", Bsec::bme680Status);
-
-    return true;
-}
-
-void SensorSGP30::sensorLoadState()
-{
-    uint8_t buffer[144]; //[BSEC_MAX_STATE_BLOB_SIZE];
-    // Existing state in EEPROM
-    logDebugP("Reading BME680 state from EEPROM\n");
-    // mEEPROM->prepareRead(EEPROM_BME680_START_ADDRESS, 144);
-    if (pWire->available()) pWire->readBytes(buffer, 144);
-
-    // for (uint8_t i = 0; i < 144; i += 16)
-    //     printHEX("<-- ", buffer + i, 16);
-    bool lCheck = true;
-    for (uint8_t lIndex = 0; lIndex < 4 && lCheck; lIndex++)
-        lCheck = (buffer[lIndex] == sMagicWord[lIndex]);
-
-    if (lCheck)
-    {
-        // Bsec::setState(buffer + 4);
-        bool lResult = checkIaqSensorStatus();
-        if (lResult)
-        {
-            logDebugP("BME680 was successfully calibrated from EEPROM\n");
-        }
-        else
-        {
-            // if sensor state was not correctly loaded, we delete EEPROM data
-            // mEEPROM->beginPage(EEPROM_BME680_START_ADDRESS);
-            // mEEPROM->write4Bytes(sMagicWord, 1); // this is correct, it deletes the last 3 bytes of magic word
-            // mEEPROM->endPage();
-            logDebugP("*** BME680 calibration from EEPROM failed! ***\n");
-        }
-    }
+    logIndentUp();
+    if (!lValid)
+        logDebugP("No valid baseline in Flash");
     else
     {
-        logDebugP("BME680 calibration data in EEPROM has wrong ID and will be deleted!\n");
+        logDebugP("SGP30 baseline found in Flash");
+        openknx.flash.read(sensorFlashSize() - 1);
+    }
+    logIndentDown();
+}
+
+void SensorSGP30::sensorSavePower()
+{
+    uint16_t eco2Base = 0, tvocBase = 0;
+    if (pSensorState == Running && Adafruit_SGP30::getIAQBaseline(&eco2Base, &tvocBase))
+    {
+        mWorkBuffer[0] = eco2Base & 0xFF;
+        mWorkBuffer[1] = (eco2Base >> 8) & 0xFF;
+        mWorkBuffer[2] = tvocBase & 0xFF;
+        mWorkBuffer[3] = (tvocBase >> 8) & 0xFF;
+        mWorkBufferInitialized = true;
     }
 }
 
-// We store sensor data in EEPROM stating at page 100 (100 * 32 = 3200 = 0xC80).
-// We write in 16 Byte chunks, a maximum of 139 bytes, means 139/16 = 9 chunks (which is in fact 144 Bytes).
-// Timing is 9 * 5 ms = 45 ms write time
-// void SensorSGP30::sensorSaveState()
-// {
-//     // buffer gets freed inside knx object after saved
-//     // uint8_t buffer[144] = {0}; //[BSEC_MAX_STATE_BLOB_SIZE];
-//     // for (uint8_t lIndex = 0; lIndex < 4; lIndex++)
-//     //     buffer[lIndex] = sMagicWord[lIndex];
-
-//     // Bsec::getState(buffer + 4);
-//     bool lCheck = checkIaqSensorStatus();
-//     if (lCheck)
-//     {
-//         logDebugP("Writing BME680 state to EEPROM\n");
-
-//         for (uint8_t lCount = 0; lCount < 144; lCount += 16)
-//         {
-//             // mEEPROM->beginPage(EEPROM_BME680_START_ADDRESS + lCount);
-//             // gWire.write(buffer + lCount, 16);
-//             // mEEPROM->endPage();
-//             // printHEX("--> ", buffer + lCount, 16);
-//         }
-//     }
-// }
-
-void SensorSGP30::sensorUpdateState(void)
+void SensorSGP30::sensorWriteFlash()
 {
-    // we save the sensor state each time accuracy is raised
-    // and 4 times a day if accuracy is 3 (this might be senseless, if we save with each restart)
-    // if ((Bsec::iaqAccuracy > mLastAccuracy && mLastAccuracy == 2) || (Bsec::iaqAccuracy >= 3 && delayCheck(stateUpdateTimer, STATE_SAVE_PERIOD)))
-    // {
-    //     sensorSaveState();
-    //     stateUpdateTimer = millis();
-    // }
-    // mLastAccuracy = Bsec::iaqAccuracy;
+    if (!mWorkBufferInitialized) sensorSavePower();
+    if (!mWorkBufferInitialized) return;
+    openknx.flash.writeByte(1); // version
+    for (uint8_t i = 0; i < 4; i++)
+        openknx.flash.writeByte(sMagicWord[i]);
+    openknx.flash.write(mWorkBuffer, 4);
+    mWorkBufferInitialized = false;
+    logDebugP("SGP30: Baseline written to Flash");
 }
 #endif

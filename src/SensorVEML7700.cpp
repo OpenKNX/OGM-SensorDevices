@@ -82,7 +82,7 @@ float SensorVEML7700::measureValue(MeasureType iMeasureType)
 
 bool SensorVEML7700::begin()
 {
-    logDebugP("Starting sensor VEML7700... ");
+    logInfoP("Starting sensor VEML7700... ");
     // #ifdef SENSOR_I2C_VEML7700
     //     gWire = SENSOR_I2C_VEML7700;
     //     gWire.begin();

@@ -19,10 +19,10 @@ std::string SensorHLKLD2420::logPrefix()
     return "Sensor<HLKLD2420>";
 }
 
-void SensorHLKLD2420::writeSensitivity(int8_t iSensitivity)
-{
-    sendCalibrationData();
-}
+// void SensorHLKLD2420::writeSensitivity(int8_t iSensitivity)
+// {
+//     sendCalibrationData();
+// }
 
 uint8_t SensorHLKLD2420::getSensorClass()
 {
@@ -35,6 +35,7 @@ void SensorHLKLD2420::sensorLoopInternal()
     {
         case Wakeup:
             Sensor::sensorLoopInternal();
+            // rebootSensorHard();
             break;
         case Calibrate:
             uartGetPacket();
@@ -121,17 +122,14 @@ void SensorHLKLD2420::startupLoop()
             {
                 pSensorStateDelay = millis();
 
-                // if (calibrationCompleted)
-                // {
-                //     // skip calibration if valid calibration values have been read from flash
-                //     mHfSensorStartupState = START_FINISHED;
-
-                //     sendCalibrationData();
-                // }
-                // else
-                if (!testCalibrationData)
+                if (testCalibrationData)
                 {
-                    mDelayTime = ParamPM_HfDelayTime;
+                    // skip calibration if valid calibration values have been read from flash
+                    sendCalibrationData();
+                }
+                else
+                {
+                    mDelayTime = MAX(ParamPM_HfDelayTime, 1); // sensor accepts minimum 1 ms
                     mRangeGateMin = ParamPM_HfRangeGateMin;
                     if (ParamPM_HfRangeGateMax > mRangeGateMin)
                         mRangeGateMax = ParamPM_HfRangeGateMax;
@@ -153,6 +151,24 @@ void SensorHLKLD2420::startupLoop()
                     triggerThresholdDb[14] = ParamPM_Trigger14 / 100.0;
                     triggerThresholdDb[15] = ParamPM_Trigger15 / 100.0;
 
+                    // ensure minimum threshold, usually just neccessary for test mode
+                    triggerThresholdDb[0] = triggerThresholdDb[0] < 1.0 ? 47.78 : triggerThresholdDb[0];
+                    triggerThresholdDb[1] = triggerThresholdDb[1] < 1.0 ? 47.77 : triggerThresholdDb[1];
+                    triggerThresholdDb[2] = triggerThresholdDb[2] < 1.0 ? 34.77 : triggerThresholdDb[2];
+                    triggerThresholdDb[3] = triggerThresholdDb[3] < 1.0 ? 33.01 : triggerThresholdDb[3];
+                    triggerThresholdDb[4] = triggerThresholdDb[4] < 1.0 ? 26.99 : triggerThresholdDb[4];
+                    triggerThresholdDb[5] = triggerThresholdDb[5] < 1.0 ? 26.02 : triggerThresholdDb[5];
+                    triggerThresholdDb[6] = triggerThresholdDb[6] < 1.0 ? 26.02 : triggerThresholdDb[6];
+                    triggerThresholdDb[7] = triggerThresholdDb[7] < 1.0 ? 24.77 : triggerThresholdDb[7];
+                    triggerThresholdDb[8] = triggerThresholdDb[8] < 1.0 ? 24.77 : triggerThresholdDb[8];
+                    triggerThresholdDb[9] = triggerThresholdDb[9] < 1.0 ? 24.77 : triggerThresholdDb[9];
+                    triggerThresholdDb[10] = triggerThresholdDb[10] < 1.0 ? 24.77 : triggerThresholdDb[10];
+                    triggerThresholdDb[11] = triggerThresholdDb[11] < 1.0 ? 23.98 : triggerThresholdDb[11];
+                    triggerThresholdDb[12] = triggerThresholdDb[12] < 1.0 ? 23.98 : triggerThresholdDb[12];
+                    triggerThresholdDb[13] = triggerThresholdDb[13] < 1.0 ? 23.01 : triggerThresholdDb[13];
+                    triggerThresholdDb[14] = triggerThresholdDb[14] < 1.0 ? 23.01 : triggerThresholdDb[14];
+                    triggerThresholdDb[15] = triggerThresholdDb[15] < 1.0 ? 22.25 : triggerThresholdDb[15];
+
                     holdThresholdDb[0] = ParamPM_Hold00 / 100.0;
                     holdThresholdDb[1] = ParamPM_Hold01 / 100.0;
                     holdThresholdDb[2] = ParamPM_Hold02 / 100.0;
@@ -169,10 +185,29 @@ void SensorHLKLD2420::startupLoop()
                     holdThresholdDb[13] = ParamPM_Hold13 / 100.0;
                     holdThresholdDb[14] = ParamPM_Hold14 / 100.0;
                     holdThresholdDb[15] = ParamPM_Hold15 / 100.0;
-                    sendCalibrationData(); // correct place? WP
 
+                    // ensure minimum threshold, usually just neccessary for test mode
+                    holdThresholdDb[0] = holdThresholdDb[0] < 1.0 ? 46.02 : holdThresholdDb[0];
+                    holdThresholdDb[1] = holdThresholdDb[1] < 1.0 ? 43.01 : holdThresholdDb[1];
+                    holdThresholdDb[2] = holdThresholdDb[2] < 1.0 ? 26.02 : holdThresholdDb[2];
+                    holdThresholdDb[3] = holdThresholdDb[3] < 1.0 ? 24.77 : holdThresholdDb[3];
+                    holdThresholdDb[4] = holdThresholdDb[4] < 1.0 ? 24.77 : holdThresholdDb[4];
+                    holdThresholdDb[5] = holdThresholdDb[5] < 1.0 ? 23.01 : holdThresholdDb[5];
+                    holdThresholdDb[6] = holdThresholdDb[6] < 1.0 ? 23.01 : holdThresholdDb[6];
+                    holdThresholdDb[7] = holdThresholdDb[7] < 1.0 ? 21.76 : holdThresholdDb[7];
+                    holdThresholdDb[8] = holdThresholdDb[8] < 1.0 ? 21.76 : holdThresholdDb[8];
+                    holdThresholdDb[9] = holdThresholdDb[9] < 1.0 ? 20.00 : holdThresholdDb[9];
+                    holdThresholdDb[10] = holdThresholdDb[10] < 1.0 ? 20.00 : holdThresholdDb[10];
+                    holdThresholdDb[11] = holdThresholdDb[11] < 1.0 ? 20.00 : holdThresholdDb[11];
+                    holdThresholdDb[12] = holdThresholdDb[12] < 1.0 ? 20.00 : holdThresholdDb[12];
+                    holdThresholdDb[13] = holdThresholdDb[13] < 1.0 ? 20.00 : holdThresholdDb[13];
+                    holdThresholdDb[14] = holdThresholdDb[14] < 1.0 ? 20.00 : holdThresholdDb[14];
+                    holdThresholdDb[15] = holdThresholdDb[15] < 1.0 ? 20.00 : holdThresholdDb[15];
+
+                    sendCalibrationData(true); // correct place? WP
                 }
-                mHfSensorStartupState = START_FINISHED;
+                if (mHfSensorStartupState == START_READ2_DONE)
+                    mHfSensorStartupState = START_FINISHED;
                 sendCommand(CMD_CLOSE_COMMAND_MODE);
             }
             break;
@@ -336,7 +371,7 @@ int SensorHLKLD2420::dBToRaw(float dbValue)
     if (dbValue > maxDbValue)
         dbValue = maxDbValue;
 
-    return int(pow(10, dbValue / 10));
+    return int(pow(10, dbValue / 10) + 0.5);
 }
 
 void SensorHLKLD2420::rebootSensorSoft()
@@ -371,6 +406,17 @@ void SensorHLKLD2420::switchPower(bool on)
         delay(1000);
         restartStartupLoop();
     }
+}
+
+void SensorHLKLD2420::sensorSavePower()
+{
+    switchPower(false);
+}
+
+bool SensorHLKLD2420::sensorRestorePower()
+{
+    switchPower(true);
+    return true;
 }
 
 void SensorHLKLD2420::restartStartupLoop()
@@ -552,7 +598,7 @@ bool SensorHLKLD2420::getSensorData()
                         for (uint8_t i = 0; i < 16; i++)
                         {
                             storedTriggerThreshold[i] = bytesToInt(mBuffer[i * 4 + 8], mBuffer[i * 4 + 9], mBuffer[i * 4 + 10], mBuffer[i * 4 + 11]);
-                            logDebugP("Gate %i: %04.0f", i, rawToDb(storedTriggerThreshold[i]) * 100.0);
+                            logDebugP("Gate %i: %02.2f dB (%i)", i, rawToDb(storedTriggerThreshold[i]), storedTriggerThreshold[i]);
                         }
                         logIndentDown();
 
@@ -574,7 +620,7 @@ bool SensorHLKLD2420::getSensorData()
                         for (uint8_t i = 0; i < 16; i++)
                         {
                             storedHoldThreshold[i] = bytesToInt(mBuffer[i * 4 + 4], mBuffer[i * 4 + 5], mBuffer[i * 4 + 6], mBuffer[i * 4 + 7]);
-                            logDebugP("Gate %i: %04.0f", i, rawToDb(storedHoldThreshold[i]) * 100.0);
+                            logDebugP("Gate %i: %02.2f dB (%i)", i, rawToDb(storedHoldThreshold[i]), storedHoldThreshold[i]);
                         }
                         logIndentDown();
 
@@ -624,7 +670,7 @@ bool SensorHLKLD2420::getSensorData()
             logIndentUp();
             for (uint8_t i = 0; i < 16; i++)
             {
-                logTraceP("Gate %i: %04.0f", i, rawToDb(rangeMax[i]) * 100.0);
+                logTraceP("Gate %i: %02.2f dB (%i)", i, rawToDb(rangeMax[i]), rangeMax[i]);
             }
             logIndentDown();
 
@@ -755,7 +801,7 @@ void SensorHLKLD2420::sendCalibrationData(bool withHardReboot)
         openknx.console.writeDiagnoseKo("HLK par send");
     }
 
-    if (storedCurrentCalibration)
+    if (storedCurrentCalibration && storedCurrentDistanceTime)
         logDebugP("Skip writing calibration to sensor as data is current");
     else
     {
@@ -779,7 +825,7 @@ void SensorHLKLD2420::sendCalibrationData(bool withHardReboot)
             param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
             param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
 
-            logDebugP("Gate %i:  %04.0f", i, triggerThresholdDb[i] * 100.0);
+            logDebugP("Gate %i: %02.2f dB (%i)", i, triggerThresholdDb[i], rawValue);
         }
         sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
         delay(500);
@@ -795,7 +841,7 @@ void SensorHLKLD2420::sendCalibrationData(bool withHardReboot)
             param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
             param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
 
-            logDebugP("Gate %i:  %04.0f", i, triggerThresholdDb[i] * 100.0);
+            logDebugP("Gate %i: %02.2f dB (%i)", i, triggerThresholdDb[i], rawValue);
         }
         sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
         delay(500);
@@ -819,7 +865,7 @@ void SensorHLKLD2420::sendCalibrationData(bool withHardReboot)
             param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
             param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
 
-            logDebugP("Gate %i:  %04.0f", i, holdThresholdDb[i] * 100.0);
+            logDebugP("Gate %i: %02.2f dB (%i)", i, holdThresholdDb[i], rawValue);
         }
         sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
         delay(500);
@@ -835,7 +881,7 @@ void SensorHLKLD2420::sendCalibrationData(bool withHardReboot)
             param[offset + 4] = (uint8_t)((rawValue >> 16) & 0xFF);
             param[offset + 5] = (uint8_t)((rawValue >> 24) & 0xFF);
 
-            logDebugP("Gate %i:  %04.0f", i, holdThresholdDb[i] * 100.0);
+            logDebugP("Gate %i: %02.2f dB (%i)", i, holdThresholdDb[i], rawValue);
         }
         sendCommand(CMD_WRITE_MODULE_CONFIG, param, 48);
         delay(500);
@@ -857,7 +903,10 @@ void SensorHLKLD2420::sendCalibrationData(bool withHardReboot)
     {
         // re-start startup loop to readback values from sensor
         if (withHardReboot)
+        {
+            openknx.console.writeDiagnoseKo("");
             rebootSensorHard();
+        }
         else
             restartStartupLoop();
     }
@@ -923,7 +972,7 @@ bool SensorHLKLD2420::checkSensorConnection()
 
 bool SensorHLKLD2420::begin()
 {
-    logDebugP("Starting sensor HLK-LD2420 (Presence)... ");
+    logInfoP("Starting sensor HLK-LD2420 (Presence)... ");
     bool lResult = Sensor::begin();
     logResult(lResult);
     return lResult;
@@ -935,7 +984,7 @@ uint8_t SensorHLKLD2420::getI2cSpeed()
 }
 
 
-void SensorHLKLD2420::showHelp()
+void SensorHLKLD2420::sensorShowHelp()
 {
     openknx.console.printHelpLine("hlk ver", "Print firmware version of HLK-LD2420 sensor.");
     openknx.console.printHelpLine("hlk rmin", "Print min. range defined by ETS app.");
@@ -959,9 +1008,11 @@ void SensorHLKLD2420::showHelp()
     openknx.console.printHelpLine("hlk reb hard", "Reboot sensor via hardware (cut power).");
 }
 
-bool SensorHLKLD2420::processCommand(const std::string iCmd, bool iDebugKo)
+bool SensorHLKLD2420::sensorProcessCommand(const std::string iCmd, bool iDebugKo)
 {
     bool lResult = false;
+    if (iCmd.length() < 5 || iCmd.substr(0, 4) != "hlk ")
+        return lResult;
     if (iCmd.length() == 5 && iCmd.substr(4, 1) == "h")
     {
         // Command help
@@ -1320,7 +1371,10 @@ bool SensorHLKLD2420::setCalibrationData(uint8_t *iData, uint8_t *eResultData, u
         mRangeGateMax = iData[3];
         mDelayTime = (iData[4] << 8) | iData[5];
         testCalibrationData = true;
-        sendCalibrationData(true);
+        // sendCalibrationData(true);
+        pSensorState = Calibrate;
+        mHfSensorStartupState = START_READ2_DONE;
+
     }
 
     eResultLength = 1;
@@ -1340,6 +1394,9 @@ bool SensorHLKLD2420::doCalibration(uint8_t *iData, uint8_t *eResultData, uint8_
             return true;
         case 2:
             eResultData[1] = calibrationCompleted;
+            return true;
+        case 3:
+            eResultData[1] = !testCalibrationData;
             return true;
         default:
             eResultData[0] = 1;

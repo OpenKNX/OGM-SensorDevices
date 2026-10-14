@@ -50,12 +50,14 @@ const double Tn = Kref + 25.0; // Nenntemperatur in Kelvin
 // native functions for value conversions (already implemented)
 float OneWireDS2438Fromula::nativeTemperatureNTC(float iTemp, float iVDD, float iVAD, float iVSens)
 {
+    if (iVDD == 0.0) return NO_NUM;
     double Rntc = Rref * ((iVAD / iVDD) / (1 - (iVAD / iVDD)));
     double TKelvin = 1 / ((1 / Tn) + ((double)1 / bWert) * log((double)Rntc / Rref));
     return TKelvin - Kref;
 }
 float OneWireDS2438Fromula::nativeHumidity(float iTemp, float iVDD, float iVAD, float iVSens)
 {
+    if (iVDD == 0.0) return NO_NUM;
     return ((iVAD / iVDD) - 0.16) / 0.0062 / (1.0546 - (0.00216 * iTemp));
 }
 float OneWireDS2438Fromula::nativeBrightness(float iTemp, float iVDD, float iVAD, float iVSens)
@@ -63,7 +65,7 @@ float OneWireDS2438Fromula::nativeBrightness(float iTemp, float iVDD, float iVAD
     if (iVSens > 0.0)
         return pow(10.0, iVSens * 1000.0 / 47.0);
     else
-        return 0.0;
+        return NO_NUM;
 }
 
 // user functions for value conversions (empty, implemented by user)

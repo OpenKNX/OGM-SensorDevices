@@ -121,7 +121,7 @@ class SensorHLKLD2420 : public Sensor
     int dBToRaw(float dbValue);
     void restartStartupLoop();
     void resetRawDataRecording();
-    void sendCalibrationData(bool withHardReboot = false);
+    void sendCalibrationData(bool withHardReboot = true);
     bool getSensorData();
 
   protected:
@@ -132,6 +132,10 @@ class SensorHLKLD2420 : public Sensor
     uint8_t mRangeGateMax = 15;
     uint8_t getSensorClass() override; // returns unique ID for this sensor type
     void sensorLoopInternal() override;
+    void sensorShowHelp() override;
+    bool sensorProcessCommand(const std::string iCmd, bool iDebugKo) override;
+    void sensorSavePower() override;
+    bool sensorRestorePower() override;
     bool checkSensorConnection() override;
     float measureValue(MeasureType iMeasureType) override;
 
@@ -146,11 +150,9 @@ class SensorHLKLD2420 : public Sensor
     bool begin() override;
     uint8_t getI2cSpeed() override;
     // void resetSensor();
-    void writeSensitivity(int8_t iSensitivity);
+    // void writeSensitivity(int8_t iSensitivity);
     // void readSensitivity();
     void sendCommand(uint8_t command, const uint8_t parameter[] = nullptr, uint8_t parameterLength = 0);
-    void showHelp();
-    bool processCommand(const std::string iCmd, bool iDebugKo);
     std::string logPrefix() override;
     void switchPower(bool on);
     bool handleFunctionProperty(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength);

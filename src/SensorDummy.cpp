@@ -26,7 +26,7 @@ float SensorDummy::measureValue(MeasureType iMeasureType)
 
 bool SensorDummy::begin()
 {
-    logDebugP("Starting dummy sensor... ");
+    logInfoP("Starting dummy sensor... ");
     logResult(true);
     return true;
 }

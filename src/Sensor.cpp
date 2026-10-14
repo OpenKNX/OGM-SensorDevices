@@ -37,7 +37,6 @@ bool Sensor::checkSensorConnection()
     lResult = (pWire->endTransmission() == 0);
     if (!lResult)
         restartSensor();
-    // }
     return lResult;
 }
 
@@ -46,11 +45,22 @@ void Sensor::sensorLoopInternal()
     switch (pSensorState)
     {
         case Wakeup:
-            // try immediately to start the sensor, then every second
+            // try immediately to start the sensor, then every second, max 10 retries
             if (pSensorStateDelay == 0 || delayCheck(pSensorStateDelay, 1000))
             {
-                // if (begin()) gSensorState = Calibrate;
-                pSensorState = begin() ? Calibrate : Off;
+                if (begin())
+                {
+                    pWakeupRetries = 0;
+                    pSensorState = Calibrate;
+                }
+                else if (pWakeupRetries < 10)
+                {
+                    pWakeupRetries++;
+                }
+                else
+                {
+                    pSensorState = Off;
+                }
                 pSensorStateDelay = millis();
             }
             break;
@@ -94,6 +104,18 @@ void Sensor::sensorReadFlash(const uint8_t* iBuffer, const uint16_t iSize)
         return;
 }
 
+// should be overridden, if there is some data to fetch from a sensor before power failure
+void Sensor::sensorSavePower()
+{
+    // do nothing here
+}
+
+// should be overridden, if there is some data to restore to a sensor after power failure
+bool Sensor::sensorRestorePower()
+{
+    return true;
+}
+
 // should be overridden, if there is a state to save before power failure
 void Sensor::sensorWriteFlash()
 {
@@ -126,9 +148,7 @@ bool Sensor::measureValue(MeasureType iMeasureType, float& eValue)
     bool lResult = false;
     if (pMeasureTypes & iMeasureType)
     {
-        lResult = checkSensorConnection();
-        if (lResult)
-            lResult = pSensorState == Running;
+        lResult = (pSensorState == Running);
         if (lResult) eValue = measureValue(iMeasureType);
         if (lResult)
             lResult = (eValue > (NO_NUM + 1.0));
@@ -136,9 +156,102 @@ bool Sensor::measureValue(MeasureType iMeasureType, float& eValue)
     return lResult;
 }
 
-#endif
 
 std::string Sensor::logPrefix()
 {
     return "Sensor";
 }
+
+SensorState Sensor::getSensorState()
+{
+    return pSensorState;
+}
+
+uint16_t Sensor::getMeasureTypes()
+{
+    return pMeasureTypes;
+}
+
+void Sensor::sensorShowHelp()
+{
+    // do nothing here, override if help is available
+}
+
+bool Sensor::sensorProcessCommand(const std::string iCmd, bool iDebugKo)
+{
+    // do nothing here, override if help is available
+    return false;
+}
+
+std::string Sensor::getSensorStateAsString(SensorState iState /* = Nil */)
+{
+    SensorState lState = iState == Nil ? pSensorState : iState;
+    switch (lState)
+    {
+        case SensorState::Wakeup:
+            return "Wakeup";
+        break;
+        case SensorState::Calibrate:
+            return "Calibrate";
+        break;
+        case SensorState::Finalize:
+            return "Finalize";
+        break;
+        case SensorState::Running:
+            return "Running";
+        break;
+        case SensorState::Off:
+            return "Off";
+        break;
+        default:
+            return "(unknown)";
+        break;
+    }
+}
+
+void Sensor::I2CSoftReset()
+{
+    #ifdef I2C_SDA_PIN
+        #ifdef I2C_SCL_PIN
+        I2CSoftReset(I2C_SDA_PIN, I2C_SCL_PIN);
+        #endif
+    #endif
+}
+
+// I2C Soft Reset function for sensors that do not respond anymore
+// just test implementation here, might need adjustments
+void Sensor::I2CSoftReset(uint8_t iSDA, uint8_t iSCL)
+{
+    pinMode(iSDA, OUTPUT);
+    pinMode(iSCL, OUTPUT);
+
+    //  START
+    digitalWrite(iSCL, HIGH);
+    digitalWrite(iSDA, LOW);
+    delayMicroseconds(10);
+    digitalWrite(iSCL, LOW);
+    digitalWrite(iSDA, HIGH);
+    delayMicroseconds(10);
+
+    for (int i = 0; i < 9; i++)
+    {
+        digitalWrite(iSCL, HIGH);
+        delayMicroseconds(10);
+        digitalWrite(iSCL, LOW);
+        delayMicroseconds(10);
+    }
+
+    //  START
+    digitalWrite(iSCL, HIGH);
+    digitalWrite(iSDA, LOW);
+    delayMicroseconds(10);
+    digitalWrite(iSCL, LOW);
+    delayMicroseconds(10);
+    //  STOP
+    digitalWrite(iSCL, HIGH);
+    digitalWrite(iSDA, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(iSCL, LOW);
+    delayMicroseconds(10);
+};
+#endif

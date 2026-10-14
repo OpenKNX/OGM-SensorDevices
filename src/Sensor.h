@@ -25,15 +25,18 @@
 #define SENS_IAQCORE 5    // Voc
 #define SENS_OPT300X 6    // Lux
 #define SENS_VL53L1X 7    // Tof
-#define SENS_SGP30 8      // Temp/Hum/Voc
+#define SENS_SGP30 8      // Voc/Co2Calc
 #define SENS_SCD40 9      // Temp/Hum/Co2
 #define SENS_SCD41 13     // Temp/Hum/Co2
 #define SENS_MR24xxB1 10  // HF-Presence
 #define SENS_VEML7700 11  // Lux
 #define SENS_HLKLD2420 12 // HF-Presence
+#define SENS_MAX31865 14  // PT100/PT1000
+#define SENS_SHT4X 15    // Temp/Hum
 
 enum SensorState
 {
+    Nil,
     Off,
     Wakeup,
     Calibrate,
@@ -60,8 +63,6 @@ enum MeasureType
     Distance = 16384
 };
 
-#if defined(SENSORMODULE) || defined(PMMODULE)
-// #include "OpenKNX/Helper.h"
 struct sSensorInfo
 {
     float lastValue;
@@ -84,6 +85,8 @@ union uData
     sActorInfo actor;
 };
 
+#if defined(SENSORMODULE) || defined(PMMODULE)
+// #include "OpenKNX/Helper.h"
 class Sensor
 {
   protected:
@@ -98,6 +101,7 @@ class Sensor
     SensorState pSensorState = Wakeup;
     uint32_t pSensorStateDelay = 0;
     float pTempOffset = 0.0;
+    uint8_t pWakeupRetries = 0;
 
     virtual bool checkSensorConnection();
     virtual float measureValue(MeasureType iMeasureType) = 0; // pure
@@ -110,14 +114,25 @@ class Sensor
     virtual uint8_t getI2cSpeed();
     virtual bool prepareTemperatureOffset(float iTempOffset);
     virtual void sensorReadFlash(const uint8_t *iBuffer, const uint16_t iSize);
+    virtual void sensorSavePower();
+    virtual bool sensorRestorePower();
     virtual void sensorWriteFlash();
     virtual uint16_t sensorFlashSize();
     virtual std::string logPrefix();
     virtual uint8_t getSensorClass() = 0; // pure; returns unique ID for this sensor type
+    virtual SensorState getSensorState();
+    virtual std::string getSensorStateAsString(SensorState iState = Nil);
+    virtual uint16_t getMeasureTypes();
+    virtual void sensorShowHelp();
+    virtual bool sensorProcessCommand(const std::string iCmd, bool iDebugKo);
     void addMeasureType(MeasureType iMeasureType);
     bool checkMeasureType(MeasureType iMeasureType);
     virtual void sensorLoopInternal();
     void restartSensor();
     bool measureValue(MeasureType iMeasureType, float &eValue);
+
+    void I2CSoftReset();
+    void I2CSoftReset(uint8_t iSDA, uint8_t iSCL);
+
 };
 #endif

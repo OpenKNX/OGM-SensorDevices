@@ -2,7 +2,7 @@
 #pragma once
 #ifdef SENSORMODULE
     #include "Sensor.h"
-    #include <SensirionI2CScd4x.h>
+    #include <SensirionI2cScd4x.h>
     #include <SensorSCD40.h>
 
     #define MEASURE_DELAY 5000
@@ -17,6 +17,8 @@ class SensorSCD41 : public SensorSCD40
   protected:
     uint8_t getSensorClass() override; // returns unique ID for this sensor type
     void sensorLoopInternal() override;
+    int16_t measureSingleShot(bool blocking);
+    virtual uint8_t calibrateExtended() override;
 
   public:
     SensorSCD41(uint16_t iMeasureTypes, TwoWire* iWire);

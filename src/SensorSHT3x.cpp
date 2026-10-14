@@ -2,6 +2,7 @@
 #ifdef SENSORMODULE
     #include "SensorSHT3x.h"
     #include <Wire.h>
+    #include <math.h>
 
 SensorSHT3x::SensorSHT3x(uint16_t iMeasureTypes, TwoWire* iWire)
     : Sensor(iMeasureTypes, iWire, SHT3X_ADDR){};
@@ -42,7 +43,7 @@ void SensorSHT3x::sensorLoopInternal()
             }
             break;
         case Running:
-            // quick hack: We use a static member to toggle between aquirering values and fetching them
+            // quick hack: We use a static member to toggle between acquirering values and fetching them
             if (sCommandSent && delayCheck(sCommandSent, 50))
             {
                 getTempHum();
@@ -66,12 +67,18 @@ float SensorSHT3x::measureValue(MeasureType iMeasureType)
     switch (iMeasureType)
     {
         case Temperature:
-            // hardware calibration
-            return mTemp;
-            break;
+            return mTemp - pTempOffset;
         case Humidity:
-            return mHumidity;
-            break;
+            if (pTempOffset == 0.0f || mHumidity == NO_NUM || mTemp == NO_NUM)
+                return mHumidity;
+            {
+                float tMeas = mTemp;
+                float tReal = mTemp - pTempOffset;
+                float rhCompensated = mHumidity * expf(17.269f * (tMeas / (237.3f + tMeas) - tReal / (237.3f + tReal)));
+                if (rhCompensated < 0.0f) rhCompensated = 0.0f;
+                if (rhCompensated > 100.0f) rhCompensated = 100.0f;
+                return rhCompensated;
+            }
         default:
             break;
     }
@@ -81,7 +88,7 @@ float SensorSHT3x::measureValue(MeasureType iMeasureType)
 bool SensorSHT3x::begin()
 {
     bool lResult = false;
-    logDebugP("Starting sensor SHT3x... ");
+    logInfoP("Starting sensor SHT3x... ");
     lResult = Sensor::begin();
     logResult(lResult);
     return lResult;
@@ -90,6 +97,12 @@ bool SensorSHT3x::begin()
 uint8_t SensorSHT3x::getI2cSpeed()
 {
     return 4; // n * 100kHz
+}
+
+bool SensorSHT3x::prepareTemperatureOffset(float iTempOffset)
+{
+    pTempOffset = iTempOffset;
+    return true;
 }
 
 float SensorSHT3x::readTemperature(void)

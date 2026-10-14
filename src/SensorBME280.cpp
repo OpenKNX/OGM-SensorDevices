@@ -3,19 +3,38 @@
     #include "SensorBME280.h"
 
 SensorBME280::SensorBME280(uint16_t iMeasureTypes, TwoWire* iWire)
-    : Sensor(iMeasureTypes, iWire, BME280_I2C_ADDR), Adafruit_BME280(){};
+    : Sensor(iMeasureTypes, iWire, 0), Adafruit_BME280(){};
 
 SensorBME280::SensorBME280(uint16_t iMeasureTypes, TwoWire* iWire, uint8_t iAddress)
-    : Sensor(iMeasureTypes, iWire, iAddress), Adafruit_BME280(){};
+    : Sensor(iMeasureTypes, iWire, 0), Adafruit_BME280(){};
 
 uint8_t SensorBME280::getSensorClass()
 {
     return SENS_BME280;
 }
 
+std::string SensorBME280::getSensorName()
+{
+    switch (_sensorID)
+    {
+    case 0x58:
+        return "BMP280";
+        break;
+    case 0x61:
+        return "BME680";
+        break;
+    case 0x60:
+        return "BME280";
+        break;
+    default:
+        return "BM(P|E)???";
+        break;
+    }
+}
+
 std::string SensorBME280::logPrefix()
 {
-    return "Sensor<BME280>";
+    return "Sensor<" + getSensorName() + ">";
 }
 
 /*!
@@ -28,7 +47,21 @@ void SensorBME280::sensorLoopInternal()
         case Wakeup:
             if (pSensorStateDelay == 0 || delayCheck(pSensorStateDelay, 1000))
             {
-                if (SensorBME280::begin() && initWakeup()) pSensorState = Calibrate;
+                bool lResult = false;
+                if (pI2CAddress == 0)
+                {
+                    logInfoP("Determine I2C address... ");
+                    pI2CAddress = BME280_I2C_ADDR;
+                    lResult = Sensor::begin();
+                    if (!lResult)
+                    {
+                        pI2CAddress = BME280_I2C_ADDR + 1;
+                        lResult = Sensor::begin();
+                    }
+                } 
+                pSensorState = (initWakeup() && SensorBME280::begin()) ? Calibrate : Off;
+                if (lResult)
+                    logInfoP("Found %s at address 0x%02X", getSensorName().c_str(), pI2CAddress);
                 pSensorStateDelay = millis();
             }
             break;
@@ -59,9 +92,11 @@ void SensorBME280::sensorLoopInternal()
  */
 bool SensorBME280::initWakeup()
 {
+    _i2caddr = pI2CAddress;
+    _wire = pWire;
     // check if sensor, i.e. the chip ID is correct
     _sensorID = read8(BME280_REGISTER_CHIPID);
-    if (_sensorID != 0x60)
+    if (_sensorID != 0x60 && _sensorID != 0x58 && _sensorID != 0x61) // 0x60 for BME280, 0x58 for BMP280, 0x61 for BME680   
         return false;
 
     // reset the device using soft-reset
@@ -99,12 +134,9 @@ float SensorBME280::measureValue(MeasureType iMeasureType)
 
 bool SensorBME280::begin()
 {
-    logDebugP("Starting sensor BME280... ");
-    _i2caddr = pI2CAddress;
-    _wire = pWire;
+    logInfoP("Starting sensor " + getSensorName() + "... ");
     bool lResult = Sensor::begin();
-    pSensorState = Wakeup;
-    // logResult(lResult);
+    logResult(lResult);
     return lResult;
 }
 

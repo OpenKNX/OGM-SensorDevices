@@ -134,7 +134,7 @@ void OneWireDS2482::loop()
         default:
             mState = Error;
             // as long as there is no Busmaster available, we stay in this state
-            if (delayCheck(mDelay, 10))
+            if (delayCheck(mDelay, 1000))
             {
                 mDelay = millis();
                 if (checkI2cPresence())
@@ -153,6 +153,8 @@ void OneWireDS2482::loop()
                         mSearchNormal->manageSearchCounter(OneWireSearch::SearchError);
                     }
                 }
+                else
+                    openknx.unsupportedEtsModule(ETS_ModuleId_WIRE);
             }
             break;
     }
@@ -214,7 +216,7 @@ bool OneWireDS2482::ProcessIButton()
 bool OneWireDS2482::ProcessPriorityBusUse()
 {
     bool lFound = false;
-    // priority use means to evaluate a Priority sensor with each iternation
+    // priority use means to evaluate a Priority sensor with each iteration
     // so we search for a prio sensor and do the according action
     while (mProcessPrioSensorIndex < mDeviceCount && !lFound)
     {

@@ -41,5 +41,6 @@ class SensorSHT3x : public Sensor
     bool begin() override;
     uint8_t getI2cSpeed() override;
     std::string logPrefix() override;
+    bool prepareTemperatureOffset(float iTempOffset) override;
 };
 #endif

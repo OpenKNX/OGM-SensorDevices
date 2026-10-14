@@ -69,7 +69,7 @@ float SensorVL53L1X::measureValue(MeasureType iMeasureType)
 
 bool SensorVL53L1X::begin()
 {
-    logDebugP("Starting sensor VL53L1X... ");
+    logInfoP("Starting sensor VL53L1X... ");
     bool lResult = Sensor::begin();
     if (lResult)
     {
@@ -109,6 +109,8 @@ bool SensorVL53L1X::getSensorData()
     if (lResult)
     {
         mDistance = this->read(false);
+        // handle special distance 0
+        if (mDistance == 0) mDistance = 1;
         // do the next reading
         this->readSingle(false);
     }

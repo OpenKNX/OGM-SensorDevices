@@ -340,7 +340,7 @@ bool SensorMR24xxB1::checkSensorConnection()
 
 bool SensorMR24xxB1::begin()
 {
-    logDebugP("Starting sensor MR24xxB1 (Presence)... ");
+    logInfoP("Starting sensor MR24xxB1 (Presence)... ");
     bool lResult = Sensor::begin();
     logResult(lResult);
     return lResult;

@@ -15,6 +15,7 @@ class SensorBME280 : public Sensor, protected Adafruit_BME280
     void sensorLoopInternal() override;
     bool initWakeup();
     bool initFinalize();
+    std::string getSensorName();
 
   public:
     SensorBME280(uint16_t iMeasureTypes, TwoWire* iWire);

@@ -82,12 +82,10 @@ Sensor* SensorDevices::newSensor(uint8_t iSensorClass, MeasureType iMeasureType,
 
     #endif
     #ifdef PMMODULE
-        #ifdef HF_SERIAL
+        #ifdef HF_POWER_PIN
         case SENS_MR24xxB1:
             lSensor = new SensorMR24xxB1(iMeasureType, iWire);
             break;
-        #endif
-        #ifdef HLK_SERIAL
         case SENS_HLKLD2420:
             lSensor = new SensorHLKLD2420(iMeasureType, iWire);
             break;

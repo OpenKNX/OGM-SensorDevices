@@ -18,6 +18,15 @@ class SensorSGP30 : public Sensor, protected Adafruit_SGP30
 
     uint32_t getAbsoluteHumidity(float iTemp, float iHum);
     void processHumidity();
+    uint8_t crc8(const uint8_t* iData, uint8_t iLen);
+    void sendHumidityCompensation();
+    void triggerMeasure();
+    bool readMeasureResult();
+
+    uint32_t mAbsoluteHumidity = 0;
+    bool mHumidityPending = false;
+    uint32_t mCommandSent = 0;
+    uint8_t mPhase = 0;
 
     uint8_t getSensorClass() override;
     void sensorLoopInternal() override;

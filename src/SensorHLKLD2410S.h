@@ -1,6 +1,6 @@
 #pragma once
 #ifdef PMMODULE
-    #ifdef HLK_SERIAL
+    #ifdef HF_SERIAL
         #include "Sensor.h"
         #include <string>
 
@@ -16,6 +16,7 @@
         #define CMD_WRITE_TRIGGER_CONFIG 0x72
         #define CMD_READ_HOLD_CONFIG 0x77
         #define CMD_WRITE_HOLD_CONFIG 0x76
+        #define CMD_AUTO_THRESHOLD 0x09
         #define CMD_DATA_MODE 0x7A
 
         #define OFFSET_PARAM_RANGE_GATE_MIN 0x0A
@@ -29,9 +30,6 @@
         #define PARAM_READ_GENERAL_CONFIG_LENGTH 12
         #define PARAM_READ_TRIGGER_HOLD_LENGTH 32
         #define PARAM_DATA_MODE_LENGTH 6
-
-        #define CALIBRATION_VALUE_COUNT 100
-        #define CALIBRATION_TRIGGER_OFFSET_DB 10
 
         // these will be deducted from trigger offset based on sensitivity percentage
         // lower offsets = higher sensitivity
@@ -49,9 +47,9 @@
 
         #define BUFFER_LENGTH mBufferIndex
 
-        #define HLKLD2410S_FLASH_VERSION 1
-        #define HLKLD2410S_FLASH_MAGIC_WORD 2274541778
-        #define HLKLD2410S_FLASH_SIZE 325
+        #define HLKLD2410S_FLASH_VERSION 2
+        #define HLKLD2410S_FLASH_MAGIC_WORD 2274541779
+        #define HLKLD2410S_FLASH_SIZE 38
 
 class SensorHLKLD2410S : public Sensor
 {
@@ -96,27 +94,15 @@ class SensorHLKLD2410S : public Sensor
     int storedResponseSpeed = NO_NUM;
     int storedTriggerThreshold[16] = {};
     int storedHoldThreshold[16] = {};
-    float triggerOffsetDb[16];
-    float holdOffsetDb[16];
     bool calibrationCompleted = false;
     bool useFactoryDefaultThresholds = false;
     // initially suppress ON/OFF signals form HF-Sensor
     uint32_t calibrationOnOffTimer = 1;
 
-    uint32_t rawDataLastRecordingReceived = 0;
-    byte rawDataRecordingCount = 0;
-    byte rawDataRecordingCountGate[16] = {};
-    float rawDataRangeTempSumDb[16];
-    double rawDataRangeTempSquareSumDb[16];
-    float rawDataRangeTempMaxDb[16] = {};
-    float rawDataRangeAverageDb[16] = {};
-    float rawDataRangeDeviationDb[16] = {};
-    float rawDataRangeMaxDb[16] = {};
-    float rawDataRangeTestAverageDb[16] = {};
-    float rawDataRangeTestDifferencesDb[16] = {};
-    float rawDataRangeTestDeviationDb[16] = {};
-    float rawDataRangeTestMaxDb[16] = {};
-    bool calibrationTestRunOnly = false;
+    uint16_t mAutoCalProgress = 0;
+    bool mJustAutoCalCompleted = false;
+    uint8_t mSavedTrigger[16] = {};
+    uint8_t mSavedHold[16] = {};
 
     int8_t mDefaultSensitivity = 5;
     uint8_t mHfSensorStartupState = 0;
@@ -148,7 +134,7 @@ class SensorHLKLD2410S : public Sensor
     short bytesToShort(byte byte0, byte byte1);
     float rawToDb(int rawValue);
     void restartStartupLoop();
-    void resetRawDataRecording();
+    void startAutoCalibration();
     void sendCalibrationData();
     void sendCalibrationDataGeneral(uint8_t rangeGateMin, uint8_t rangeGateMax, uint16_t delayTime, uint8_t statusReportFrequency, uint8_t distanceReportFrequency, uint8_t responseSpeed);
     bool getSensorData();
@@ -186,8 +172,10 @@ class SensorHLKLD2410S : public Sensor
     void writeSensitivity(int8_t iSensitivity);
     // void readSensitivity();
     void sendCommand(uint8_t command, const uint8_t parameter[] = nullptr, uint8_t parameterLength = 0);
-    void showHelp();
-    bool processCommand(const std::string iCmd, bool iDebugKo);
+    void sensorSavePower() override;
+    bool sensorRestorePower() override;
+    void sensorShowHelp() override;
+    bool sensorProcessCommand(const std::string iCmd, bool iDebugKo) override;
     std::string logPrefix() override;
     void switchPower(bool on);
     bool handleFunctionProperty(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength);

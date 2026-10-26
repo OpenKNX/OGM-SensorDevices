@@ -1,5 +1,5 @@
 #ifdef PMMODULE
-    #ifdef HLK_SERIAL
+    #ifdef HF_SERIAL
         #include "SensorHLKLD2410S.h"
         #include <Arduino.h>
         #include <OpenKNX.h>
@@ -20,7 +20,7 @@ std::string SensorHLKLD2410S::logPrefix()
 }
 
 #ifdef HF_USE_SERIALPIO 
-    SerialPIO HLK_SERIAL(HF_UART_TX_PIN, HF_UART_RX_PIN, 1300);
+    SerialPIO HF_SERIAL(HF_UART_TX_PIN, HF_UART_RX_PIN, 1300);
 #endif
 
 
@@ -169,16 +169,25 @@ void SensorHLKLD2410S::startupLoop()
 
                 if (calibrationCompleted)
                 {
-                    // skip calibration if valid calibration values have been read from flash
                     mHfSensorStartupState = START_FINISHED;
 
-                    sendCalibrationData();
+                    if (mJustAutoCalCompleted)
+                    {
+                        mJustAutoCalCompleted = false;
+                        openknx.flash.save(true);
+                        logInfoP("Native auto-calibration complete, thresholds saved");
+                        openknx.console.writeDiagnoseKo("HLK cal done");
+                        calibrationOnOffTimer = delayTimerInit();
+                    }
+                    else
+                    {
+                        sendCalibrationData();
+                    }
                 }
                 else
                 {
                     mHfSensorStartupState = START_CALIBRATING;
-
-                    resetRawDataRecording();
+                    startAutoCalibration();
                 }
 
                 sendCommand(CMD_CLOSE_COMMAND_MODE);
@@ -202,15 +211,11 @@ void SensorHLKLD2410S::forceCalibration()
 {
     logDebugP("Force sensor calibration");
 
-    sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_EXT, PARAM_OPEN_COMMAND_MODE_LENGTH);
-    delay(100);
-
     pSensorState = Calibrate;
     mHfSensorStartupState = START_CALIBRATING;
     pSensorStateDelay = millis();
 
-    resetRawDataRecording();
-    sendCommand(CMD_CLOSE_COMMAND_MODE);
+    startAutoCalibration();
 }
 
 void SensorHLKLD2410S::uartGetPacket()
@@ -223,7 +228,7 @@ void SensorHLKLD2410S::uartGetPacket()
             // wait for a valid header
             while (
                 mPacketState == GET_SYNC_STATE &&
-                HLK_SERIAL.available() > 0 && HLK_SERIAL.readBytes(&rxByte, 1) == 1)
+                HF_SERIAL.available() > 0 && HF_SERIAL.readBytes(&rxByte, 1) == 1)
             {
                 lastDataReceived = millis();
 
@@ -299,7 +304,7 @@ void SensorHLKLD2410S::uartGetPacket()
             // add data till valid footer received
             while (
                 mPacketState == GET_PACKET_DATA &&
-                HLK_SERIAL.available() > 0 && HLK_SERIAL.readBytes(&rxByte, 1) == 1)
+                HF_SERIAL.available() > 0 && HF_SERIAL.readBytes(&rxByte, 1) == 1)
             {
                 lastDataReceived = millis();
 
@@ -370,7 +375,7 @@ void SensorHLKLD2410S::rebootSensorHard()
     delay(1000);
 
     switchPower(true);
-    openknx.console.writeDiagenoseKo("HLK reb hard");
+    openknx.console.writeDiagnoseKo("HLK reb hard");
 }
 
 void SensorHLKLD2410S::switchPower(bool on)
@@ -402,33 +407,19 @@ void SensorHLKLD2410S::restartStartupLoop()
     mHfSensorStartupState = START_INIT;
 }
 
-void SensorHLKLD2410S::resetRawDataRecording()
+void SensorHLKLD2410S::startAutoCalibration()
 {
-    for (uint8_t i = 0; i < 16; i++)
-    {
-        rawDataRangeTempSumDb[i] = 0;
-        rawDataRangeTempSquareSumDb[i] = 0;
-        rawDataRangeTempMaxDb[i] = 0;
-        rawDataRecordingCountGate[i] = 0;
-    }
-
-    rawDataLastRecordingReceived = millis();
-    rawDataRecordingCount = 0;
     calibrationCompleted = false;
+    mAutoCalProgress = 0;
+    logInfoP("Starting native auto-calibration (120s)...");
+    openknx.console.writeDiagnoseKo("HLK cal start");
 
-    if (calibrationTestRunOnly)
-    {
-        logDebugP("Start sensor calibration - test run only");
-        openknx.console.writeDiagenoseKo("HLK calt start");
-    }
-    else
-    {
-        logDebugP("Start sensor calibration");
-        openknx.console.writeDiagenoseKo("HLK cal start");
-    }
-
-    sendCalibrationDataGeneral(mRangeGateMin, mRangeGateMax, mDelayTime, 80, 80, 10);
-    sendCommand(CMD_DATA_MODE, PARAM_DATA_MODE_STANDARD, PARAM_DATA_MODE_LENGTH);
+    uint8_t param[6] = {0x02, 0x00, 0x01, 0x00, 0x78, 0x00}; // trigger=2, hold=1, scan=120s
+    sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_EXT, PARAM_OPEN_COMMAND_MODE_LENGTH);
+    delay(100);
+    sendCommand(CMD_AUTO_THRESHOLD, param, 6);
+    delay(100);
+    sendCommand(CMD_CLOSE_COMMAND_MODE);
 }
 
 bool SensorHLKLD2410S::getSensorData()
@@ -442,13 +433,6 @@ bool SensorHLKLD2410S::getSensorData()
     std::string successMessage;
 
     uint8_t payloadSize;
-
-    int rangeMax[16] = {};
-
-    // if (calibrationOnOffTimer == 0 || delayCheck(calibrationOnOffTimer, 15000))
-    //     calibrationOnOffTimer = 0;
-    // else
-    //     return result;
 
     switch (mPacketType)
     {
@@ -506,122 +490,42 @@ bool SensorHLKLD2410S::getSensorData()
                 break;
             }
 
-            // cut 5 bytes at the beginning: 1 byte target status, 2 bytes target distance, 2 bytes reserved
-            memmove(mBuffer, mBuffer + 5, BUFFER_LENGTH - 2);
-            mBufferIndex -= 5;
-
-            bool allZero = true;
-            for (uint8_t i = 0; i < 16; i++)
+            // check data type: 0x01 = standard data, 0x03 = auto-threshold progress
+            uint8_t dataType = mBuffer[0];
+            if (dataType == 0x03)
             {
-                rangeMax[i] = bytesToInt(mBuffer[i * 4], mBuffer[i * 4 + 1], mBuffer[i * 4 + 2], mBuffer[i * 4 + 3]);
-                if (rangeMax[i] > 0)
-                    allZero = false;
+                mAutoCalProgress = bytesToShort(mBuffer[1], mBuffer[2]);
+                logDebugP("Auto-threshold progress: %u%%", mAutoCalProgress / 100);
+                if (mAutoCalProgress >= 10000)
+                {
+                    logInfoP("Auto-calibration reached 100%%, reading back thresholds");
+                    mJustAutoCalCompleted = true;
+                    calibrationCompleted = true;
+                    restartStartupLoop();
+                }
+                result = true;
+                break;
             }
-
-            if (allZero)
+            if (dataType != 0x01)
             {
-                logTraceP("Only zero values received, ignoring");
+                logDebugP("Unknown standard frame data type: 0x%02X", dataType);
                 break;
             }
 
-            logTraceP("Range values received (%d):", rawDataRecordingCount);
+            // cut 6 bytes: 1 byte data type, 1 byte target status, 2 bytes target distance, 2 bytes reserved
+            memmove(mBuffer, mBuffer + 6, BUFFER_LENGTH - 6);
+            mBufferIndex -= 6;
+
+            logTraceP("Standard data frame (gate energy):");
             logIndentUp();
             for (uint8_t i = 0; i < 16; i++)
             {
-                if (rangeMax[i] > 0)
-                    logTraceP("Gate %i: %.2f", i, rawToDb(rangeMax[i]));
-                else
-                    logTraceP("Gate %i: 0 (ignored)", i);
+                int gateVal = bytesToInt(mBuffer[i * 4], mBuffer[i * 4 + 1], mBuffer[i * 4 + 2], mBuffer[i * 4 + 3]);
+                if (gateVal > 0)
+                    logTraceP("Gate %i: %.2f dB", i, rawToDb(gateVal));
             }
             logIndentDown();
 
-            // if more than 5 sec. past since last raw data value (should be every 1-2 sec.),
-            // something when wrong, start recording from scratch
-            if (delayCheck(rawDataLastRecordingReceived, 5000))
-            {
-                logDebugP("Too long without new data, restarting calibration");
-                resetRawDataRecording();
-            }
-            else if (rawDataRecordingCount < CALIBRATION_VALUE_COUNT)
-            {
-                float tempDb;
-                for (uint8_t i = 0; i < 16; i++)
-                {
-                    if (rangeMax[i] > 0)
-                    {
-                        tempDb = rawToDb(rangeMax[i]);
-                        rawDataRangeTempSumDb[i] += tempDb;
-                        rawDataRangeTempSquareSumDb[i] += pow(tempDb, 2);
-                        rawDataRangeTempMaxDb[i] = max(rawDataRangeTempMaxDb[i], tempDb);
-                        rawDataRecordingCountGate[i]++;
-                    }
-                }
-                rawDataRecordingCount++;
-
-                rawDataLastRecordingReceived = millis();
-            }
-
-            if (!calibrationCompleted &&
-                rawDataRecordingCount == CALIBRATION_VALUE_COUNT)
-            {
-                logIndentDown();
-
-                // enter command mode to stop raw data transfer
-                sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_EXT, PARAM_OPEN_COMMAND_MODE_LENGTH);
-                delay(100);
-                // set frequencies back to normal
-                sendCalibrationDataGeneral(mRangeGateMin, mRangeGateMax, mDelayTime, mStatusReportFrequency, mDistanceReportFrequency, mResponseSpeed);
-                delay(100);
-
-                // reset back to minimal data mode
-                sendCommand(CMD_DATA_MODE, PARAM_DATA_MODE_MINIMAL, PARAM_DATA_MODE_LENGTH);
-                delay(100);
-                sendCommand(CMD_CLOSE_COMMAND_MODE);
-                delay(100);
-
-                if (calibrationTestRunOnly)
-                {
-                    openknx.console.writeDiagenoseKo("HLK calt done");
-                    logDebugP("Sensor calibrarion test finished, data not stored");
-                    calibrationTestRunOnly = false;
-                    calibrationCompleted = true;
-                    calibrationOnOffTimer = delayTimerInit();
-
-                    for (uint8_t i = 0; i < 16; i++)
-                    {
-                        rawDataRangeTestAverageDb[i] = rawDataRangeTempSumDb[i] / (float)rawDataRecordingCountGate[i];
-                        rawDataRangeTestDifferencesDb[i] = rawDataRangeTestAverageDb[i] - rawDataRangeAverageDb[i];
-                        rawDataRangeTestDeviationDb[i] = sqrtf((rawDataRangeTempSquareSumDb[i] - (pow(rawDataRangeTempSumDb[i], 2) / rawDataRecordingCountGate[i])) / (rawDataRecordingCount - 1));
-                        rawDataRangeTestMaxDb[i] = rawDataRangeTempMaxDb[i];
-                    }
-                }
-                else
-                {
-                    sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_EXT, PARAM_OPEN_COMMAND_MODE_LENGTH);
-                    delay(500);
-
-                    for (uint8_t i = 0; i < 16; i++)
-                    {
-                        rawDataRangeAverageDb[i] = rawDataRangeTempSumDb[i] / (float)rawDataRecordingCountGate[i];
-                        rawDataRangeDeviationDb[i] = sqrtf((rawDataRangeTempSquareSumDb[i] - (pow(rawDataRangeTempSumDb[i], 2) / rawDataRecordingCountGate[i])) / (rawDataRecordingCountGate[i] - 1));
-                        rawDataRangeMaxDb[i] = rawDataRangeTempMaxDb[i];
-                    }
-
-                    openknx.console.writeDiagenoseKo("HLK cal done");
-                    // will be followed by "HLK cal send"
-                    openknx.console.writeDiagenoseKo("");
-                    logDebugP("Sensor calibration finished");
-                    calibrationCompleted = true;
-                    calibrationOnOffTimer = delayTimerInit();
-
-                    // persist new calibration data in flash
-                    openknx.flash.save(true);
-
-                    useFactoryDefaultThresholds = false;
-                    sendCalibrationData();
-                }
-            }
-            
             result = true;
             break;
         }
@@ -659,20 +563,13 @@ bool SensorHLKLD2410S::getSensorData()
                     if (!success)
                         break;
 
-                    // cut 2 bytes at the beginning (command word): 00 01
-                    memmove(mBuffer, mBuffer + 2, BUFFER_LENGTH - 2);
-                    mBufferIndex -= 2;
-                    
-                    // mBuffer now holds 3x2 bytes undocumented version information
+                    // cut 4 bytes at the beginning: 00 01 00 00
+                    memmove(mBuffer, mBuffer + 4, BUFFER_LENGTH - 4);
+                    mBufferIndex -= 4;
+
                     moduleVersionMajor = bytesToShort(mBuffer[0], mBuffer[1]);
                     moduleVersionMinor = bytesToShort(mBuffer[2], mBuffer[3]);
                     moduleVersionRevision = bytesToShort(mBuffer[4], mBuffer[5]);
-                    logDebugP("Unknown version: %u.%u.%u", moduleVersionMajor, moduleVersionMinor, moduleVersionRevision);
-
-                    // and 3x2 bytes actual version information
-                    moduleVersionMajor = bytesToShort(mBuffer[6], mBuffer[7]);
-                    moduleVersionMinor = bytesToShort(mBuffer[8], mBuffer[9]);
-                    moduleVersionRevision = bytesToShort(mBuffer[10], mBuffer[11]);
                     logDebugP("Module version: %u.%u.%u", moduleVersionMajor, moduleVersionMinor, moduleVersionRevision);
 
                     result = true;
@@ -794,83 +691,32 @@ bool SensorHLKLD2410S::getSensorData()
 
 void SensorHLKLD2410S::sendCalibrationData()
 {
-    logDebugP("Saving calibration data");
+    logDebugP("Sending calibration data to sensor");
     logIndentUp();
 
-    float triggerThresholdDb[16];
-    float holdThresholdDb[16];
+    uint8_t triggerDb[16];
+    uint8_t holdDb[16];
 
     if (useFactoryDefaultThresholds)
     {
-        triggerThresholdDb[0] = 48;
-        triggerThresholdDb[1] = 42;
-        triggerThresholdDb[2] = 36;
-        triggerThresholdDb[3] = 34;
-        triggerThresholdDb[4] = 32;
-        triggerThresholdDb[5] = 31;
-        triggerThresholdDb[6] = 31;
-        triggerThresholdDb[7] = 31;
-        triggerThresholdDb[8] = 31;
-        triggerThresholdDb[9] = 31;
-        triggerThresholdDb[10] = 31;
-        triggerThresholdDb[11] = 31;
-        triggerThresholdDb[12] = 31;
-        triggerThresholdDb[13] = 31;
-        triggerThresholdDb[14] = 31;
-        triggerThresholdDb[15] = 31;
+        triggerDb[0] = 48; triggerDb[1] = 42; triggerDb[2] = 36; triggerDb[3] = 34;
+        triggerDb[4] = 32; triggerDb[5] = 31; triggerDb[6] = 31; triggerDb[7] = 31;
+        triggerDb[8] = 31; triggerDb[9] = 31; triggerDb[10] = 31; triggerDb[11] = 31;
+        triggerDb[12] = 31; triggerDb[13] = 31; triggerDb[14] = 31; triggerDb[15] = 31;
 
-        holdThresholdDb[0] = 45;
-        holdThresholdDb[1] = 42;
-        holdThresholdDb[2] = 36;
-        holdThresholdDb[3] = 33;
-        holdThresholdDb[4] = 32;
-        holdThresholdDb[5] = 28;
-        holdThresholdDb[6] = 28;
-        holdThresholdDb[7] = 28;
-        holdThresholdDb[8] = 28;
-        holdThresholdDb[9] = 28;
-        holdThresholdDb[10] = 28;
-        holdThresholdDb[11] = 28;
-        holdThresholdDb[12] = 28;
-        holdThresholdDb[13] = 28;
-        holdThresholdDb[14] = 28;
-        holdThresholdDb[15] = 28;
+        holdDb[0] = 45; holdDb[1] = 42; holdDb[2] = 36; holdDb[3] = 33;
+        holdDb[4] = 32; holdDb[5] = 28; holdDb[6] = 28; holdDb[7] = 28;
+        holdDb[8] = 28; holdDb[9] = 28; holdDb[10] = 28; holdDb[11] = 28;
+        holdDb[12] = 28; holdDb[13] = 28; holdDb[14] = 28; holdDb[15] = 28;
 
         logDebugP("Factory default thresholds used");
     }
     else
     {
-        logTraceP("rawDataRangeAverage:");
-        logIndentUp();
-
         for (uint8_t i = 0; i < 16; i++)
-            logTraceP("Gate %i: %.2f", i, rawDataRangeAverageDb[i]);
-
-        logIndentDown();
-
-        if (ParamPM_HlkSettings)
         {
-            logDebugP("No formula used, sensitivity ignored");
-
-            // calculate trigger thresholds
-            for (uint8_t i = 0; i < 16; i++)
-                triggerThresholdDb[i] = round(rawDataRangeAverageDb[i] + triggerOffsetDb[i]);
-
-            // calculate hold thresholds
-            for (uint8_t i = 0; i < 16; i++)
-                holdThresholdDb[i] = round(rawDataRangeAverageDb[i] + holdOffsetDb[i]);
-        }
-        else
-        {
-            logDebugP("Using formula with sensitivity: %d", mSensitivity);
-            int8_t lSensitivity = mSensitivity > 0 && mSensitivity <= 10 ? mSensitivity : SENSITIVITY_DEFAULT;
-            for (uint8_t i = 0; i < 16; i++)
-            {
-                triggerOffsetDb[i] = 6 / log10(lSensitivity + 1);
-                triggerThresholdDb[i] = round(rawDataRangeAverageDb[i] + triggerOffsetDb[i]);
-                holdOffsetDb[i] = 3 * (1 / log10(lSensitivity + 1)) - 1.5;
-                holdThresholdDb[i] = round(rawDataRangeAverageDb[i] + holdOffsetDb[i]);
-            }
+            triggerDb[i] = mSavedTrigger[i];
+            holdDb[i] = mSavedHold[i];
         }
     }
 
@@ -885,22 +731,15 @@ void SensorHLKLD2410S::sendCalibrationData()
     bool storedCurrentCalibration = true;
     for (uint8_t i = 0; i < 16; i++)
     {
-        if ((storedTriggerThreshold[i] != triggerThresholdDb[i]) ||
-            (storedHoldThreshold[i] != holdThresholdDb[i]))
+        if ((storedTriggerThreshold[i] != triggerDb[i]) ||
+            (storedHoldThreshold[i] != holdDb[i]))
         {
-            logTraceP("Gate %i mismatch: trigger %u ?= %.2f, hold %u ?= %.2f", i, storedTriggerThreshold[i], triggerThresholdDb[i], storedHoldThreshold[i], holdThresholdDb[i]);
             storedCurrentCalibration = false;
             break;
         }
     }
 
-    logDebugP("Write config to sensor:");
-    logIndentUp();
-
-    uint8_t param[96];
-
-    if (!storedCurrentGeneral ||
-        !storedCurrentCalibration)
+    if (!storedCurrentGeneral || !storedCurrentCalibration)
     {
         sendCommand(CMD_OPEN_COMMAND_MODE, PARAM_OPEN_COMMAND_MODE_EXT, PARAM_OPEN_COMMAND_MODE_LENGTH);
         delay(100);
@@ -911,74 +750,55 @@ void SensorHLKLD2410S::sendCalibrationData()
     else
     {
         sendCalibrationDataGeneral(mRangeGateMin, mRangeGateMax, mDelayTime, mStatusReportFrequency, mDistanceReportFrequency, mResponseSpeed);
-        openknx.console.writeDiagenoseKo("HLK par send");
+        openknx.console.writeDiagnoseKo("HLK par send");
     }
 
     if (storedCurrentCalibration)
         logDebugP("Skip writing calibration to sensor as data is current");
     else
     {
-        logDebugP("triggerThreshold:");
-        logIndentUp();
-
-        // write back trigger thresholds, for each:
-        // first 2 bytes parameter offset, then 4 bytes value
+        uint8_t param[96];
         uint8_t offset;
+
+        logDebugP("Writing trigger thresholds:");
+        logIndentUp();
         for (uint8_t i = 0; i < 16; i++)
         {
             offset = i * 6;
-            param[offset] = i;
-            param[offset + 1] = 0;
-
-            param[offset + 2] = (uint8_t)triggerThresholdDb[i];
-            param[offset + 3] = 0;
-            param[offset + 4] = 0;
-            param[offset + 5] = 0;
-
-            logDebugP("Gate %u: %u", i, (uint8_t)triggerThresholdDb[i]);
+            param[offset] = i;     param[offset + 1] = 0;
+            param[offset + 2] = triggerDb[i];
+            param[offset + 3] = 0; param[offset + 4] = 0; param[offset + 5] = 0;
+            logDebugP("Gate %u: %u", i, triggerDb[i]);
         }
         sendCommand(CMD_WRITE_TRIGGER_CONFIG, param, 96);
         delay(500);
         logIndentDown();
 
-        logDebugP("holdThreshold:");
+        logDebugP("Writing hold thresholds:");
         logIndentUp();
-
-        // write back hold thresholds, for each:
-        // first 2 bytes parameter offset, then 4 bytes value
         for (uint8_t i = 0; i < 16; i++)
         {
             offset = i * 6;
-            param[offset] = i;
-            param[offset + 1] = 0;
-
-            param[offset + 2] = (uint8_t)holdThresholdDb[i];
-            param[offset + 3] = 0;
-            param[offset + 4] = 0;
-            param[offset + 5] = 0;
-
-            logDebugP("Gate %u: %u", i, (uint8_t)holdThresholdDb[i]);
+            param[offset] = i;     param[offset + 1] = 0;
+            param[offset + 2] = holdDb[i];
+            param[offset + 3] = 0; param[offset + 4] = 0; param[offset + 5] = 0;
+            logDebugP("Gate %u: %u", i, holdDb[i]);
         }
         sendCommand(CMD_WRITE_HOLD_CONFIG, param, 96);
         delay(500);
         logIndentDown();
 
         if (!storedCurrentGeneral)
-            openknx.console.writeDiagenoseKo("");
-        openknx.console.writeDiagenoseKo("HLK cal send");
-        openknx.console.writeDiagenoseKo("");
+            openknx.console.writeDiagnoseKo("");
+        openknx.console.writeDiagnoseKo("HLK cal send");
+        openknx.console.writeDiagnoseKo("");
         rebootSensorHard();
     }
 
-    logDebugP("Writing config to sensor finished");
     logIndentDown();
 
-    logIndentDown();
-
-    if (!storedCurrentGeneral ||
-        !storedCurrentCalibration)
+    if (!storedCurrentGeneral || !storedCurrentCalibration)
     {
-        // re-start startup loop to readback values from sensor
         restartStartupLoop();
         calibrationOnOffTimer = delayTimerInit();
     }
@@ -1061,9 +881,9 @@ void SensorHLKLD2410S::sendCommand(uint8_t command, const uint8_t parameter[], u
 
     memcpy(cmdData + cmdDataIndex, FOOTER_COMMAND, HEADER_FOOTER_SIZE);
 
-    if (HLK_SERIAL.availableForWrite())
+    if (HF_SERIAL.availableForWrite())
     {
-        HLK_SERIAL.write(cmdData, totalLength);
+        HF_SERIAL.write(cmdData, totalLength);
 
         logTraceP("Sending to sensor:");
         logIndentUp();
@@ -1103,7 +923,7 @@ bool SensorHLKLD2410S::checkSensorConnection()
 
 bool SensorHLKLD2410S::begin()
 {
-    logDebugP("Starting sensor HLK-LD2420 (Presence)... ");
+    logDebugP("Starting sensor HLK-LD2410S (Presence)... ");
     bool lResult = Sensor::begin();
     logResult(lResult);
     return lResult;
@@ -1123,37 +943,23 @@ void SensorHLKLD2410S::sensorReadFlash(const uint8_t *buffer, const uint16_t siz
     logIndentUp();
 
     uint8_t version = openknx.flash.readByte();
-    if (version > HLKLD2410S_FLASH_VERSION)
+    if (version != HLKLD2410S_FLASH_VERSION)
     {
-        logDebugP("Invalid flash version %u", version);
+        logDebugP("Flash version %u not supported (expected %u), ignoring", version, HLKLD2410S_FLASH_VERSION);
         return;
     }
 
     uint32_t magicWord = openknx.flash.readInt();
     if (magicWord != HLKLD2410S_FLASH_MAGIC_WORD)
     {
-        logDebugP("Flash content invalid");
+        logDebugP("Flash content invalid (magic word mismatch)");
         return;
     }
 
-    if (version == 0)
-    {
-        for (uint8_t i = 0; i < 16; i++)
-            rawDataRangeAverageDb[i] = openknx.flash.readFloat();
-    }
-    else if (version == 1)
-    {
-        for (uint8_t i = 0; i < 16; i++)
-            triggerOffsetDb[i] = openknx.flash.readFloat();
-        for (uint8_t i = 0; i < 16; i++)
-            holdOffsetDb[i] = openknx.flash.readFloat();
-        for (uint8_t i = 0; i < 16; i++)
-            rawDataRangeAverageDb[i] = openknx.flash.readFloat();
-        for (uint8_t i = 0; i < 16; i++)
-            rawDataRangeDeviationDb[i] = openknx.flash.readFloat();
-        for (uint8_t i = 0; i < 16; i++)
-            rawDataRangeMaxDb[i] = openknx.flash.readFloat();
-    }
+    for (uint8_t i = 0; i < 16; i++)
+        mSavedTrigger[i] = openknx.flash.readByte();
+    for (uint8_t i = 0; i < 16; i++)
+        mSavedHold[i] = openknx.flash.readByte();
 
     calibrationCompleted = true;
 
@@ -1173,15 +979,9 @@ void SensorHLKLD2410S::sensorWriteFlash()
     openknx.flash.writeInt(HLKLD2410S_FLASH_MAGIC_WORD);
 
     for (uint8_t i = 0; i < 16; i++)
-        openknx.flash.writeFloat(triggerOffsetDb[i]);
+        openknx.flash.writeByte((uint8_t)storedTriggerThreshold[i]);
     for (uint8_t i = 0; i < 16; i++)
-        openknx.flash.writeFloat(holdOffsetDb[i]);
-    for (uint8_t i = 0; i < 16; i++)
-        openknx.flash.writeFloat(rawDataRangeAverageDb[i]);
-    for (uint8_t i = 0; i < 16; i++)
-        openknx.flash.writeFloat(rawDataRangeDeviationDb[i]);
-    for (uint8_t i = 0; i < 16; i++)
-        openknx.flash.writeFloat(rawDataRangeMaxDb[i]);
+        openknx.flash.writeByte((uint8_t)storedHoldThreshold[i]);
 
     logDebugP("Calibration data written to flash");
 }
@@ -1191,35 +991,32 @@ uint16_t SensorHLKLD2410S::sensorFlashSize()
     return HLKLD2410S_FLASH_SIZE;
 }
 
-void SensorHLKLD2410S::showHelp()
+void SensorHLKLD2410S::sensorSavePower()
 {
-    openknx.console.printHelpLine("hlk ver", "Print firmware version of HLK-LD2420 sensor.");
+    // calibration data is already persisted via openknx.flash.save() after calibration
+}
+
+bool SensorHLKLD2410S::sensorRestorePower()
+{
+    restartStartupLoop();
+    return true;
+}
+
+void SensorHLKLD2410S::sensorShowHelp()
+{
+    openknx.console.printHelpLine("hlk ver", "Print firmware version of HLK-LD2410S sensor.");
     openknx.console.printHelpLine("hlk sens", "Print sensitivity defined by ETS app.");
     openknx.console.printHelpLine("hlk rmin", "Print min. range defined by ETS app.");
     openknx.console.printHelpLine("hlk rmax", "Print max. range defined by ETS app.");
     openknx.console.printHelpLine("hlk delay", "Print delay time defined by ETS app.");
-    // openknx.console.printHelpLine("hlk ct read", "Print all 16 calibration trigger thresholds in dB.");
-    // openknx.console.printHelpLine("hlk cNNt read", "Print calibration trigger threshold in dB at index NN (00-15).");
-    // openknx.console.printHelpLine("hlk ch read", "Print all 16 calibration hold thresholds in dB.");
-    // openknx.console.printHelpLine("hlk cNNh read", "Print calibration hold threshold in dB at index NN (00-15).");
-    openknx.console.printHelpLine("hlk cr read", "Print all 16 calibration raw data averages in dB.");
-    openknx.console.printHelpLine("hlk cNNr read", "Print calibration raw data average in dB at index NN (00-15).");
-    openknx.console.printHelpLine("hlk cNNr 00.00", "Set calibration raw data average in dB at index NN (00-15).");
-    openknx.console.printHelpLine("hlk cd read", "Print all 16 calibration raw data average differences from last test run in dB.");
-    openknx.console.printHelpLine("hlk cNNd read", "Print calibration raw data average difference from last test run in dB at index NN (00-15).");
-    openknx.console.printHelpLine("hlk cs read", "Print all 16 calibration raw data standard deviations in dB.");
-    openknx.console.printHelpLine("hlk cNNs read", "Print calibration raw data standard deviation in dB at index NN (00-15).");
-    openknx.console.printHelpLine("hlk cm read", "Print all 16 calibration raw data maximums in dB.");
-    openknx.console.printHelpLine("hlk cNNm read", "Print calibration raw data maximum in dB at index NN (00-15).");
-    openknx.console.printHelpLine("hlk cal send", "Send stored calibration data to sensor (e. g. changed by hlk cNNr).");
-    openknx.console.printHelpLine("hlk cal run", "Start new sensor calibration run and send data to sensor.");
-    openknx.console.printHelpLine("hlk calt run", "Start new sensor calibration test run (no data send to sensor).");
+    openknx.console.printHelpLine("hlk cal run", "Start native auto-calibration (120s).");
+    openknx.console.printHelpLine("hlk cal prog", "Print current auto-calibration progress (0-10000).");
+    openknx.console.printHelpLine("hlk cal send", "Re-apply stored calibration thresholds to sensor.");
     openknx.console.printHelpLine("hlk cal def", "Send factory default calibration data to sensor.");
-    //openknx.console.printHelpLine("hlk reb soft", "Reboot sensor via software.");
     openknx.console.printHelpLine("hlk reb hard", "Reboot sensor via hardware (cut power).");
 }
 
-bool SensorHLKLD2410S::processCommand(const std::string iCmd, bool iDebugKo)
+bool SensorHLKLD2410S::sensorProcessCommand(const std::string iCmd, bool iDebugKo)
 {
     bool lResult = false;
     if (iCmd.length() == 5 && iCmd.substr(4, 1) == "h")
@@ -1227,325 +1024,89 @@ bool SensorHLKLD2410S::processCommand(const std::string iCmd, bool iDebugKo)
         // Command help
         if (iDebugKo)
         {
-            openknx.console.writeDiagenoseKo("-> ver");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> sens");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> rmin");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> rmax");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> delay");
-            openknx.console.writeDiagenoseKo("");
-            // openknx.console.writeDiagenoseKo("-> ct read");
-            // openknx.console.writeDiagenoseKo("");
-            // openknx.console.writeDiagenoseKo("-> cNNt read");
-            // openknx.console.writeDiagenoseKo("");
-            // openknx.console.writeDiagenoseKo("-> ch read");
-            // openknx.console.writeDiagenoseKo("");
-            // openknx.console.writeDiagenoseKo("-> cNNh read");
-            // openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> cr read");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> cNNr read");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> cNNr 00.00");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> cd read");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> cNNd read");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> cs read");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> cNNs read");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> cm read");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> cNNm read");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> cal send");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> cal run");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> calt run");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> cal def");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> reb soft");
-            openknx.console.writeDiagenoseKo("");
-            openknx.console.writeDiagenoseKo("-> reb hard");
+            openknx.console.writeDiagnoseKo("-> ver");
+            openknx.console.writeDiagnoseKo("");
+            openknx.console.writeDiagnoseKo("-> sens");
+            openknx.console.writeDiagnoseKo("");
+            openknx.console.writeDiagnoseKo("-> rmin");
+            openknx.console.writeDiagnoseKo("");
+            openknx.console.writeDiagnoseKo("-> rmax");
+            openknx.console.writeDiagnoseKo("");
+            openknx.console.writeDiagnoseKo("-> delay");
+            openknx.console.writeDiagnoseKo("");
+            openknx.console.writeDiagnoseKo("-> cal run");
+            openknx.console.writeDiagnoseKo("");
+            openknx.console.writeDiagnoseKo("-> cal prog");
+            openknx.console.writeDiagnoseKo("");
+            openknx.console.writeDiagnoseKo("-> cal send");
+            openknx.console.writeDiagnoseKo("");
+            openknx.console.writeDiagnoseKo("-> cal def");
+            openknx.console.writeDiagnoseKo("");
+            openknx.console.writeDiagnoseKo("-> reb hard");
         }
     }
     else if (iCmd.length() == 7 && iCmd.substr(4, 3) == "ver")
     {
         logDebugP("Module version: %u.%u.%u", moduleVersionMajor, moduleVersionMinor, moduleVersionRevision);
         if (iDebugKo)
-            openknx.console.writeDiagenoseKo("HLK ver %u.%u.%u", moduleVersionMajor, moduleVersionMinor, moduleVersionRevision);
+            openknx.console.writeDiagnoseKo("HLK ver %u.%u.%u", moduleVersionMajor, moduleVersionMinor, moduleVersionRevision);
         lResult = true;
     }
     else if (iCmd.length() == 8 && iCmd.substr(4, 4) == "sens")
     {
         logInfoP("Sensitivity: %u", mSensitivity);
         if (iDebugKo)
-            openknx.console.writeDiagenoseKo("HLK sens %u", mSensitivity);
+            openknx.console.writeDiagnoseKo("HLK sens %u", mSensitivity);
         lResult = true;
     }
     else if (iCmd.length() == 8 && iCmd.substr(4, 4) == "rmin")
     {
         logInfoP("Range gate min.: %u", mRangeGateMin);
         if (iDebugKo)
-            openknx.console.writeDiagenoseKo("HLK rmin %u", mRangeGateMin);
+            openknx.console.writeDiagnoseKo("HLK rmin %u", mRangeGateMin);
         lResult = true;
     }
     else if (iCmd.length() == 8 && iCmd.substr(4, 4) == "rmax")
     {
         logInfoP("Range gate max.: %u", mRangeGateMax);
         if (iDebugKo)
-            openknx.console.writeDiagenoseKo("HLK rmax %u", mRangeGateMax);
+            openknx.console.writeDiagnoseKo("HLK rmax %u", mRangeGateMax);
         lResult = true;
     }
     else if (iCmd.length() == 9 && iCmd.substr(4, 5) == "delay")
     {
         logInfoP("Delay time: %u", mDelayTime);
         if (iDebugKo)
-            openknx.console.writeDiagenoseKo("HLK delay %u", mDelayTime);
+            openknx.console.writeDiagnoseKo("HLK delay %u", mDelayTime);
         lResult = true;
     }
-    else if (iCmd.length() == 12 && iCmd.substr(4, 10) == "calt run")
+    else if (iCmd.length() == 12 && iCmd.substr(4, 8) == "cal prog")
     {
-        calibrationTestRunOnly = true;
-        forceCalibration();
+        logInfoP("Auto-calibration progress: %u / 10000", mAutoCalProgress);
+        if (iDebugKo)
+            openknx.console.writeDiagnoseKo("HLK cal %u%%", mAutoCalProgress / 100);
         lResult = true;
     }
-    else if (iCmd.length() >= 8 && iCmd.substr(4, 4) == "calt")
-    {
-        // other calt commands (typos) might be interpreted
-        // as cNNt commands (with fatal error), so we prevent them
-        lResult = false;
-    }
-    else if (iCmd.length() == 11 && iCmd.substr(4, 9) == "cal run")
+    else if (iCmd.length() == 11 && iCmd.substr(4, 7) == "cal run")
     {
         forceCalibration();
         lResult = true;
     }
-    else if (iCmd.length() == 12 && iCmd.substr(4, 10) == "cal send")
+    else if (iCmd.length() == 12 && iCmd.substr(4, 8) == "cal send")
     {
         sendCalibrationData();
         lResult = true;
     }
-    else if (iCmd.length() == 11 && iCmd.substr(4, 9) == "cal def")
+    else if (iCmd.length() == 11 && iCmd.substr(4, 7) == "cal def")
     {
         useFactoryDefaultThresholds = true;
         sendCalibrationData();
         lResult = true;
     }
-    // else if (iCmd.length() == 12 && iCmd.substr(4, 10) == "reb soft")
-    // {
-    //     rebootSensorSoft();
-    //     lResult = true;
-    // }
-    else if (iCmd.length() == 12 && iCmd.substr(4, 10) == "reb hard")
+    else if (iCmd.length() == 12 && iCmd.substr(4, 8) == "reb hard")
     {
         rebootSensorHard();
         lResult = true;
-    }
-    else if (iCmd.length() == 11)
-    {
-        // if (iCmd.substr(4, 7) == "ct read")
-        // {
-        //     // calibration trigger thresholds: read all
-        //     for (uint8_t i = 0; i < 16; i++)
-        //     {
-        //         logInfoP("triggerThresholdDb, gate %u: %.2f", i, triggerThresholdDb[i]);
-        //         if (iDebugKo)
-        //         {
-        //             openknx.console.writeDiagenoseKo("HLK c%02ut %.2f", i, triggerThresholdDb[i]);
-        //             if (i < 15)
-        //                 openknx.console.writeDiagenoseKo("");
-        //         }
-        //     }
-        //     lResult = true;
-        // }
-        // else if (iCmd.substr(4, 7) == "ch read")
-        // {
-        //     // calibration hold thresholds: read all
-        //     for (uint8_t i = 0; i < 16; i++)
-        //     {
-        //         logInfoP("holdThresholdDb, gate %u: %.2f", i, holdThresholdDb[i]);
-        //         if (iDebugKo)
-        //         {
-        //             openknx.console.writeDiagenoseKo("HLK c%02uh %.2f", i, holdThresholdDb[i]);
-        //             if (i < 15)
-        //                 openknx.console.writeDiagenoseKo("");
-        //         }
-        //     }
-        //     lResult = true;
-        // }
-        if (iCmd.substr(4, 7) == "cr read")
-        {
-            // calibration raw data averages: read all
-            for (uint8_t i = 0; i < 16; i++)
-            {
-                logInfoP("rawDataRangeAverageDb, gate %u: %.2f", i, rawDataRangeAverageDb[i]);
-                if (iDebugKo)
-                {
-                    openknx.console.writeDiagenoseKo("HLK c%02ur %.2f", i, rawDataRangeAverageDb[i]);
-                    if (i < 15)
-                        openknx.console.writeDiagenoseKo("");
-                }
-            }
-            lResult = true;
-        }
-        else if (iCmd.substr(4, 7) == "cd read")
-        {
-            // calibration raw data average differences: read all
-            for (uint8_t i = 0; i < 16; i++)
-            {
-                if (rawDataRangeTestDifferencesDb[i] < 0)
-                {
-                    logInfoP("rawDataRangeTestDifferencesDb, gate %u:%.2f", i, rawDataRangeTestDifferencesDb[i]);
-                    if (iDebugKo)
-                        openknx.console.writeDiagenoseKo("HLK c%02ud%.2f", i, rawDataRangeTestDifferencesDb[i]);
-                }
-                else
-                {
-                    logInfoP("rawDataRangeTestDifferencesDb, gate %u: %.2f", i, rawDataRangeTestDifferencesDb[i]);
-                    if (iDebugKo)
-                        openknx.console.writeDiagenoseKo("HLK c%02ud %.2f", i, rawDataRangeTestDifferencesDb[i]);
-                }
-                if (iDebugKo && i < 15)
-                    openknx.console.writeDiagenoseKo("");
-            }
-            lResult = true;
-        }
-        else if (iCmd.substr(4, 7) == "cs read")
-        {
-            // calibration raw data standard deviation: read all
-            for (uint8_t i = 0; i < 16; i++)
-            {
-                logInfoP("rawDataRangeDeviationDb, gate %u: %.2f", i, rawDataRangeDeviationDb[i]);
-                if (iDebugKo)
-                {
-                    openknx.console.writeDiagenoseKo("HLK c%02us %.2f", i, rawDataRangeDeviationDb[i]);
-                    if (i < 15)
-                        openknx.console.writeDiagenoseKo("");
-                }
-            }
-            lResult = true;
-        }
-        else if (iCmd.substr(4, 7) == "cm read")
-        {
-            // calibration raw data max: read all
-            for (uint8_t i = 0; i < 16; i++)
-            {
-                logInfoP("rawDataRangeMaxDb, gate %u: %.2f", i, rawDataRangeMaxDb[i]);
-                if (iDebugKo)
-                {
-                    openknx.console.writeDiagenoseKo("HLK c%02um %.2f", i, rawDataRangeMaxDb[i]);
-                    if (i < 15)
-                        openknx.console.writeDiagenoseKo("");
-                }
-            }
-            lResult = true;
-        }
-    }
-    else if (iCmd.length() == 13 && iCmd.substr(4, 1) == "c")
-    {
-        // read single calibration data value
-        uint8_t valueIndex = stoi(iCmd.substr(5, 2));
-
-        // if (iCmd.substr(7, 1) == "t")
-        // {
-        //     // trigger thresholds
-        //     if (iCmd.substr(9, 4) == "read")
-        //     {
-        //         // read value
-        //         logInfoP("triggerThresholdDb, gate %u: %.2f", valueIndex, triggerThresholdDb[valueIndex]);
-        //         if (iDebugKo)
-        //             openknx.console.writeDiagenoseKo("HLK c%02ut %.2f", valueIndex, triggerThresholdDb[valueIndex]);
-        //         lResult = true;
-        //     }
-        // }
-        // else if (iCmd.substr(7, 1) == "h")
-        // {
-        //     // hold thresholds
-        //     if (iCmd.substr(9, 4) == "read")
-        //     {
-        //         // read value
-        //         logInfoP("holdThresholdDb, gate %u: %.2f", valueIndex, holdThresholdDb[valueIndex]);
-        //         if (iDebugKo)
-        //             openknx.console.writeDiagenoseKo("HLK c%02uh %.2f", valueIndex, holdThresholdDb[valueIndex]);
-        //         lResult = true;
-        //     }
-        // }
-        if (iCmd.substr(7, 1) == "r")
-        {
-            // calibration raw data averages
-            if (iCmd.substr(9, 4) == "read")
-            {
-                // read value
-                logInfoP("rawDataRangeAverageDb, gate %u: %.2f", valueIndex, rawDataRangeAverageDb[valueIndex]);
-                if (iDebugKo)
-                    openknx.console.writeDiagenoseKo("HLK c%02ur %.2f", valueIndex, rawDataRangeAverageDb[valueIndex]);
-                lResult = true;
-            }
-        }
-        else if (iCmd.substr(7, 1) == "d")
-        {
-            // calibration raw data average differences
-            if (iCmd.substr(9, 4) == "read")
-            {
-                // read value
-                if (rawDataRangeTestDifferencesDb[valueIndex] < 0)
-                {
-                    logInfoP("rawDataRangeTestDifferencesDb, gate %u:%.2f", valueIndex, rawDataRangeTestDifferencesDb[valueIndex]);
-                    if (iDebugKo)
-                        openknx.console.writeDiagenoseKo("HLK c%02ud%.2f", valueIndex, rawDataRangeTestDifferencesDb[valueIndex]);
-                }
-                else
-                {
-                    logInfoP("rawDataRangeTestDifferencesDb, gate %u: %.2f", valueIndex, rawDataRangeTestDifferencesDb[valueIndex]);
-                    if (iDebugKo)
-                        openknx.console.writeDiagenoseKo("HLK c%02ud %.2f", valueIndex, rawDataRangeTestDifferencesDb[valueIndex]);
-                }
-                lResult = true;
-            }
-        }
-        else if (iCmd.substr(7, 1) == "s")
-        {
-            // calibration raw data standard deviation
-            if (iCmd.substr(9, 4) == "read")
-            {
-                // read value
-                logInfoP("rawDataRangeDeviationDb, gate %u: %.2f", valueIndex, rawDataRangeDeviationDb[valueIndex]);
-                if (iDebugKo)
-                    openknx.console.writeDiagenoseKo("HLK c%02ur %.2f", valueIndex, rawDataRangeDeviationDb[valueIndex]);
-                lResult = true;
-            }
-        }
-        else if (iCmd.substr(7, 1) == "m")
-        {
-            // calibration raw data max
-            if (iCmd.substr(9, 4) == "read")
-            {
-                // read value
-                logInfoP("rawDataRangeMaxDb, gate %u: %.2f", valueIndex, rawDataRangeMaxDb[valueIndex]);
-                if (iDebugKo)
-                    openknx.console.writeDiagenoseKo("HLK c%02ur %.2f", valueIndex, rawDataRangeMaxDb[valueIndex]);
-                lResult = true;
-            }
-        }
-    }
-    else if (iCmd.length() == 14 && iCmd.substr(4, 1) == "c")
-    {
-        // set single calibration data value
-        uint8_t valueIndex = stoi(iCmd.substr(5, 2));
-
-        if (iCmd.substr(7, 1) == "r")
-        {
-            rawDataRangeAverageDb[valueIndex] = stod(iCmd.substr(9, 5));
-            lResult = true;
-        }
     }
     return lResult;
 }
@@ -1569,80 +1130,38 @@ bool SensorHLKLD2410S::handleFunctionProperty(uint8_t *iData, uint8_t *eResultDa
 bool SensorHLKLD2410S::getCalibrationData(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength)
 {
     uint8_t lRequestedData = iData[1];
-    float *lDataArray = nullptr;
+    eResultData[0] = 0;
+
     switch (lRequestedData)
     {
-        case 1: // cal raw
-            lDataArray = rawDataRangeAverageDb;
-            break;
-        case 2: // cal std
-            lDataArray = rawDataRangeDeviationDb;
-            break;
-        case 3: // cal max
-            lDataArray = rawDataRangeMaxDb;
-            break;
-        case 4: // cur raw
-            lDataArray = rawDataRangeTestAverageDb;
-            break;
-        case 5: // cur std
-            lDataArray = rawDataRangeTestDeviationDb;
-            break;
-        case 6: // cur max
-            lDataArray = rawDataRangeTestMaxDb;
-            break;
-        case 7:
-            lDataArray = holdOffsetDb;
-            break;
-        case 8:
-            lDataArray = triggerOffsetDb;
-            break;
+        case 1: // trigger thresholds
+            for (uint8_t i = 0; i < 16; i++)
+            {
+                uint16_t lValue = mSavedTrigger[i] * 100;
+                eResultData[i * 2 + 1] = lValue >> 8;
+                eResultData[i * 2 + 2] = lValue & 0xFF;
+            }
+            eResultLength = 33;
+            return true;
+        case 2: // hold thresholds
+            for (uint8_t i = 0; i < 16; i++)
+            {
+                uint16_t lValue = mSavedHold[i] * 100;
+                eResultData[i * 2 + 1] = lValue >> 8;
+                eResultData[i * 2 + 2] = lValue & 0xFF;
+            }
+            eResultLength = 33;
+            return true;
         default:
             return false;
-            break;
     }
-
-    eResultData[0] = 0;
-    for (uint8_t i = 0; i < 16; i++)
-    {
-        uint16_t lValue = lDataArray[i] * 100.0 + 0.5;
-        eResultData[i * 2 + 1] = lValue >> 8;
-        eResultData[i * 2 + 2] = lValue & 0xFF;
-    }
-    eResultLength = 33;
-    return true;
 }
 
 bool SensorHLKLD2410S::setCalibrationData(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength)
 {
-    // iData: 1 Byte command (3), 1 Byte subcommand (7 = hold, 8 = trigger), 16*2 Byte dB-Value * 100 (as integer)
-    uint8_t lRequestedData = iData[1];
-    float *lDataArray = nullptr;
-    switch (lRequestedData)
-    {
-        case 7:
-            lDataArray = holdOffsetDb;
-            break;
-        case 8:
-            lDataArray = triggerOffsetDb;
-            break;
-        default:
-            return false;
-            break;
-    }
-
-    eResultData[0] = 0;
-    for (uint8_t i = 0; i < 16; i++)
-    {
-        uint8_t lArrayIndex = i * 2 + 2;
-        float lValue = (iData[lArrayIndex] << 8 | iData[lArrayIndex + 1] & 0xFF) / 100.0;
-        lDataArray[i] = lValue;
-    }
-
-    sendCalibrationData();
-    openknx.flash.save(true);
-
+    eResultData[0] = 1;
     eResultLength = 1;
-    return true;
+    return false;
 }
 
 bool SensorHLKLD2410S::doCalibration(uint8_t *iData, uint8_t *eResultData, uint8_t &eResultLength)
@@ -1652,13 +1171,15 @@ bool SensorHLKLD2410S::doCalibration(uint8_t *iData, uint8_t *eResultData, uint8
     eResultLength = 2;
     switch (iData[1])
     {
-        case 4:
-            calibrationTestRunOnly = true;
         case 1:
+        case 4:
             forceCalibration();
             return true;
         case 2:
-            eResultData[1] = calibrationCompleted;
+            // return progress (0-10000) as big-endian uint16
+            eResultData[1] = mAutoCalProgress >> 8;
+            eResultData[2] = mAutoCalProgress & 0xFF;
+            eResultLength = 3;
             return true;
         default:
             eResultData[0] = 1;

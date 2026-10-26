@@ -44,6 +44,8 @@ class SensorBME680 : public Sensor, protected Bsec2
     static float iaq;
     static float co2Equivalent;
     static float iaqAccuracy;
+    static bool sNeedsFlashSave;
+    static uint8_t sLastAccuracy;
 
   public:
     SensorBME680(uint16_t iMeasureTypes, TwoWire* iWire);
@@ -61,8 +63,9 @@ class SensorBME680 : public Sensor, protected Bsec2
     // just as interface between Bsec2 and Bsec
   private:
     static uint8_t sMagicWord[];
-    static uint8_t bsec_config_iaq[BME680_CALIBRATION_DATA_SIZE];
+    static const uint8_t sBsecConfigBME680[BME680_CALIBRATION_DATA_SIZE];
+    static const uint8_t sBsecConfigBME688[BME680_CALIBRATION_DATA_SIZE];
     // EepromManager *mEEPROM;
-    uint8_t mLastAccuracy = 0;   
+    uint8_t mChipVariant = 0;
 };
 #endif

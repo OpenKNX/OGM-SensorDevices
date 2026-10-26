@@ -24,6 +24,11 @@ bool SensorSGP30::begin()
     logInfoP("Starting sensor SGP30... ");
     bool lResult = Sensor::begin();
     if (lResult) lResult = Adafruit_SGP30::begin(pWire);
+    if (lResult)
+        logDebugP("Serial: 0x%04X%04X%04X",
+                  Adafruit_SGP30::serialnumber[0],
+                  Adafruit_SGP30::serialnumber[1],
+                  Adafruit_SGP30::serialnumber[2]);
     if (lResult) lResult = Adafruit_SGP30::IAQinit();
     logResult(lResult);
     return lResult;
@@ -52,8 +57,9 @@ void SensorSGP30::processHumidity()
     float lHum  = KoSENS_Hum.value(DPT_Value_Humidity);
     if (lTemp < -40.0f || lTemp > 80.0f || lHum < 0.0f || lHum > 100.0f)
         return;
-    Adafruit_SGP30::setHumidity(getAbsoluteHumidity(lTemp, lHum));
-    logDebugP("Humidity compensation: T=%.1f RH=%.1f", lTemp, lHum);
+    mAbsoluteHumidity = getAbsoluteHumidity(lTemp, lHum);
+    mHumidityPending = true;
+    // logDebugP("Humidity compensation: T=%.1f RH=%.1f", lTemp, lHum);
 #endif
 }
 
@@ -80,31 +86,61 @@ void SensorSGP30::sensorLoopInternal()
         case Finalize:
         {
             static uint32_t sMeasTimer = 0;
-            // measure every 1s during warmup (required by SGP30 internal algorithm)
-            if (delayCheck(sMeasTimer, 1000))
+            if (mPhase == 0)
             {
-                Adafruit_SGP30::IAQmeasure();
-                sMeasTimer = millis();
+                // transition to Running after 15s warmup
+                if (delayCheck(pSensorStateDelay, 15000))
+                {
+                    sMeasTimer = 0;
+                    mPhase = 0;
+                    pSensorState = Running;
+                    pSensorStateDelay = millis();
+                    break;
+                }
+                // trigger measurement every 1s (required by SGP30 internal algorithm)
+                if (delayCheck(sMeasTimer, 1000))
+                {
+                    triggerMeasure();
+                    mCommandSent = millis();
+                    sMeasTimer = millis();
+                    mPhase = 2;
+                }
             }
-            // transition to Running after 15s warmup
-            if (delayCheck(pSensorStateDelay, 15000))
+            else if (mPhase == 2 && delayCheck(mCommandSent, 12))
             {
-                sMeasTimer = 0;
-                pSensorState = Running;
-                pSensorStateDelay = millis();
+                readMeasureResult(); // result not used during warmup
+                mPhase = 0;
             }
             break;
         }
         case Running:
-            if (delayCheck(pSensorStateDelay, 1000))
+            if (mPhase == 0 && delayCheck(pSensorStateDelay, 1000))
             {
                 processHumidity();
-                if (Adafruit_SGP30::IAQmeasure())
+                if (mHumidityPending)
                 {
-                    mTVOC = (float)Adafruit_SGP30::TVOC;
-                    mECO2 = (float)Adafruit_SGP30::eCO2;
+                    sendHumidityCompensation();
+                    mCommandSent = millis();
+                    mPhase = 1;
+                }
+                else
+                {
+                    triggerMeasure();
+                    mCommandSent = millis();
+                    mPhase = 2;
                 }
                 pSensorStateDelay = millis();
+            }
+            else if (mPhase == 1 && delayCheck(mCommandSent, 5))
+            {
+                triggerMeasure();
+                mCommandSent = millis();
+                mPhase = 2;
+            }
+            else if (mPhase == 2 && delayCheck(mCommandSent, 12))
+            {
+                readMeasureResult();
+                mPhase = 0;
             }
             break;
         default:
@@ -175,5 +211,54 @@ void SensorSGP30::sensorWriteFlash()
     openknx.flash.write(mWorkBuffer, 4);
     mWorkBufferInitialized = false;
     logDebugP("SGP30: Baseline written to Flash");
+}
+
+uint8_t SensorSGP30::crc8(const uint8_t* iData, uint8_t iLen)
+{
+    const uint8_t cPolynomial = 0x31;
+    uint8_t lCrc = 0xFF;
+    for (uint8_t j = iLen; j; --j)
+    {
+        lCrc ^= *iData++;
+        for (uint8_t i = 8; i; --i)
+            lCrc = (lCrc & 0x80) ? (lCrc << 1) ^ cPolynomial : (lCrc << 1);
+    }
+    return lCrc;
+}
+
+void SensorSGP30::sendHumidityCompensation()
+{
+    uint8_t buf[2] = {(uint8_t)(mAbsoluteHumidity >> 8), (uint8_t)(mAbsoluteHumidity & 0xFF)};
+    pWire->beginTransmission(pI2CAddress);
+    pWire->write(0x20); // CMD 0x2061
+    pWire->write(0x61);
+    pWire->write(buf[0]);
+    pWire->write(buf[1]);
+    pWire->write(crc8(buf, 2));
+    pWire->endTransmission();
+    mHumidityPending = false;
+}
+
+void SensorSGP30::triggerMeasure()
+{
+    pWire->beginTransmission(pI2CAddress);
+    pWire->write(0x20); // CMD 0x2008
+    pWire->write(0x08);
+    pWire->endTransmission();
+}
+
+bool SensorSGP30::readMeasureResult()
+{
+    uint8_t buf[6];
+    pWire->requestFrom(pI2CAddress, (uint8_t)6);
+    if (pWire->available() != 6)
+        return false;
+    for (uint8_t i = 0; i < 6; i++)
+        buf[i] = pWire->read();
+    if (buf[2] != crc8(buf, 2) || buf[5] != crc8(buf + 3, 2))
+        return false;
+    mECO2 = (float)(((uint16_t)buf[0] << 8) | buf[1]);
+    mTVOC = (float)(((uint16_t)buf[3] << 8) | buf[4]);
+    return true;
 }
 #endif

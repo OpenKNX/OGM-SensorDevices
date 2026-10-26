@@ -33,6 +33,8 @@
 #define SENS_HLKLD2420 12 // HF-Presence
 #define SENS_MAX31865 14  // PT100/PT1000
 #define SENS_SHT4X 15    // Temp/Hum
+#define SENS_HLKLD2410S 16 // HF-Presence
+#define SENS_SHT2X 17     // Temp/Hum
 
 enum SensorState
 {

@@ -7,6 +7,7 @@
     #include "SensorBME680.h"
     #include "SensorDummy.h"
     #include "SensorHLKLD2420.h"
+    #include "SensorHLKLD2410S.h"
     #include "SensorIAQCore.h"
     #include "SensorMR24xxB1.h"
     #include "SensorOPT300x.h"
@@ -14,8 +15,12 @@
     #include "SensorSCD40.h"
     #include "SensorSCD41.h"
     #include "SensorSGP30.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-enum-enum-conversion"
+    #include "SensorSHT2x.h"
     #include "SensorSHT3x.h"
     #include "SensorSHT4x.h"
+#pragma GCC diagnostic pop
     #include "SensorVEML7700.h"
     #include "SensorVL53L1X.h"
     #include "SensorMAX31865.h"
@@ -28,6 +33,10 @@ Sensor* SensorDevices::newSensor(uint8_t iSensorClass, MeasureType iMeasureType,
     #ifdef SENSORMODULE
         case SENS_SHT3X:
             lSensor = new SensorSHT3x(iMeasureType, iWire);
+            break;
+
+        case SENS_SHT2X:
+            lSensor = new SensorSHT2x(iMeasureType, iWire);
             break;
 
         case SENS_SHT4X:
@@ -88,6 +97,9 @@ Sensor* SensorDevices::newSensor(uint8_t iSensorClass, MeasureType iMeasureType,
             break;
         case SENS_HLKLD2420:
             lSensor = new SensorHLKLD2420(iMeasureType, iWire);
+            break;
+        case SENS_HLKLD2410S:
+            lSensor = new SensorHLKLD2410S(iMeasureType, iWire);
             break;
         #endif
     #endif

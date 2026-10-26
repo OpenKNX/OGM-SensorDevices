@@ -59,6 +59,7 @@ void Sensor::sensorLoopInternal()
                 }
                 else
                 {
+                    logInfoP("Sensor not found after 10 retries, giving up");
                     pSensorState = Off;
                 }
                 pSensorStateDelay = millis();

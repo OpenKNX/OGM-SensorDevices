@@ -335,3 +335,162 @@ Identical to OGM-Common (see `../OGM-Common/AGENTS.md`):
 - [README.md](README.md) — sensor overview
 - [`../OGM-Common/AGENTS.md`](../OGM-Common/AGENTS.md) — base framework,
   logging API, flash API, code conventions
+
+---
+
+## OneWire Stack
+
+The OneWire subsystem is **entirely separate** from the I²C sensor stack above.
+It has its own compile guard, its own class hierarchy, and is consumed by
+**OFM-OneWireModule** (not by OFM-SensorModule or OFM-PresenceModule).
+
+### Compile Guard
+
+```cpp
+#ifdef WIREMODULE
+```
+
+All OneWire source files are wrapped in this guard. It is defined by the device
+project when OFM-OneWireModule is included.
+
+### Architecture
+
+```
+OneWireDS2482          (bus master — I²C ↔ 1-Wire bridge, DS2482-100/800 or DS2484)
+  │
+  ├── OneWireSearch    (ROM search algorithm — one instance per search type per BM)
+  │
+  └── OneWire[]        (up to 30 device slots per bus master)
+        ├── OneWireDS18B20    (DS18B20 / DS18S20 / DS1822 / DS1825 — temperature)
+        ├── OneWireDS1990     (DS1990A — iButton)
+        ├── OneWireDS2438     (battery/multi-sensor — temp + VDD + VAD + VSens)
+        │     └── OneWireDS2438Fromula  (NTC / HIH-4010 humidity / brightness formulas)
+        ├── OneWireDS2408     (8-channel PIO expander)
+        └── OneWireDS2413     (2-channel PIO expander)
+```
+
+### `OneWire` Base Class (`src/OneWire.h/.cpp`)
+
+Abstract base for all 1-Wire devices.
+
+| Member | Meaning |
+|---|---|
+| `pId[7]` | 7-byte ROM ID (CRC byte not stored) |
+| `pMode` | `New` / `Connected` / `Disconnected` |
+| `pPrio` | `PrioHigh` (iButton) / `PrioNormal` (IO) / `PrioLow` (sensors) |
+| `pBM` | Pointer to owning `OneWireDS2482` — set by bus master on `addSensor()` |
+| `pDelay` | `millis()` timestamp for non-blocking timing |
+| `pValid` | Whether the last measurement is valid |
+
+**Static factory**: `OneWire::factory(tIdRef iId, bool* eIsNew)` instantiates the
+correct subclass by family byte (byte 0 of the ROM ID). Stores up to
+`COUNT_1WIRE_CHANNEL` sensors in a static internal array — creates a new instance
+only the first time a given ID is seen (`*eIsNew = true`), returns the existing one
+on subsequent calls.
+
+**Disappear tolerance**: `cDisappearCount = 2` — a device must be absent from 2
+consecutive bus searches before transitioning from `Connected` to `Disconnected`.
+
+**Family codes:**
+
+| Macro | Hex | Device |
+|---|---|---|
+| `MODEL_DS18S20` | 0x10 | Temperature |
+| `MODEL_DS18B20` | 0x28 | Temperature |
+| `MODEL_DS1822` | 0x22 | Temperature |
+| `MODEL_DS1825` | 0x3B | Temperature |
+| `MODEL_DS2438` | 0x26 | Battery/multi-sensor |
+| `MODEL_DS2413` | 0x3A | 2-channel IO |
+| `MODEL_DS2408` | 0x29 | 8-channel IO |
+| `MODEL_DS1990` | 0x01 | iButton |
+
+### Bus Master: `OneWireDS2482` (`src/OneWireDS2482.h/.cpp`)
+
+Drives the Maxim DS2482/DS2484 I²C-to-1-Wire bridge chip via Arduino `Wire`.
+
+**State machine:** `Init → Startup → SearchIButton → ProcessIO → ProcessSensors →
+SearchNewDevices → Idle → (back to SearchIButton)` / `Error` (retries every 1 s,
+checks for short circuit).
+
+**Priority dispatch:**
+- `ProcessIButton()`: runs every state-machine cycle; uses a dedicated
+  `mSearchPrio` (`OneWireSearch`) to do a targeted search for each known iButton.
+  State assignment after this call is unconditional (Error state from inside the
+  method is ignored — intentional for iButton robustness).
+- `ProcessPriorityBusUse()`: iterates IO expanders (DS2408/DS2413), one per cycle.
+- `ProcessNormalBusUse()`: iterates slow sensors (DS18B20, DS2438), one per cycle.
+- `SearchNewDevices`: discovers unknown bus members via `mSearchNormal`; can be
+  disabled at `setup()` time.
+
+**Error handling:**
+- `waitOnBusy()`: polls up to 1000 × 20 µs; sets `DS2482_ERROR_TIMEOUT` on timeout.
+- `wireReset()`: sets `DS2482_ERROR_SHORT` if SD bit set after reset.
+- `writeConfig()`: sets `DS2482_ERROR_CONFIG` on readback mismatch.
+- `Error` state: rechecks I²C presence every 1 s; calls
+  `openknx.unsupportedEtsModule()` if chip permanently absent.
+
+**`setupTiming(tRSTL, tMSP, tW0L, tREC0, RWPU)`**: DS2484-only port parameter
+adjustment — must be called after `setup()` and only if `checkI2cPresence()` returns
+true. Currently only called for busmaster 0 in OFM-OneWireModule.
+
+### DS18B20 / DS18S20 (`src/OneWireDS18B20.h/.cpp`)
+
+State machine: `Startup → Idle ↔ StartMeasurement (750 ms) → GetMeasure → Idle`.
+Supports 9–12 bit resolution (DS18B20) and fixed 9-bit (DS18S20).
+Parasite power: detected via `READPOWERSUPPLY`; issues `STARTCONVO` with strong
+pullup and delays `COPYSCRATCH` by 10 ms. CRC validated on every scratchpad read.
+
+### DS2438 Multi-Sensor (`src/OneWireDS2438.h/.cpp`)
+
+Measures: on-chip temperature + VDD (supply) + VAD (external ADC) + VSens (current
+sense). State machine progresses through `StartMeasureTemp → GetMeasureTemp →
+SetConfigVDD → StartMeasureVDD → GetMeasureVDD → SetConfigVAD → StartMeasureVAD →
+GetMeasureVAD → Idle`. All values are committed atomically at `Idle`.
+
+**Model function constants (consumed by OFM-OneWireModule via `getModelFunction()`):**
+
+| Constant | Returns |
+|---|---|
+| `FmlRaw_TemperatureOnChip` (10) | On-chip temperature (°C) |
+| `FmlRaw_VoltageOfChip` (11) | VDD (V) |
+| `FmlRaw_VoltageOfADC1` (12) | VAD (V) |
+| `FmlRaw_VoltageOfSens` (13) | VSens (V) |
+| `FmlNative_TemperatureNTC` (15) | NTC temperature via Steinhart-Hart |
+| `FmlNative_Humidity` (16) | Relative humidity via HIH-4010 formula |
+| `FmlNative_Brightness` (17) | Lux via 47 Ω photodiode formula |
+| `FmlUser_Start`..`FmlUser_End` (50..79) | 30 user-defined function slots |
+
+### DS2438 Formula Layer (`src/OneWireDS2438Fromula.h/.cpp`)
+
+> **Note:** The class name and filenames spell "Fromula" (missing 'r'). This typo is
+> present throughout — in both file names, the class name, and all `#include` references.
+> Do **not** silently rename it without a full codebase-wide search.
+
+Static utility class; `OneWireDS2438` is declared `friend`. Holds a static array
+`userFunction[30]` of `(float, float, float, float) → float` function pointers.
+
+**Native formulas:**
+- `nativeTemperatureNTC`: Steinhart-Hart, Rref = 100 kΩ, b = 3590, Tn = 298.15 K.
+- `nativeHumidity`: HIH-4010 formula, temperature-compensated.
+- `nativeBrightness`: `pow(10, VSens×1000/47)` — interprets VSens through 47 Ω as
+  photodiode current.
+
+### DS2408 / DS2413 (`src/OneWireDS2408.h/.cpp`, `src/OneWireDS2413.h/.cpp`)
+
+IO expanders, `PrioNormal`. DS2408: 8 open-drain pins; DS2413: 2 open-drain pins.
+Write handshake: send byte + complement, expect 0xAA + echo. `mIoMask` / `mIoInvertMask`
+configurable per bit.
+
+### Search Algorithm (`src/OneWireSearch.h/.cpp`)
+
+Implements the Dallas ROM search algorithm via DS2482 triplet commands.
+`wireSearchBlocking()` finds one device per call (~91 ms), using the 64-bit discrepancy
+tracking variables. CRC8 validated at end of each found ID. Calls
+`searchLoopCallback()` every 4 bits to yield to the main loop.
+
+### CRC
+
+Dow-CRC8 (X^8 + X^5 + X^4 + X^0). Two implementations selectable via
+`ONEWIRE_CRC8_TABLE`: table-based (2 × 16 entries, `pgm_read_byte`) or bit-by-bit.
+CRC is recomputed on every `wireSelect` (7 ID bytes → 1 CRC byte sent over the bus).
+
